@@ -17,8 +17,8 @@ export const players: Player[] = [
   {
     id: "p1",
     name: "あおい",
+    jerseyNumber: "7",
     gradeLabel: "1ねん",
-    gradeBand: "lower",
     active: true,
     guardianName: "佐藤さん",
     favoriteSkill: "はしる",
@@ -30,8 +30,8 @@ export const players: Player[] = [
   {
     id: "p2",
     name: "はると",
+    jerseyNumber: "12",
     gradeLabel: "2ねん",
-    gradeBand: "lower",
     active: true,
     guardianName: "田中さん",
     favoriteSkill: "キャッチ",
@@ -42,8 +42,8 @@ export const players: Player[] = [
   {
     id: "p3",
     name: "ゆい",
+    jerseyNumber: "21",
     gradeLabel: "2ねん",
-    gradeBand: "lower",
     active: true,
     guardianName: "山田さん",
     favoriteSkill: "よける",
@@ -54,8 +54,8 @@ export const players: Player[] = [
   {
     id: "p4",
     name: "そうた",
+    jerseyNumber: "3",
     gradeLabel: "3ねん",
-    gradeBand: "middle",
     active: true,
     guardianName: "井上さん",
     favoriteSkill: "まもる",
@@ -66,8 +66,8 @@ export const players: Player[] = [
   {
     id: "p5",
     name: "みお",
+    jerseyNumber: "18",
     gradeLabel: "1ねん",
-    gradeBand: "lower",
     active: false,
     guardianName: "中村さん",
     favoriteSkill: "こえだし",
@@ -79,6 +79,7 @@ export const players: Player[] = [
 export const goalTemplates: GoalTemplate[] = [
   {
     id: "g1",
+    side: "offense",
     title: "こえをかける",
     prompt: "短い言葉を差し込んで、今日の声かけ目標にします。",
     emoji: "📣",
@@ -88,6 +89,7 @@ export const goalTemplates: GoalTemplate[] = [
   },
   {
     id: "g2",
+    side: "offense",
     title: "見るポイント",
     prompt: "どこを見るかを入れると、そのまま今日の目標になります。",
     emoji: "👀",
@@ -97,6 +99,7 @@ export const goalTemplates: GoalTemplate[] = [
   },
   {
     id: "g3",
+    side: "defense",
     title: "すぐ動く",
     prompt: "テンプレートだけで使える、入力なしの目標です。",
     emoji: "💨",
@@ -105,6 +108,7 @@ export const goalTemplates: GoalTemplate[] = [
   },
   {
     id: "g4",
+    side: "defense",
     title: "守りをがんばる",
     prompt: "守備で何をするかを差し込めます。",
     emoji: "🏈",

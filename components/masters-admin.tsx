@@ -74,12 +74,13 @@ export function MastersAdmin({
     ]);
   }
 
-  function addTemplate() {
+  function addTemplateBySide(side: "offense" | "defense") {
     setDraftTemplates((current) => [
       ...current,
       {
-        id: `goal-${Date.now()}`,
-        title: "新しいテンプレート",
+        id: `goal-${Date.now()}-${side}`,
+        side,
+        title: side === "offense" ? "新しい攻撃テンプレート" : "新しい守備テンプレート",
         prompt: "説明を入れてください",
         emoji: "⭐",
         color: "orange",
@@ -123,6 +124,8 @@ export function MastersAdmin({
 
   const offensePositions = draftPositions.filter((position) => position.side === "offense");
   const defensePositions = draftPositions.filter((position) => position.side === "defense");
+  const offenseTemplates = draftTemplates.filter((template) => template.side === "offense");
+  const defenseTemplates = draftTemplates.filter((template) => template.side === "defense");
 
   function isPositionUsed(positionId: string) {
     return players.some(
@@ -204,24 +207,36 @@ export function MastersAdmin({
               <div className="panel-body">
                 <div className="section-row">
                   <h3 className="section-title">目標テンプレート</h3>
-                  <button className="button secondary" type="button" onClick={addTemplate}>
-                    テンプレート追加
-                  </button>
+                  <div className="card-actions">
+                    <button className="button secondary" type="button" onClick={() => addTemplateBySide("offense")}>
+                      攻撃テンプレ追加
+                    </button>
+                    <button className="button secondary" type="button" onClick={() => addTemplateBySide("defense")}>
+                      守備テンプレ追加
+                    </button>
+                  </div>
                 </div>
 
                 <div className="masters-list">
-                  {draftTemplates.map((template, index) => (
-                    <div className="template-editor" key={template.id}>
-                      <div className="template-grid">
-                        <input type="text" value={template.title} onChange={(event) => updateTemplate(index, "title", event.target.value)} />
-                        <input type="text" value={template.emoji} onChange={(event) => updateTemplate(index, "emoji", event.target.value)} />
-                        <input type="text" value={template.prompt} onChange={(event) => updateTemplate(index, "prompt", event.target.value)} />
-                        <input type="text" value={template.templateText} onChange={(event) => updateTemplate(index, "templateText", event.target.value)} />
-                        <input type="text" value={template.inputPlaceholder ?? ""} onChange={(event) => updateTemplate(index, "inputPlaceholder", event.target.value)} />
+                  {[...offenseTemplates, ...defenseTemplates].map((template) => {
+                    const index = draftTemplates.findIndex((item) => item.id === template.id);
+
+                    return (
+                      <div className="template-editor" key={template.id}>
+                        <div className="chip-row">
+                          <span className="chip">{template.side === "offense" ? "オフェンス" : "ディフェンス"}</span>
+                        </div>
+                        <div className="template-grid">
+                          <input type="text" value={template.title} onChange={(event) => updateTemplate(index, "title", event.target.value)} />
+                          <input type="text" value={template.emoji} onChange={(event) => updateTemplate(index, "emoji", event.target.value)} />
+                          <input type="text" value={template.prompt} onChange={(event) => updateTemplate(index, "prompt", event.target.value)} />
+                          <input type="text" value={template.templateText} onChange={(event) => updateTemplate(index, "templateText", event.target.value)} />
+                          <input type="text" value={template.inputPlaceholder ?? ""} onChange={(event) => updateTemplate(index, "inputPlaceholder", event.target.value)} />
+                        </div>
+                        <p className="subtle">`{"{input}"}` を入れると差し込み入力つき、入れないとワンタップ用テンプレートになります。</p>
                       </div>
-                      <p className="subtle">`{"{input}"}` を入れると差し込み入力つき、入れないとワンタップ用テンプレートになります。</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

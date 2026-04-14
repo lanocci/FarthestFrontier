@@ -1,35 +1,15 @@
 "use client";
 
 import { formatDateInput } from "@/lib/date";
-import {
-  GoalLog,
-  GoalTemplate,
-  GradeBand,
-  Material,
-  Player,
-  PositionMaster,
-} from "@/lib/types";
+import { Player, PositionMaster } from "@/lib/types";
 import { getPositionLabel } from "@/lib/utils";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
-import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 
 type TeamDashboardProps = {
-  canManageTeam: boolean;
   dataLoading: boolean;
-  goalLogs: GoalLog[];
-  goalTemplates: GoalTemplate[];
-  materials: Material[];
   players: Player[];
   positionMasters: PositionMaster[];
-  setTeamMessage: Dispatch<SetStateAction<string | null>>;
-  setGoalLogs: Dispatch<SetStateAction<GoalLog[]>>;
-  setMaterials: Dispatch<SetStateAction<Material[]>>;
-  setPlayers: Dispatch<SetStateAction<Player[]>>;
-  supabase: SupabaseClient | null;
-  syncing: boolean;
-  setSyncing: Dispatch<SetStateAction<boolean>>;
   teamMessage: string | null;
   usingRemoteData: boolean;
   onResetLocalMode: () => void;
@@ -48,17 +28,13 @@ export function TeamDashboard({
   onResetLocalMode,
 }: TeamDashboardProps) {
   const [searchText, setSearchText] = useState("");
-  const [gradeFilter, setGradeFilter] = useState<"all" | GradeBand>("all");
 
   const filteredPlayers = useMemo(
     () =>
       players.filter((player) => {
-        const matchesSearch = player.name.includes(searchText.trim());
-        const matchesGrade = gradeFilter === "all" ? true : player.gradeBand === gradeFilter;
-
-        return matchesSearch && matchesGrade;
+        return player.name.includes(searchText.trim());
       }),
-    [gradeFilter, players, searchText],
+    [players, searchText],
   );
 
   const activePlayerCount = players.filter((player) => player.active).length;
@@ -76,7 +52,6 @@ export function TeamDashboard({
             <h2>今週の練習</h2>
             <p>{getWeekLabel()}</p>
           </div>
-          {/*<span className="coach-badge">コーチ</span>*/}
         </div>
         <div className="progress-rail">
           <div className="progress-fill" style={{ width: `${completionRatio}%` }} />
@@ -87,16 +62,10 @@ export function TeamDashboard({
         </div>
       </section>
 
-      <div className="status-strip">
-        {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
-        <Link className="button secondary" href="/players">
-          選手管理
-        </Link>
-        <Link className="button secondary" href="/masters">
-          マスター管理
-        </Link>
+      <div className="status-strip dashboard-status">
+        {teamMessage ? <span className="subtle compact-message">{teamMessage}</span> : null}
         {!usingRemoteData ? (
-          <button className="button ghost" type="button" onClick={onResetLocalMode}>
+          <button className="button ghost button-compact" type="button" onClick={onResetLocalMode}>
             体験データに戻す
           </button>
         ) : null}
@@ -111,16 +80,6 @@ export function TeamDashboard({
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
           />
-          <select
-            aria-label="学年帯"
-            value={gradeFilter}
-            onChange={(event) => setGradeFilter(event.target.value as "all" | GradeBand)}
-          >
-            <option value="all">全学年</option>
-            <option value="lower">低学年</option>
-            <option value="middle">中学年</option>
-            <option value="upper">高学年</option>
-          </select>
           <div className="toolbar-count">一覧 {filteredPlayers.length}人</div>
         </div>
 
@@ -130,7 +89,7 @@ export function TeamDashboard({
               <article className="practice-card">
                 <div className="practice-card-head">
                   <div>
-                    <strong>{player.name}</strong>
+                    <strong>{player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}</strong>
                     <div className="subtle">
                       {getPositionLabel(player.offensePositionId, positionMasters)} / {getPositionLabel(player.defensePositionId, positionMasters)}
                     </div>
@@ -152,7 +111,7 @@ export function TeamDashboard({
                 </div>
 
                 <div className="practice-actions">
-                  <span className="button">目標 / 振り返り</span>
+                  <span className="button button-compact">入力する</span>
                 </div>
               </article>
             </Link>

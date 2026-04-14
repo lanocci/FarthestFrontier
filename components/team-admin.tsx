@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Section } from "@/components/section";
 import { insertPlayer, updatePlayer } from "@/lib/data-store";
-import { GradeBand, Player, PositionMaster } from "@/lib/types";
+import { Player, PositionMaster } from "@/lib/types";
 import { getPositionLabel, getPositionsBySide } from "@/lib/utils";
 
 type TeamAdminProps = {
@@ -25,8 +25,8 @@ type TeamAdminProps = {
 
 type PlayerForm = {
   name: string;
+  jerseyNumber: string;
   gradeLabel: string;
-  gradeBand: GradeBand;
   guardianName: string;
   favoriteSkill: string;
   offensePositionId: string;
@@ -37,8 +37,8 @@ type PlayerForm = {
 function createInitialPlayerForm(positionMasters: PositionMaster[]): PlayerForm {
   return {
     name: "",
+    jerseyNumber: "",
     gradeLabel: "1ねん",
-    gradeBand: "lower",
     guardianName: "",
     favoriteSkill: "",
     offensePositionId: getPositionsBySide("offense", positionMasters)[0]?.id ?? "",
@@ -50,8 +50,8 @@ function createInitialPlayerForm(positionMasters: PositionMaster[]): PlayerForm 
 function createFormFromPlayer(player: Player): PlayerForm {
   return {
     name: player.name,
+    jerseyNumber: player.jerseyNumber,
     gradeLabel: player.gradeLabel,
-    gradeBand: player.gradeBand,
     guardianName: player.guardianName,
     favoriteSkill: player.favoriteSkill,
     offensePositionId: player.offensePositionId,
@@ -215,12 +215,8 @@ export function TeamAdmin({
                 <h3 className="section-title">新しい選手を追加</h3>
                 <div className="admin-form">
                   <input type="text" placeholder="選手名" value={createForm.name} onChange={(event) => updateCreateForm("name", event.target.value)} disabled={!canManageTeam || syncing} />
+                  <input type="text" placeholder="背番号" value={createForm.jerseyNumber} onChange={(event) => updateCreateForm("jerseyNumber", event.target.value)} disabled={!canManageTeam || syncing} />
                   <input type="text" placeholder="1ねん / 2ねん" value={createForm.gradeLabel} onChange={(event) => updateCreateForm("gradeLabel", event.target.value)} disabled={!canManageTeam || syncing} />
-                  <select value={createForm.gradeBand} onChange={(event) => updateCreateForm("gradeBand", event.target.value as GradeBand)} disabled={!canManageTeam || syncing}>
-                    <option value="lower">低学年</option>
-                    <option value="middle">中学年</option>
-                    <option value="upper">高学年</option>
-                  </select>
                   <input type="text" placeholder="保護者名" value={createForm.guardianName} onChange={(event) => updateCreateForm("guardianName", event.target.value)} disabled={!canManageTeam || syncing} />
                   <input type="text" placeholder="とくいなこと" value={createForm.favoriteSkill} onChange={(event) => updateCreateForm("favoriteSkill", event.target.value)} disabled={!canManageTeam || syncing} />
                   <select value={createForm.offensePositionId} onChange={(event) => updateCreateForm("offensePositionId", event.target.value)} disabled={!canManageTeam || syncing}>
@@ -248,7 +244,7 @@ export function TeamAdmin({
                     {players.map((player) => (
                       <button key={player.id} className={`admin-player-item ${player.id === selectedPlayerId ? "is-selected" : ""}`} type="button" onClick={() => setSelectedPlayerId(player.id)}>
                         <strong>{player.name}</strong>
-                        <span>{player.gradeLabel}</span>
+                        <span>{player.jerseyNumber ? `#${player.jerseyNumber} / ${player.gradeLabel}` : player.gradeLabel}</span>
                         <span className={`chip ${player.active ? "ok" : "warn"}`}>{player.active ? "在籍中" : "休会"}</span>
                       </button>
                     ))}
@@ -266,12 +262,8 @@ export function TeamAdmin({
             <div className="admin-edit-card">
               <div className="admin-form">
                 <input type="text" value={editForm.name} onChange={(event) => updateEditForm("name", event.target.value)} disabled={!canManageTeam || syncing} />
+                <input type="text" value={editForm.jerseyNumber} onChange={(event) => updateEditForm("jerseyNumber", event.target.value)} disabled={!canManageTeam || syncing} />
                 <input type="text" value={editForm.gradeLabel} onChange={(event) => updateEditForm("gradeLabel", event.target.value)} disabled={!canManageTeam || syncing} />
-                <select value={editForm.gradeBand} onChange={(event) => updateEditForm("gradeBand", event.target.value as GradeBand)} disabled={!canManageTeam || syncing}>
-                  <option value="lower">低学年</option>
-                  <option value="middle">中学年</option>
-                  <option value="upper">高学年</option>
-                </select>
                 <input type="text" value={editForm.guardianName} onChange={(event) => updateEditForm("guardianName", event.target.value)} disabled={!canManageTeam || syncing} />
                 <input type="text" value={editForm.favoriteSkill} onChange={(event) => updateEditForm("favoriteSkill", event.target.value)} disabled={!canManageTeam || syncing} />
                 <select value={editForm.offensePositionId} onChange={(event) => updateEditForm("offensePositionId", event.target.value)} disabled={!canManageTeam || syncing}>

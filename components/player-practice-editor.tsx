@@ -6,7 +6,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { Section } from "@/components/section";
 import { updatePlayer } from "@/lib/data-store";
-import { GoalTemplate, Player, PositionMaster } from "@/lib/types";
+import { GoalTemplate, Player, PositionMaster, PositionSide } from "@/lib/types";
 import { buildGoalText, getPositionLabel } from "@/lib/utils";
 
 type PlayerPracticeEditorProps = {
@@ -25,12 +25,14 @@ type PlayerPracticeEditorProps = {
 
 function GoalField({
   label,
+  side,
   currentValue,
   templates,
   disabled,
   onSave,
 }: {
   label: string;
+  side: PositionSide;
   currentValue?: string;
   templates: GoalTemplate[];
   disabled: boolean;
@@ -39,7 +41,8 @@ function GoalField({
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [input, setInput] = useState("");
 
-  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
+  const scopedTemplates = templates.filter((template) => template.side === side);
+  const selectedTemplate = scopedTemplates.find((template) => template.id === selectedTemplateId) ?? null;
   const preview = useMemo(() => {
     if (!selectedTemplate) {
       return input.trim();
@@ -63,7 +66,7 @@ function GoalField({
       <span className="entry-label">{label}</span>
       <strong>{currentValue ?? "未入力"}</strong>
       <div className="template-chips">
-        {templates.map((template) => (
+        {scopedTemplates.map((template) => (
           <button
             key={template.id}
             className={`chip-button ${selectedTemplateId === template.id ? "is-active" : ""}`}
@@ -176,7 +179,7 @@ export function PlayerPracticeEditor({
     <div className="stack practice-editor-page">
       <Section
         title={player.name}
-        copy={`${player.gradeLabel} / OF: ${getPositionLabel(player.offensePositionId, positionMasters)} / DF: ${getPositionLabel(player.defensePositionId, positionMasters)}`}
+        copy={`${player.jerseyNumber ? `#${player.jerseyNumber} / ` : ""}${player.gradeLabel} / OF: ${getPositionLabel(player.offensePositionId, positionMasters)} / DF: ${getPositionLabel(player.defensePositionId, positionMasters)}`}
       >
         <div className="status-strip">
           {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
@@ -189,6 +192,7 @@ export function PlayerPracticeEditor({
       <div className="entry-grid">
         <GoalField
           label="オフェンス目標"
+          side="offense"
           currentValue={player.offenseGoal}
           templates={goalTemplates}
           disabled={!canManageTeam || syncing}
@@ -196,6 +200,7 @@ export function PlayerPracticeEditor({
         />
         <GoalField
           label="ディフェンス目標"
+          side="defense"
           currentValue={player.defenseGoal}
           templates={goalTemplates}
           disabled={!canManageTeam || syncing}

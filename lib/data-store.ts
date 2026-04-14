@@ -11,8 +11,8 @@ import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/t
 type PlayerRow = {
   id: string;
   name: string;
+  jersey_number: string | null;
   grade_label: string;
-  grade_band: Player["gradeBand"];
   guardian_name: string;
   favorite_skill: string | null;
   offense_position_id: string;
@@ -26,6 +26,7 @@ type PlayerRow = {
 
 type GoalTemplateRow = {
   id: string;
+  side: GoalTemplate["side"];
   title: string;
   prompt: string;
   emoji: string;
@@ -72,8 +73,8 @@ function toPlayer(row: PlayerRow): Player {
   return {
     id: row.id,
     name: row.name,
+    jerseyNumber: row.jersey_number ?? "",
     gradeLabel: row.grade_label,
-    gradeBand: row.grade_band,
     guardianName: row.guardian_name,
     favoriteSkill: row.favorite_skill ?? "これから見つける",
     offensePositionId: row.offense_position_id,
@@ -89,6 +90,7 @@ function toPlayer(row: PlayerRow): Player {
 function toGoalTemplate(row: GoalTemplateRow): GoalTemplate {
   return {
     id: row.id,
+    side: row.side,
     title: row.title,
     prompt: row.prompt,
     emoji: row.emoji,
@@ -139,14 +141,14 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     { data: positionRows, error: positionError },
   ] = await Promise.all([
     supabase
-        .from("players")
-        .select(
-          "id, name, grade_label, grade_band, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, offense_reflection, defense_goal, defense_reflection, active",
-        )
-        .order("created_at", { ascending: true }),
+      .from("players")
+      .select(
+        "id, name, jersey_number, grade_label, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, offense_reflection, defense_goal, defense_reflection, active",
+      )
+      .order("created_at", { ascending: true }),
     supabase
       .from("goal_templates")
-      .select("id, title, prompt, emoji, color, template_text, input_placeholder")
+      .select("id, side, title, prompt, emoji, color, template_text, input_placeholder")
       .order("created_at", { ascending: true }),
     supabase
       .from("goal_logs")
@@ -182,8 +184,8 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
     .from("players")
     .insert({
       name: player.name,
+      jersey_number: player.jerseyNumber || null,
       grade_label: player.gradeLabel,
-      grade_band: player.gradeBand,
       guardian_name: player.guardianName,
       favorite_skill: player.favoriteSkill,
       offense_position_id: player.offensePositionId,
@@ -195,7 +197,7 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
       active: player.active,
     })
     .select(
-      "id, name, grade_label, grade_band, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, offense_reflection, defense_goal, defense_reflection, active",
+      "id, name, jersey_number, grade_label, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, offense_reflection, defense_goal, defense_reflection, active",
     )
     .single();
 
@@ -211,8 +213,8 @@ export async function updatePlayer(supabase: SupabaseClient, player: Player): Pr
     .from("players")
     .update({
       name: player.name,
+      jersey_number: player.jerseyNumber || null,
       grade_label: player.gradeLabel,
-      grade_band: player.gradeBand,
       guardian_name: player.guardianName,
       favorite_skill: player.favoriteSkill,
       offense_position_id: player.offensePositionId,
@@ -316,6 +318,7 @@ export async function upsertGoalTemplates(
   const { error } = await supabase.from("goal_templates").upsert(
     templates.map((template) => ({
       id: template.id,
+      side: template.side,
       title: template.title,
       prompt: template.prompt,
       emoji: template.emoji,

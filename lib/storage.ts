@@ -48,6 +48,7 @@ function normalizePlayer(player: Player): Player {
   const legacyOffense = (player as Player & { offensePosition?: string }).offensePosition;
   const legacyDefense = (player as Player & { defensePosition?: string }).defensePosition;
   const legacyRecentGoal = (player as Player & { recentGoalText?: string }).recentGoalText;
+  const legacyJerseyNumber = (player as Player & { number?: string | number }).number;
   const offenseMap: Record<string, string> = {
     center: "op-center",
     quarterback: "op-quarterback",
@@ -65,8 +66,10 @@ function normalizePlayer(player: Player): Player {
 
   return {
     ...player,
+    jerseyNumber: player.jerseyNumber ?? String(legacyJerseyNumber ?? ""),
     offensePositionId: player.offensePositionId ?? offenseMap[legacyOffense ?? ""] ?? "op-flex",
     defensePositionId: player.defensePositionId ?? defenseMap[legacyDefense ?? ""] ?? "dp-linebacker",
+    gradeLabel: player.gradeLabel ?? "未設定",
     offenseGoal: player.offenseGoal ?? legacyRecentGoal,
     defenseGoal: player.defenseGoal,
     offenseReflection: player.offenseReflection,

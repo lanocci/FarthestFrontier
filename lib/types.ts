@@ -1,5 +1,4 @@
 export type Role = "coach" | "guardian";
-export type GradeBand = "lower" | "middle" | "upper";
 export type MaterialType = "slide" | "sheet" | "doc";
 export type MaterialAudience = "all" | "guardians" | "coaches";
 export type PositionSide = "offense" | "defense";
@@ -13,8 +12,8 @@ export type PositionMaster = {
 export type Player = {
   id: string;
   name: string;
+  jerseyNumber: string;
   gradeLabel: string;
-  gradeBand: GradeBand;
   active: boolean;
   guardianName: string;
   favoriteSkill: string;
@@ -28,6 +27,7 @@ export type Player = {
 
 export type GoalTemplate = {
   id: string;
+  side: PositionSide;
   title: string;
   prompt: string;
   emoji: string;

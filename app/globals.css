@@ -53,18 +53,18 @@ select:disabled {
 .page-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 28px 0 48px;
+  padding: 20px 0 32px;
 }
 
 .global-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-  padding: 18px 22px;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px 18px;
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: 20px;
   background: rgba(255, 252, 246, 0.82);
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow);
@@ -81,7 +81,7 @@ select:disabled {
 
 .header-title {
   margin: 0;
-  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-size: clamp(1.15rem, 2.3vw, 1.65rem);
 }
 
 .header-nav {
@@ -99,12 +99,12 @@ select:disabled {
 }
 
 .dashboard-simple {
-  margin-top: 22px;
+  margin-top: 12px;
 }
 
 .week-panel {
-  padding: 28px;
-  border-radius: 28px;
+  padding: 18px;
+  border-radius: 22px;
   background: linear-gradient(180deg, #1f8c3f, #17853a);
   color: #fff;
   box-shadow: var(--shadow);
@@ -124,14 +124,14 @@ select:disabled {
 }
 
 .week-panel-header h2 {
-  margin: 8px 0 10px;
-  font-size: clamp(2rem, 5vw, 3rem);
+  margin: 6px 0 6px;
+  font-size: clamp(1.55rem, 3.8vw, 2.15rem);
 }
 
 .week-panel-header p {
   margin: 0;
   color: rgba(255, 255, 255, 0.8);
-  font-size: 1.2rem;
+  font-size: 0.92rem;
 }
 
 .coach-badge {
@@ -147,8 +147,8 @@ select:disabled {
 
 .progress-rail {
   width: 100%;
-  height: 14px;
-  margin-top: 22px;
+  height: 10px;
+  margin-top: 14px;
   border-radius: 999px;
   background: rgba(7, 64, 28, 0.35);
   overflow: hidden;
@@ -164,28 +164,29 @@ select:disabled {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 10px;
   color: rgba(255, 255, 255, 0.86);
   font-weight: 700;
+  font-size: 0.82rem;
 }
 
 .player-section {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .player-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
 }
 
 .practice-card {
-  padding: 18px;
+  padding: 12px;
   border: 1px solid rgba(23, 50, 77, 0.12);
-  border-radius: 24px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 30px rgba(30, 53, 78, 0.08);
+  box-shadow: 0 8px 20px rgba(30, 53, 78, 0.08);
 }
 
 .practice-card-link {
@@ -206,35 +207,36 @@ select:disabled {
 
 .practice-card-head strong {
   display: block;
-  font-size: 1.7rem;
-  line-height: 1.1;
+  font-size: 1.05rem;
+  line-height: 1.15;
 }
 
 .practice-summary {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .practice-summary span {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: #97a0b3;
-  font-size: 0.92rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
 .practice-summary strong {
   display: block;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .practice-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .practice-editor-page {
@@ -334,13 +336,14 @@ select:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 16px;
+  min-height: 36px;
+  padding: 0 12px;
   border: 1px solid rgba(23, 50, 77, 0.14);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.6);
   color: var(--ink);
   font-weight: 700;
+  font-size: 0.88rem;
 }
 
 .tab-link.is-active {
@@ -417,16 +420,25 @@ select:disabled {
 .status-strip {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
+}
+
+.dashboard-status {
+  justify-content: space-between;
+}
+
+.compact-message {
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .login-card input,
 .toolbar input,
 .toolbar select {
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid rgba(23, 50, 77, 0.16);
   border-radius: 14px;
   background: var(--field);
@@ -437,14 +449,22 @@ select:disabled {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 0 18px;
+  min-height: 40px;
+  padding: 0 14px;
   border: none;
   border-radius: 14px;
   background: var(--accent);
   color: white;
   font-weight: 700;
   cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.button-compact {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
 }
 
 .button.secondary {
@@ -472,26 +492,27 @@ select:disabled {
 
 .stack {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 180px 150px;
-  gap: 12px;
-  margin-bottom: 18px;
+  grid-template-columns: 1fr 92px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .toolbar-count {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 0 16px;
+  min-height: 40px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   font-weight: 700;
+  font-size: 0.84rem;
 }
 
 .inline-form {
@@ -817,7 +838,6 @@ select:disabled {
     display: grid;
   }
 
-  .player-grid,
   .entry-grid {
     grid-template-columns: 1fr;
   }
@@ -841,19 +861,47 @@ select:disabled {
 }
 
 @media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
   .page-shell {
     width: min(100% - 20px, 100%);
-    padding-top: 16px;
+    padding-top: 12px;
   }
 
   .hero,
   .panel-body {
-    padding: 18px;
+    padding: 16px;
   }
 
   .week-panel,
   .entry-card {
-    padding: 18px;
+    padding: 14px;
+  }
+
+  .global-header {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .header-eyebrow {
+    margin-bottom: 2px;
+    font-size: 0.72rem;
+  }
+
+  .header-title {
+    font-size: 1rem;
+  }
+
+  .header-nav {
+    gap: 6px;
+  }
+
+  .tab-link {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 0.78rem;
   }
 
   .stats {
@@ -877,15 +925,69 @@ select:disabled {
     grid-template-columns: 1fr;
   }
 
+  .player-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
   .player-row,
   .doc-row,
   .selected-player-banner,
   .section-row,
-  .practice-card-head,
   .week-panel-header,
   .week-panel-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .practice-card-head {
+    gap: 6px;
+  }
+
+  .practice-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .practice-card-head strong {
+    font-size: 0.96rem;
+  }
+
+  .practice-summary strong {
+    font-size: 0.78rem;
+  }
+
+  .week-panel-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .week-panel-footer {
+    gap: 4px;
+    font-size: 0.76rem;
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr 76px;
+    gap: 6px;
+  }
+
+  .toolbar input {
+    padding: 9px 10px;
+    border-radius: 12px;
+  }
+
+  .toolbar-count {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 0.76rem;
+  }
+
+  .dashboard-status {
+    align-items: flex-start;
+  }
+
+  .compact-message {
+    font-size: 0.74rem;
   }
 
   .master-row {

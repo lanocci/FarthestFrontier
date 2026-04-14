@@ -10,18 +10,23 @@ create table if not exists public.position_masters (
 create table if not exists public.players (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  jersey_number text,
   grade_label text not null,
-  grade_band text not null check (grade_band in ('lower', 'middle', 'upper')),
   guardian_name text not null,
   favorite_skill text,
   offense_position_id text not null references public.position_masters(id),
   defense_position_id text not null references public.position_masters(id),
+  offense_goal text,
+  offense_reflection text,
+  defense_goal text,
+  defense_reflection text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 create table if not exists public.goal_templates (
   id uuid primary key default gen_random_uuid(),
+  side text not null check (side in ('offense', 'defense')),
   title text not null,
   prompt text not null,
   emoji text not null default '🏈',
