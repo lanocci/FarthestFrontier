@@ -1,5 +1,11 @@
 create extension if not exists pgcrypto;
 
+create table if not exists public.team_members (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  role text not null check (role in ('coach', 'guardian')),
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.position_masters (
   id text primary key,
   label text not null,
@@ -49,6 +55,21 @@ create table if not exists public.goal_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.practice_entries (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid not null references public.players(id) on delete cascade,
+  practice_date date not null,
+  offense_goal text,
+  defense_goal text,
+  offense_reflection_rating smallint check (offense_reflection_rating between 1 and 5),
+  offense_reflection_comment text,
+  defense_reflection_rating smallint check (defense_reflection_rating between 1 and 5),
+  defense_reflection_comment text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (player_id, practice_date)
+);
+
 create table if not exists public.materials (
   id uuid primary key default gen_random_uuid(),
   title text not null,
@@ -71,8 +92,151 @@ end;
 $$;
 
 drop trigger if exists materials_set_updated_at on public.materials;
+drop trigger if exists practice_entries_set_updated_at on public.practice_entries;
 
 create trigger materials_set_updated_at
 before update on public.materials
 for each row
 execute function public.set_updated_at();
+
+create trigger practice_entries_set_updated_at
+before update on public.practice_entries
+for each row
+execute function public.set_updated_at();
+
+create or replace function public.current_team_role()
+returns text
+language sql
+stable
+as $$
+  select tm.role
+  from public.team_members tm
+  where tm.user_id = auth.uid()
+$$;
+
+create or replace function public.is_team_member()
+returns boolean
+language sql
+stable
+as $$
+  select public.current_team_role() in ('coach', 'guardian')
+$$;
+
+create or replace function public.is_coach()
+returns boolean
+language sql
+stable
+as $$
+  select public.current_team_role() = 'coach'
+$$;
+
+alter table public.team_members enable row level security;
+alter table public.position_masters enable row level security;
+alter table public.players enable row level security;
+alter table public.goal_templates enable row level security;
+alter table public.goal_logs enable row level security;
+alter table public.practice_entries enable row level security;
+alter table public.materials enable row level security;
+
+drop policy if exists "team_members_select_self" on public.team_members;
+create policy "team_members_select_self"
+on public.team_members
+for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "position_masters_select_team_members" on public.position_masters;
+create policy "position_masters_select_team_members"
+on public.position_masters
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "position_masters_manage_coaches" on public.position_masters;
+create policy "position_masters_manage_coaches"
+on public.position_masters
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "players_select_team_members" on public.players;
+create policy "players_select_team_members"
+on public.players
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "players_manage_coaches" on public.players;
+create policy "players_manage_coaches"
+on public.players
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "goal_templates_select_team_members" on public.goal_templates;
+create policy "goal_templates_select_team_members"
+on public.goal_templates
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "goal_templates_manage_coaches" on public.goal_templates;
+create policy "goal_templates_manage_coaches"
+on public.goal_templates
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "goal_logs_select_team_members" on public.goal_logs;
+create policy "goal_logs_select_team_members"
+on public.goal_logs
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "goal_logs_manage_coaches" on public.goal_logs;
+create policy "goal_logs_manage_coaches"
+on public.goal_logs
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "practice_entries_select_team_members" on public.practice_entries;
+create policy "practice_entries_select_team_members"
+on public.practice_entries
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "practice_entries_manage_team_members" on public.practice_entries;
+create policy "practice_entries_manage_team_members"
+on public.practice_entries
+for all
+to authenticated
+using (public.is_team_member())
+with check (public.is_team_member());
+
+drop policy if exists "materials_select_team_members" on public.materials;
+create policy "materials_select_team_members"
+on public.materials
+for select
+to authenticated
+using (
+  public.is_coach()
+  or (
+    public.is_team_member()
+    and audience in ('all', 'guardians')
+  )
+);
+
+drop policy if exists "materials_manage_coaches" on public.materials;
+create policy "materials_manage_coaches"
+on public.materials
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());

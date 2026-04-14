@@ -1,8 +1,8 @@
 "use client";
 
-import { formatDateInput } from "@/lib/date";
+import { formatDisplayDate, getDashboardPracticeDate } from "@/lib/date";
 import { Player, PositionMaster } from "@/lib/types";
-import { getPositionLabel } from "@/lib/utils";
+import { getPositionLabel, getPracticeEntry } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -15,10 +15,6 @@ type TeamDashboardProps = {
   onResetLocalMode: () => void;
 };
 
-function getWeekLabel() {
-  return `${formatDateInput().replace(/-/g, "/")}週`;
-}
-
 export function TeamDashboard({
   dataLoading,
   players,
@@ -28,6 +24,7 @@ export function TeamDashboard({
   onResetLocalMode,
 }: TeamDashboardProps) {
   const [searchText, setSearchText] = useState("");
+  const practiceDate = getDashboardPracticeDate();
 
   const filteredPlayers = useMemo(
     () =>
@@ -39,7 +36,10 @@ export function TeamDashboard({
 
   const activePlayerCount = players.filter((player) => player.active).length;
   const completedReflectionCount = players.filter(
-    (player) => player.offenseReflectionRating && player.defenseReflectionRating,
+    (player) => {
+      const entry = getPracticeEntry(player, practiceDate);
+      return entry?.offenseReflectionRating && entry?.defenseReflectionRating;
+    },
   ).length;
   const completionRatio = activePlayerCount ? Math.round((completedReflectionCount / activePlayerCount) * 100) : 0;
 
@@ -50,7 +50,7 @@ export function TeamDashboard({
           <div>
             <span className="eyebrow">フラッグフットボール</span>
             <h2>今週の練習</h2>
-            <p>{getWeekLabel()}</p>
+            <p>{formatDisplayDate(practiceDate)}週</p>
           </div>
         </div>
         <div className="progress-rail">
@@ -85,7 +85,7 @@ export function TeamDashboard({
 
         <div className="player-grid">
           {filteredPlayers.map((player) => (
-            <article className={`practice-card ${player.offenseGoal || player.defenseGoal ? "has-goal" : "is-missing-goal"}`} key={player.id}>
+            <article className={`practice-card ${(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "has-goal" : "is-missing-goal"}`} key={player.id}>
               <div className="practice-card-link">
                 <div className="practice-card-head">
                   <div>
@@ -100,28 +100,28 @@ export function TeamDashboard({
                 </div>
 
                 <div className="chip-row compact-chip-row">
-                  <span className={`chip ${player.offenseGoal || player.defenseGoal ? "ok" : "warn"}`}>
-                    {player.offenseGoal || player.defenseGoal ? "目標設定済み" : "目標未設定"}
+                  <span className={`chip ${(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "ok" : "warn"}`}>
+                    {(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "目標設定済み" : "目標未設定"}
                   </span>
                 </div>
 
                 <div className="practice-summary">
                   <div>
                     <span>OF目標</span>
-                    <strong>{player.offenseGoal ?? "未入力"}</strong>
+                    <strong>{getPracticeEntry(player, practiceDate)?.offenseGoal ?? "未入力"}</strong>
                   </div>
                   <div>
                     <span>DF目標</span>
-                    <strong>{player.defenseGoal ?? "未入力"}</strong>
+                    <strong>{getPracticeEntry(player, practiceDate)?.defenseGoal ?? "未入力"}</strong>
                   </div>
                 </div>
 
                 <div className="practice-actions">
-                  <Link className="button secondary button-compact" href={`/players/${player.id}/goals`}>
+                  <Link className="button secondary button-compact" href={`/players/${player.id}/goals?date=${practiceDate}`}>
                     目標
                   </Link>
-                  {player.offenseGoal || player.defenseGoal ? (
-                    <Link className="button button-compact" href={`/players/${player.id}/reflections`}>
+                  {getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal ? (
+                    <Link className="button button-compact" href={`/players/${player.id}/reflections?date=${practiceDate}`}>
                       振り返り
                     </Link>
                   ) : (

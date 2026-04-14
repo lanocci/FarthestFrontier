@@ -10,7 +10,7 @@ import { PlayerPracticeEditor } from "@/components/player-practice-editor";
 import { SettingsRoom } from "@/components/settings-room";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
-import { fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
+import { fetchCurrentTeamRole, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
 import {
   clearStorage,
   loadGoalLogs,
@@ -25,20 +25,23 @@ import {
   savePositionMasters,
 } from "@/lib/storage";
 import { getSupabaseClient } from "@/lib/supabase";
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, Player, PositionMaster, TeamRole } from "@/lib/types";
+import { filterMaterialsForRole } from "@/lib/utils";
 
 type AppShellProps = {
   view?: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
   playerId?: string;
+  practiceDate?: string;
 };
 
-export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
+export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShellProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [goalLogs, setGoalLogs] = useState<GoalLog[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([]);
   const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
   const [session, setSession] = useState<Session | null>(null);
+  const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [teamMessage, setTeamMessage] = useState<string | null>(null);
@@ -112,6 +115,7 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
 
   useEffect(() => {
     if (!supabase || !session) {
+      setTeamRole(null);
       setTeamMessage(
         authEnabled
           ? "ログインするとSupabaseのチームデータを読み込みます。"
@@ -127,15 +131,17 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
       setDataLoading(true);
 
       try {
+        const role = await fetchCurrentTeamRole(client);
         const snapshot = await fetchTeamSnapshot(client);
 
         if (!mounted) {
           return;
         }
 
+        setTeamRole(role);
         setPlayers(snapshot.players);
         setGoalLogs(snapshot.goalLogs);
-        setMaterials(snapshot.materials);
+        setMaterials(filterMaterialsForRole(snapshot.materials, role));
         setGoalTemplates(
           snapshot.goalTemplates.length ? snapshot.goalTemplates : getFallbackTeamSnapshot().goalTemplates,
         );
@@ -177,7 +183,8 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
     setTeamMessage("ローカル体験モードを初期データに戻しました。");
   }
 
-  const canManageTeam = !authEnabled || Boolean(session);
+  const canManageAdmin = !authEnabled || teamRole === "coach";
+  const canEditPractice = !authEnabled || Boolean(session);
 
   return (
     <main className="page-shell">
@@ -185,7 +192,7 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
 
       {view === "players" ? (
         <TeamAdmin
-          canManageTeam={canManageTeam}
+          canManageTeam={canManageAdmin}
           dataLoading={dataLoading}
           players={players}
           positionMasters={positionMasters}
@@ -200,7 +207,7 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
         />
       ) : view === "masters" ? (
         <MastersAdmin
-          canManageTeam={canManageTeam}
+          canManageTeam={canManageAdmin}
           dataLoading={dataLoading}
           goalTemplates={goalTemplates}
           players={players}
@@ -223,7 +230,7 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
         />
       ) : view === "materials-manage" ? (
         <MaterialsRoom
-          canManageTeam={canManageTeam}
+          canManageTeam={canManageAdmin}
           dataLoading={dataLoading}
           materials={materials}
           setMaterials={setMaterials}
@@ -236,11 +243,12 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
           onResetLocalMode={resetLocalMode}
         />
       ) : view === "settings" ? (
-        <SettingsRoom teamMessage={teamMessage} />
+        <SettingsRoom canManageAdmin={canManageAdmin} teamMessage={teamMessage} />
       ) : view === "player-goal" ? (
         <PlayerPracticeEditor
           mode="goal"
-          canManageTeam={canManageTeam}
+          initialPracticeDate={practiceDate}
+          canManageTeam={canEditPractice}
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
           positionMasters={positionMasters}
@@ -255,7 +263,8 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
       ) : view === "player-reflection" ? (
         <PlayerPracticeEditor
           mode="reflection"
-          canManageTeam={canManageTeam}
+          initialPracticeDate={practiceDate}
+          canManageTeam={canEditPractice}
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
           positionMasters={positionMasters}

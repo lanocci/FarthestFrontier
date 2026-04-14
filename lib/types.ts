@@ -1,4 +1,5 @@
 export type Role = "coach" | "guardian";
+export type TeamRole = Role;
 export type MaterialType = "slide" | "sheet" | "doc";
 export type MaterialAudience = "all" | "guardians" | "coaches";
 export type PositionSide = "offense" | "defense";
@@ -8,6 +9,16 @@ export type PositionMaster = {
   id: string;
   label: string;
   side: PositionSide;
+};
+
+export type PlayerPracticeEntry = {
+  practiceDate: string;
+  offenseGoal?: string;
+  defenseGoal?: string;
+  offenseReflectionRating?: ReflectionRating;
+  offenseReflectionComment?: string;
+  defenseReflectionRating?: ReflectionRating;
+  defenseReflectionComment?: string;
 };
 
 export type Player = {
@@ -20,6 +31,7 @@ export type Player = {
   favoriteSkill: string;
   offensePositionId: string;
   defensePositionId: string;
+  practiceEntries: PlayerPracticeEntry[];
   offenseGoal?: string;
   defenseGoal?: string;
   offenseReflectionRating?: ReflectionRating;

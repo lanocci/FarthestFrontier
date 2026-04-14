@@ -6,7 +6,8 @@ import {
   players as mockPlayers,
   positionMasters as mockPositionMasters,
 } from "@/lib/mock-data";
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
+import { getDashboardPracticeDate } from "@/lib/date";
+import { GoalLog, GoalTemplate, Material, Player, PlayerPracticeEntry, PositionMaster, TeamRole } from "@/lib/types";
 
 type PlayerRow = {
   id: string;
@@ -35,6 +36,17 @@ type GoalTemplateRow = {
   color: GoalTemplate["color"];
   template_text: string;
   input_placeholder: string | null;
+};
+
+type PracticeEntryRow = {
+  player_id: string;
+  practice_date: string;
+  offense_goal: string | null;
+  defense_goal: string | null;
+  offense_reflection_rating: 1 | 2 | 3 | 4 | 5 | null;
+  offense_reflection_comment: string | null;
+  defense_reflection_rating: 1 | 2 | 3 | 4 | 5 | null;
+  defense_reflection_comment: string | null;
 };
 
 type GoalLogRow = {
@@ -71,6 +83,10 @@ export type TeamSnapshot = {
   positionMasters: PositionMaster[];
 };
 
+type TeamMemberRow = {
+  role: TeamRole;
+};
+
 function toPlayer(row: PlayerRow): Player {
   return {
     id: row.id,
@@ -81,6 +97,7 @@ function toPlayer(row: PlayerRow): Player {
     favoriteSkill: row.favorite_skill ?? "これから見つける",
     offensePositionId: row.offense_position_id,
     defensePositionId: row.defense_position_id,
+    practiceEntries: [],
     offenseGoal: row.offense_goal ?? undefined,
     defenseGoal: row.defense_goal ?? undefined,
     offenseReflectionRating: row.offense_reflection_rating ?? undefined,
@@ -101,6 +118,18 @@ function toGoalTemplate(row: GoalTemplateRow): GoalTemplate {
     color: row.color,
     templateText: row.template_text,
     inputPlaceholder: row.input_placeholder ?? undefined,
+  };
+}
+
+function toPracticeEntry(row: PracticeEntryRow): PlayerPracticeEntry {
+  return {
+    practiceDate: row.practice_date,
+    offenseGoal: row.offense_goal ?? undefined,
+    defenseGoal: row.defense_goal ?? undefined,
+    offenseReflectionRating: row.offense_reflection_rating ?? undefined,
+    offenseReflectionComment: row.offense_reflection_comment ?? undefined,
+    defenseReflectionRating: row.defense_reflection_rating ?? undefined,
+    defenseReflectionComment: row.defense_reflection_comment ?? undefined,
   };
 }
 
@@ -143,6 +172,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     { data: logRows, error: logError },
     { data: materialRows, error: materialError },
     { data: positionRows, error: positionError },
+    { data: practiceRows, error: practiceError },
   ] = await Promise.all([
     supabase
       .from("players")
@@ -163,24 +193,89 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
       .select("id, title, description, material_type, audience, google_url, updated_at")
       .order("updated_at", { ascending: false }),
     supabase.from("position_masters").select("id, label, side").order("label", { ascending: true }),
+    supabase
+      .from("practice_entries")
+      .select("player_id, practice_date, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment")
+      .order("practice_date", { ascending: false }),
   ]);
 
   const firstError =
-    playerError ?? templateError ?? logError ?? materialError ?? positionError;
+    playerError ?? templateError ?? logError ?? materialError ?? positionError ?? practiceError;
 
   if (firstError) {
     throw new Error(firstError.message);
   }
 
   const goalEntries = (logRows ?? []).map(toGoalLog);
+  const practiceEntriesByPlayer = new Map<string, PlayerPracticeEntry[]>();
+
+  for (const row of practiceRows ?? []) {
+    const current = practiceEntriesByPlayer.get(row.player_id) ?? [];
+    current.push(toPracticeEntry(row));
+    practiceEntriesByPlayer.set(row.player_id, current);
+  }
 
   return {
-    players: (playerRows ?? []).map((row) => toPlayer(row)),
+    players: (playerRows ?? []).map((row) => {
+      const practiceEntries = practiceEntriesByPlayer.get(row.id) ?? [];
+      const fallbackEntry =
+        !practiceEntries.length &&
+        (row.offense_goal ||
+          row.defense_goal ||
+          row.offense_reflection_rating ||
+          row.offense_reflection_comment ||
+          row.defense_reflection_rating ||
+          row.defense_reflection_comment)
+          ? [
+              {
+                practiceDate: getDashboardPracticeDate(),
+                offenseGoal: row.offense_goal ?? undefined,
+                defenseGoal: row.defense_goal ?? undefined,
+                offenseReflectionRating: row.offense_reflection_rating ?? undefined,
+                offenseReflectionComment: row.offense_reflection_comment ?? undefined,
+                defenseReflectionRating: row.defense_reflection_rating ?? undefined,
+                defenseReflectionComment: row.defense_reflection_comment ?? undefined,
+              },
+            ]
+          : [];
+
+      return {
+        ...toPlayer(row),
+        practiceEntries: practiceEntries.length ? practiceEntries : fallbackEntry,
+      };
+    }),
     goalTemplates: (templateRows ?? []).map(toGoalTemplate),
     goalLogs: goalEntries,
     materials: (materialRows ?? []).map(toMaterial),
     positionMasters: (positionRows ?? []).map(toPositionMaster),
   };
+}
+
+export async function fetchCurrentTeamRole(supabase: SupabaseClient): Promise<TeamRole | null> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    throw new Error(authError.message);
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("user_id", user.id)
+    .single<TeamMemberRow>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.role ?? null;
 }
 
 export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player, "id">): Promise<Player> {
@@ -212,6 +307,27 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
   }
 
   return toPlayer(data);
+}
+
+export async function upsertPracticeEntry(
+  supabase: SupabaseClient,
+  playerId: string,
+  entry: PlayerPracticeEntry,
+): Promise<void> {
+  const { error } = await supabase.from("practice_entries").upsert({
+    player_id: playerId,
+    practice_date: entry.practiceDate,
+    offense_goal: entry.offenseGoal ?? null,
+    defense_goal: entry.defenseGoal ?? null,
+    offense_reflection_rating: entry.offenseReflectionRating ?? null,
+    offense_reflection_comment: entry.offenseReflectionComment ?? null,
+    defense_reflection_rating: entry.defenseReflectionRating ?? null,
+    defense_reflection_comment: entry.defenseReflectionComment ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function updatePlayer(supabase: SupabaseClient, player: Player): Promise<void> {

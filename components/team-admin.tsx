@@ -134,6 +134,7 @@ export function TeamAdmin({
       gradeLabel: createForm.gradeLabel.trim(),
       guardianName: createForm.guardianName.trim(),
       favoriteSkill: createForm.favoriteSkill.trim() || "これから見つける",
+      practiceEntries: [],
     };
 
     try {

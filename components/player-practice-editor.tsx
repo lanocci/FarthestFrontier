@@ -5,14 +5,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { Section } from "@/components/section";
-import { updatePlayer } from "@/lib/data-store";
-import { GoalTemplate, Player, PositionMaster, PositionSide, ReflectionRating } from "@/lib/types";
-import { buildGoalText, getPositionLabel } from "@/lib/utils";
+import { upsertPracticeEntry } from "@/lib/data-store";
+import { formatDisplayDate, getDashboardPracticeDate, getRecentPracticeDates } from "@/lib/date";
+import { GoalTemplate, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating } from "@/lib/types";
+import { buildGoalText, getPositionLabel, getPracticeEntry, upsertPracticeEntryForPlayer } from "@/lib/utils";
 
 type EditorMode = "goal" | "reflection";
 
 type PlayerPracticeEditorProps = {
   mode: EditorMode;
+  initialPracticeDate?: string;
   canManageTeam: boolean;
   goalTemplates: GoalTemplate[];
   player: Player | null;
@@ -176,6 +178,7 @@ function ReflectionField({
 
 export function PlayerPracticeEditor({
   mode,
+  initialPracticeDate,
   canManageTeam,
   goalTemplates,
   player,
@@ -188,12 +191,15 @@ export function PlayerPracticeEditor({
   teamMessage,
   usingRemoteData,
 }: PlayerPracticeEditorProps) {
-  async function persist(nextPlayer: Player, message: string) {
+  const defaultPracticeDate = initialPracticeDate ?? getDashboardPracticeDate();
+  const [selectedPracticeDate, setSelectedPracticeDate] = useState(defaultPracticeDate);
+
+  async function persist(nextPlayer: Player, nextEntry: PlayerPracticeEntry, message: string) {
     try {
       setSyncing(true);
 
       if (usingRemoteData && supabase) {
-        await updatePlayer(supabase, nextPlayer);
+        await upsertPracticeEntry(supabase, nextPlayer.id, nextEntry);
       }
 
       setPlayers((current) => current.map((currentPlayer) => (currentPlayer.id === nextPlayer.id ? nextPlayer : currentPlayer)));
@@ -217,7 +223,11 @@ export function PlayerPracticeEditor({
 
   const pageTitle = mode === "goal" ? "目標入力" : "振り返り入力";
   const pageCopy = `${player.jerseyNumber ? `#${player.jerseyNumber} / ` : ""}${player.gradeLabel} / OF: ${getPositionLabel(player.offensePositionId, positionMasters)} / DF: ${getPositionLabel(player.defensePositionId, positionMasters)}`;
-  const canOpenReflection = Boolean(player.offenseGoal || player.defenseGoal);
+  const selectedEntry = getPracticeEntry(player, selectedPracticeDate);
+  const canOpenReflection = Boolean(selectedEntry?.offenseGoal || selectedEntry?.defenseGoal);
+  const practiceDateOptions = Array.from(
+    new Set([...getRecentPracticeDates(6, defaultPracticeDate), ...player.practiceEntries.map((entry) => entry.practiceDate)]),
+  ).sort((left, right) => right.localeCompare(left));
 
   if (mode === "reflection" && !canOpenReflection) {
     return (
@@ -225,7 +235,7 @@ export function PlayerPracticeEditor({
         <Section title={`${player.name}の振り返り入力`} copy={pageCopy}>
           <div className="status-strip">
             <span className="subtle">先に目標を入れると振り返りが使えます。</span>
-            <Link className="button secondary is-current" href={`/players/${player.id}/goals`}>
+            <Link className="button secondary is-current" href={`/players/${player.id}/goals?date=${selectedPracticeDate}`}>
               目標を入れる
             </Link>
             <Link className="button secondary" href="/">
@@ -242,11 +252,21 @@ export function PlayerPracticeEditor({
       <Section title={`${player.name}の${pageTitle}`} copy={pageCopy}>
         <div className="status-strip">
           {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
-          <Link className={`button secondary ${mode === "goal" ? "is-current" : ""}`} href={`/players/${player.id}/goals`}>
+          <label className="field-stack week-select">
+            <span className="field-label">練習日</span>
+            <select value={selectedPracticeDate} onChange={(event) => setSelectedPracticeDate(event.target.value)}>
+              {practiceDateOptions.map((practiceDate) => (
+                <option key={practiceDate} value={practiceDate}>
+                  {formatDisplayDate(practiceDate)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Link className={`button secondary ${mode === "goal" ? "is-current" : ""}`} href={`/players/${player.id}/goals?date=${selectedPracticeDate}`}>
             目標
           </Link>
           {canOpenReflection ? (
-            <Link className={`button secondary ${mode === "reflection" ? "is-current" : ""}`} href={`/players/${player.id}/reflections`}>
+            <Link className={`button secondary ${mode === "reflection" ? "is-current" : ""}`} href={`/players/${player.id}/reflections?date=${selectedPracticeDate}`}>
               振り返り
             </Link>
           ) : (
@@ -263,47 +283,71 @@ export function PlayerPracticeEditor({
           <GoalField
             label="オフェンス目標"
             side="offense"
-            currentValue={player.offenseGoal}
+            currentValue={selectedEntry?.offenseGoal}
             templates={goalTemplates}
             disabled={!canManageTeam || syncing}
-            onSave={(value) => persist({ ...player, offenseGoal: value }, `${player.name}のオフェンス目標を保存しました。`)}
+            onSave={(value) => {
+              const nextEntry = {
+                practiceDate: selectedPracticeDate,
+                ...selectedEntry,
+                offenseGoal: value,
+              };
+              const nextPlayer = upsertPracticeEntryForPlayer(player, nextEntry);
+              return persist(nextPlayer, nextEntry, `${player.name}のオフェンス目標を保存しました。`);
+            }}
           />
           <GoalField
             label="ディフェンス目標"
             side="defense"
-            currentValue={player.defenseGoal}
+            currentValue={selectedEntry?.defenseGoal}
             templates={goalTemplates}
             disabled={!canManageTeam || syncing}
-            onSave={(value) => persist({ ...player, defenseGoal: value }, `${player.name}のディフェンス目標を保存しました。`)}
+            onSave={(value) => {
+              const nextEntry = {
+                practiceDate: selectedPracticeDate,
+                ...selectedEntry,
+                defenseGoal: value,
+              };
+              const nextPlayer = upsertPracticeEntryForPlayer(player, nextEntry);
+              return persist(nextPlayer, nextEntry, `${player.name}のディフェンス目標を保存しました。`);
+            }}
           />
         </div>
       ) : (
         <div className="entry-grid">
           <ReflectionField
             label="オフェンス振り返り"
-            goal={player.offenseGoal}
-            rating={player.offenseReflectionRating}
-            comment={player.offenseReflectionComment}
+            goal={selectedEntry?.offenseGoal}
+            rating={selectedEntry?.offenseReflectionRating}
+            comment={selectedEntry?.offenseReflectionComment}
             disabled={!canManageTeam || syncing}
-            onSave={({ rating, comment }) =>
-              persist(
-                { ...player, offenseReflectionRating: rating, offenseReflectionComment: comment || undefined },
-                `${player.name}のオフェンス振り返りを保存しました。`,
-              )
-            }
+            onSave={({ rating, comment }) => {
+              const nextEntry = {
+                practiceDate: selectedPracticeDate,
+                ...selectedEntry,
+                offenseReflectionRating: rating,
+                offenseReflectionComment: comment || undefined,
+              };
+              const nextPlayer = upsertPracticeEntryForPlayer(player, nextEntry);
+              return persist(nextPlayer, nextEntry, `${player.name}のオフェンス振り返りを保存しました。`);
+            }}
           />
           <ReflectionField
             label="ディフェンス振り返り"
-            goal={player.defenseGoal}
-            rating={player.defenseReflectionRating}
-            comment={player.defenseReflectionComment}
+            goal={selectedEntry?.defenseGoal}
+            rating={selectedEntry?.defenseReflectionRating}
+            comment={selectedEntry?.defenseReflectionComment}
             disabled={!canManageTeam || syncing}
-            onSave={({ rating, comment }) =>
-              persist(
-                { ...player, defenseReflectionRating: rating, defenseReflectionComment: comment || undefined },
-                `${player.name}のディフェンス振り返りを保存しました。`,
-              )
-            }
+            onSave={({ rating, comment }) => {
+              const nextEntry = {
+                practiceDate: selectedPracticeDate,
+                ...selectedEntry,
+                defenseReflectionRating: rating,
+                defenseReflectionComment: comment || undefined,
+              };
+              const nextPlayer = upsertPracticeEntryForPlayer(player, nextEntry);
+              return persist(nextPlayer, nextEntry, `${player.name}のディフェンス振り返りを保存しました。`);
+            }}
           />
         </div>
       )}

@@ -24,8 +24,13 @@ export const players: Player[] = [
     favoriteSkill: "はしる",
     offensePositionId: "op-runner",
     defensePositionId: "dp-cornerback",
-    offenseGoal: "ボールを最後まで見る",
-    defenseGoal: "フラッグを1回ねらう",
+    practiceEntries: [
+      {
+        practiceDate: "2026-04-18",
+        offenseGoal: "ボールを最後まで見る",
+        defenseGoal: "フラッグを1回ねらう",
+      },
+    ],
   },
   {
     id: "p2",
@@ -37,7 +42,12 @@ export const players: Player[] = [
     favoriteSkill: "キャッチ",
     offensePositionId: "op-receiver",
     defensePositionId: "dp-safety",
-    offenseGoal: "スタートで1歩目を早く出す",
+    practiceEntries: [
+      {
+        practiceDate: "2026-04-18",
+        offenseGoal: "スタートで1歩目を早く出す",
+      },
+    ],
   },
   {
     id: "p3",
@@ -49,7 +59,12 @@ export const players: Player[] = [
     favoriteSkill: "よける",
     offensePositionId: "op-flex",
     defensePositionId: "dp-linebacker",
-    defenseGoal: "中のコースを守る",
+    practiceEntries: [
+      {
+        practiceDate: "2026-04-18",
+        defenseGoal: "中のコースを守る",
+      },
+    ],
   },
   {
     id: "p4",
@@ -61,8 +76,14 @@ export const players: Player[] = [
     favoriteSkill: "まもる",
     offensePositionId: "op-center",
     defensePositionId: "dp-rusher",
-    offenseReflectionRating: 4,
-    offenseReflectionComment: "声をかけながらスタートできた",
+    practiceEntries: [
+      {
+        practiceDate: "2026-04-12",
+        offenseGoal: "スナップ前に声を出す",
+        offenseReflectionRating: 4,
+        offenseReflectionComment: "声をかけながらスタートできた",
+      },
+    ],
   },
   {
     id: "p5",
@@ -74,6 +95,7 @@ export const players: Player[] = [
     favoriteSkill: "こえだし",
     offensePositionId: "op-quarterback",
     defensePositionId: "dp-flag-keeper",
+    practiceEntries: [],
   },
 ];
 

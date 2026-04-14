@@ -1,4 +1,5 @@
 import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/lib/mock-data";
+import { getDashboardPracticeDate } from "@/lib/date";
 import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
 import { findGoalTemplate } from "@/lib/utils";
 
@@ -51,6 +52,30 @@ function normalizePlayer(player: Player): Player {
   const legacyJerseyNumber = (player as Player & { number?: string | number }).number;
   const legacyOffenseReflection = (player as Player & { offenseReflection?: string }).offenseReflection;
   const legacyDefenseReflection = (player as Player & { defenseReflection?: string }).defenseReflection;
+  const legacyPracticeDate = getDashboardPracticeDate();
+  const normalizedEntries =
+    player.practiceEntries?.length
+      ? player.practiceEntries
+      : player.offenseGoal ||
+          player.defenseGoal ||
+          player.offenseReflectionRating ||
+          player.offenseReflectionComment ||
+          player.defenseReflectionRating ||
+          player.defenseReflectionComment ||
+          legacyOffenseReflection ||
+          legacyDefenseReflection
+        ? [
+            {
+              practiceDate: legacyPracticeDate,
+              offenseGoal: player.offenseGoal ?? legacyRecentGoal,
+              defenseGoal: player.defenseGoal,
+              offenseReflectionRating: player.offenseReflectionRating,
+              offenseReflectionComment: player.offenseReflectionComment ?? legacyOffenseReflection,
+              defenseReflectionRating: player.defenseReflectionRating,
+              defenseReflectionComment: player.defenseReflectionComment ?? legacyDefenseReflection,
+            },
+          ]
+        : [];
   const offenseMap: Record<string, string> = {
     center: "op-center",
     quarterback: "op-quarterback",
@@ -72,6 +97,7 @@ function normalizePlayer(player: Player): Player {
     offensePositionId: player.offensePositionId ?? offenseMap[legacyOffense ?? ""] ?? "op-flex",
     defensePositionId: player.defensePositionId ?? defenseMap[legacyDefense ?? ""] ?? "dp-linebacker",
     gradeLabel: player.gradeLabel ?? "未設定",
+    practiceEntries: normalizedEntries,
     offenseGoal: player.offenseGoal ?? legacyRecentGoal,
     defenseGoal: player.defenseGoal,
     offenseReflectionComment: player.offenseReflectionComment ?? legacyOffenseReflection,

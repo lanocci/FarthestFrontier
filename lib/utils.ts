@@ -1,8 +1,31 @@
 import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/lib/mock-data";
-import { GoalTemplate, Material, Player, PositionMaster, PositionSide } from "@/lib/types";
+import { GoalTemplate, Material, Player, PlayerPracticeEntry, PositionMaster, PositionSide, TeamRole } from "@/lib/types";
 
 export function getRecentGoalForPlayer(player: Player): string | undefined {
   return player.offenseGoal ?? player.defenseGoal;
+}
+
+export function getPracticeEntry(player: Player, practiceDate: string): PlayerPracticeEntry | undefined {
+  return player.practiceEntries.find((entry) => entry.practiceDate === practiceDate);
+}
+
+export function upsertPracticeEntryForPlayer(player: Player, nextEntry: PlayerPracticeEntry): Player {
+  const currentEntries = player.practiceEntries ?? [];
+  const hasEntry = currentEntries.some((entry) => entry.practiceDate === nextEntry.practiceDate);
+  const practiceEntries = hasEntry
+    ? currentEntries.map((entry) => (entry.practiceDate === nextEntry.practiceDate ? nextEntry : entry))
+    : [nextEntry, ...currentEntries].sort((left, right) => right.practiceDate.localeCompare(left.practiceDate));
+
+  return {
+    ...player,
+    practiceEntries,
+    offenseGoal: nextEntry.offenseGoal,
+    defenseGoal: nextEntry.defenseGoal,
+    offenseReflectionRating: nextEntry.offenseReflectionRating,
+    offenseReflectionComment: nextEntry.offenseReflectionComment,
+    defenseReflectionRating: nextEntry.defenseReflectionRating,
+    defenseReflectionComment: nextEntry.defenseReflectionComment,
+  };
 }
 
 export function countActivePlayers(): number {
@@ -41,6 +64,14 @@ export function formatAudience(material: Material): string {
     default:
       return material.audience;
   }
+}
+
+export function filterMaterialsForRole(materialsList: Material[], role: TeamRole | null): Material[] {
+  if (role === "coach" || role === null) {
+    return materialsList;
+  }
+
+  return materialsList.filter((material) => material.audience !== "coaches");
 }
 
 export function isValidUrl(value: string): boolean {
