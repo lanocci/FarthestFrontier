@@ -189,6 +189,14 @@ select:disabled {
   box-shadow: 0 8px 20px rgba(30, 53, 78, 0.08);
 }
 
+.practice-card.has-goal {
+  border-color: rgba(47, 143, 91, 0.2);
+}
+
+.practice-card.is-missing-goal {
+  border-color: rgba(202, 150, 50, 0.2);
+}
+
 .practice-card-link {
   display: block;
 }
@@ -234,9 +242,13 @@ select:disabled {
 
 .practice-actions {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
+}
+
+.compact-chip-row {
+  margin-top: 8px;
 }
 
 .practice-editor-page {
@@ -265,6 +277,60 @@ select:disabled {
   border: 1px solid rgba(23, 50, 77, 0.16);
   border-radius: 14px;
   background: var(--field);
+}
+
+.goal-preview-block {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.goal-preview-block span {
+  color: #97a0b3;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.goal-preview-block strong {
+  line-height: 1.5;
+}
+
+.rating-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rating-button {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 8px 6px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+}
+
+.rating-button span {
+  font-size: 1rem;
+}
+
+.rating-button strong {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.rating-button.is-active {
+  border-color: rgba(232, 96, 45, 0.34);
+  background: rgba(232, 96, 45, 0.12);
+  color: var(--accent-strong);
 }
 
 .entry-label {
@@ -473,6 +539,20 @@ select:disabled {
   border: 1px solid var(--line);
 }
 
+.button.secondary.is-current {
+  border-color: rgba(232, 96, 45, 0.28);
+  background: rgba(232, 96, 45, 0.1);
+  color: var(--accent-strong);
+}
+
+.button.is-disabled,
+.button.secondary.is-disabled {
+  pointer-events: none;
+  background: rgba(23, 50, 77, 0.08);
+  border: 1px solid rgba(23, 50, 77, 0.08);
+  color: var(--muted);
+}
+
 .button.ghost {
   background: rgba(255, 255, 255, 0.6);
   color: var(--accent-strong);
@@ -552,6 +632,21 @@ select:disabled {
   gap: 12px;
 }
 
+.admin-form-full {
+  grid-column: 1 / -1;
+}
+
+.field-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .admin-form input,
 .admin-form select {
   width: 100%;
@@ -597,6 +692,41 @@ select:disabled {
   display: grid;
   grid-template-columns: 0.9fr 1.1fr;
   gap: 16px;
+}
+
+.materials-grid {
+  grid-template-columns: 0.95fr 1.05fr;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.settings-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(30, 53, 78, 0.1);
+}
+
+.settings-card strong {
+  font-size: 1rem;
+}
+
+.settings-card span {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.88rem;
 }
 
 .section-row {
@@ -830,6 +960,7 @@ select:disabled {
   .dashboard,
   .admin-grid,
   .masters-grid,
+  .settings-grid,
   .global-header {
     grid-template-columns: 1fr;
   }
@@ -930,6 +1061,11 @@ select:disabled {
     gap: 8px;
   }
 
+  .rating-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
   .player-row,
   .doc-row,
   .selected-player-banner,
@@ -955,6 +1091,25 @@ select:disabled {
 
   .practice-summary strong {
     font-size: 0.78rem;
+  }
+
+  .practice-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .rating-button {
+    min-height: 60px;
+    padding: 6px 4px;
+    border-radius: 12px;
+  }
+
+  .rating-button span {
+    font-size: 0.92rem;
+  }
+
+  .rating-button strong {
+    font-size: 0.64rem;
+    letter-spacing: -0.01em;
   }
 
   .week-panel-header h2 {

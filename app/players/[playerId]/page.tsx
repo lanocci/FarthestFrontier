@@ -1,4 +1,4 @@
-import { AppShell } from "@/components/app-shell";
+import { redirect } from "next/navigation";
 
 export default async function PlayerPage({
   params,
@@ -7,5 +7,5 @@ export default async function PlayerPage({
 }) {
   const { playerId } = await params;
 
-  return <AppShell view="player" playerId={playerId} />;
+  redirect(`/players/${playerId}/goals`);
 }

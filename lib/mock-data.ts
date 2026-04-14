@@ -61,7 +61,8 @@ export const players: Player[] = [
     favoriteSkill: "まもる",
     offensePositionId: "op-center",
     defensePositionId: "dp-rusher",
-    offenseReflection: "声をかけながらスタートできた",
+    offenseReflectionRating: 4,
+    offenseReflectionComment: "声をかけながらスタートできた",
   },
   {
     id: "p5",

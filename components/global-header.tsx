@@ -3,13 +3,13 @@
 import Link from "next/link";
 
 type GlobalHeaderProps = {
-  view: "dashboard" | "players" | "masters" | "player";
+  view: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
 };
 
 const navItems = [
   { href: "/", label: "ダッシュボード", view: "dashboard" },
-  { href: "/players", label: "選手管理", view: "players" },
-  { href: "/masters", label: "マスター管理", view: "masters" },
+  { href: "/materials", label: "資料室", view: "materials" },
+  { href: "/settings", label: "設定", view: "settings" },
 ] as const;
 
 export function GlobalHeader({ view }: GlobalHeaderProps) {
@@ -24,7 +24,7 @@ export function GlobalHeader({ view }: GlobalHeaderProps) {
         {navItems.map((item) => (
           <Link
             key={item.href}
-            className={`tab-link ${view === item.view || (view === "player" && item.view === "dashboard") ? "is-active" : ""}`}
+            className={`tab-link ${view === item.view || ((view === "player-goal" || view === "player-reflection") && item.view === "dashboard") || ((view === "players" || view === "masters" || view === "materials-manage") && item.view === "settings") ? "is-active" : ""}`}
             href={item.href}
           >
             {item.label}

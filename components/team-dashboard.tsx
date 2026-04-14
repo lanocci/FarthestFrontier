@@ -39,7 +39,7 @@ export function TeamDashboard({
 
   const activePlayerCount = players.filter((player) => player.active).length;
   const completedReflectionCount = players.filter(
-    (player) => player.offenseReflection?.trim() && player.defenseReflection?.trim(),
+    (player) => player.offenseReflectionRating && player.defenseReflectionRating,
   ).length;
   const completionRatio = activePlayerCount ? Math.round((completedReflectionCount / activePlayerCount) * 100) : 0;
 
@@ -85,8 +85,8 @@ export function TeamDashboard({
 
         <div className="player-grid">
           {filteredPlayers.map((player) => (
-            <Link className="practice-card-link" href={`/players/${player.id}`} key={player.id}>
-              <article className="practice-card">
+            <article className={`practice-card ${player.offenseGoal || player.defenseGoal ? "has-goal" : "is-missing-goal"}`} key={player.id}>
+              <div className="practice-card-link">
                 <div className="practice-card-head">
                   <div>
                     <strong>{player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}</strong>
@@ -96,6 +96,12 @@ export function TeamDashboard({
                   </div>
                   <span className={`chip ${player.active ? "ok" : "warn"}`}>
                     {player.active ? "在籍中" : "休会"}
+                  </span>
+                </div>
+
+                <div className="chip-row compact-chip-row">
+                  <span className={`chip ${player.offenseGoal || player.defenseGoal ? "ok" : "warn"}`}>
+                    {player.offenseGoal || player.defenseGoal ? "目標設定済み" : "目標未設定"}
                   </span>
                 </div>
 
@@ -111,10 +117,19 @@ export function TeamDashboard({
                 </div>
 
                 <div className="practice-actions">
-                  <span className="button button-compact">入力する</span>
+                  <Link className="button secondary button-compact" href={`/players/${player.id}/goals`}>
+                    目標
+                  </Link>
+                  {player.offenseGoal || player.defenseGoal ? (
+                    <Link className="button button-compact" href={`/players/${player.id}/reflections`}>
+                      振り返り
+                    </Link>
+                  ) : (
+                    <span className="button button-compact is-disabled">振り返り</span>
+                  )}
                 </div>
-              </article>
-            </Link>
+              </div>
+            </article>
           ))}
         </div>
       </section>

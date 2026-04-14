@@ -17,9 +17,11 @@ create table if not exists public.players (
   offense_position_id text not null references public.position_masters(id),
   defense_position_id text not null references public.position_masters(id),
   offense_goal text,
-  offense_reflection text,
   defense_goal text,
-  defense_reflection text,
+  offense_reflection_rating smallint check (offense_reflection_rating between 1 and 5),
+  offense_reflection_comment text,
+  defense_reflection_rating smallint check (defense_reflection_rating between 1 and 5),
+  defense_reflection_comment text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );

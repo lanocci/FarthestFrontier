@@ -3,8 +3,11 @@
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 import { GlobalHeader } from "@/components/global-header";
+import { MaterialsLibrary } from "@/components/materials-library";
 import { MastersAdmin } from "@/components/masters-admin";
+import { MaterialsRoom } from "@/components/materials-room";
 import { PlayerPracticeEditor } from "@/components/player-practice-editor";
+import { SettingsRoom } from "@/components/settings-room";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
 import { fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
@@ -25,7 +28,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
 
 type AppShellProps = {
-  view?: "dashboard" | "players" | "masters" | "player";
+  view?: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
   playerId?: string;
 };
 
@@ -212,8 +215,46 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
           usingRemoteData={usingRemoteData}
           onResetLocalMode={resetLocalMode}
         />
-      ) : view === "player" ? (
+      ) : view === "materials" ? (
+        <MaterialsLibrary
+          dataLoading={dataLoading}
+          materials={materials}
+          teamMessage={teamMessage}
+        />
+      ) : view === "materials-manage" ? (
+        <MaterialsRoom
+          canManageTeam={canManageTeam}
+          dataLoading={dataLoading}
+          materials={materials}
+          setMaterials={setMaterials}
+          setTeamMessage={setTeamMessage}
+          supabase={supabase}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          teamMessage={teamMessage}
+          usingRemoteData={usingRemoteData}
+          onResetLocalMode={resetLocalMode}
+        />
+      ) : view === "settings" ? (
+        <SettingsRoom teamMessage={teamMessage} />
+      ) : view === "player-goal" ? (
         <PlayerPracticeEditor
+          mode="goal"
+          canManageTeam={canManageTeam}
+          goalTemplates={goalTemplates}
+          player={players.find((player) => player.id === playerId) ?? null}
+          positionMasters={positionMasters}
+          setPlayers={setPlayers}
+          setTeamMessage={setTeamMessage}
+          supabase={supabase}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          teamMessage={teamMessage}
+          usingRemoteData={usingRemoteData}
+        />
+      ) : view === "player-reflection" ? (
+        <PlayerPracticeEditor
+          mode="reflection"
           canManageTeam={canManageTeam}
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
