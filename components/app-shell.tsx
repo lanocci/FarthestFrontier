@@ -5,11 +5,11 @@ import type { Session } from "@supabase/supabase-js";
 import { GlobalHeader } from "@/components/global-header";
 import { LoginPanel } from "@/components/login-panel";
 import { MastersAdmin } from "@/components/masters-admin";
+import { PlayerPracticeEditor } from "@/components/player-practice-editor";
 import { SetupPanel } from "@/components/setup-panel";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
 import { fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
-import { formatDateInput } from "@/lib/date";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   clearStorage,
@@ -27,10 +27,11 @@ import {
 import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
 
 type AppShellProps = {
-  view?: "dashboard" | "players" | "masters";
+  view?: "dashboard" | "players" | "masters" | "player";
+  playerId?: string;
 };
 
-export function AppShell({ view = "dashboard" }: AppShellProps) {
+export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [goalLogs, setGoalLogs] = useState<GoalLog[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -47,7 +48,6 @@ export function AppShell({ view = "dashboard" }: AppShellProps) {
   const supabase = useMemo(() => getSupabaseClient(), []);
   const authEnabled = Boolean(supabase);
   const usingRemoteData = authEnabled && Boolean(session);
-  const today = formatDateInput();
 
   useEffect(() => {
     setPlayers(loadPlayers());
@@ -229,7 +229,9 @@ export function AppShell({ view = "dashboard" }: AppShellProps) {
   }
 
   const activePlayerCount = players.filter((player) => player.active).length;
-  const goalsTodayCount = goalLogs.filter((log) => log.date === today).length;
+  const reflectionCompletedCount = players.filter(
+    (player) => player.offenseReflection?.trim() && player.defenseReflection?.trim(),
+  ).length;
   const sharedMaterialCount = materials.length;
   const canManageTeam = !authEnabled || Boolean(session);
 
@@ -250,8 +252,8 @@ export function AppShell({ view = "dashboard" }: AppShellProps) {
             <span>在籍中の選手</span>
           </div>
           <div className="stat-card">
-            <strong>{goalsTodayCount}</strong>
-            <span>今日の目標登録</span>
+            <strong>{reflectionCompletedCount}</strong>
+            <span>振り返り完了</span>
           </div>
           <div className="stat-card">
             <strong>{sharedMaterialCount}</strong>
@@ -259,18 +261,20 @@ export function AppShell({ view = "dashboard" }: AppShellProps) {
           </div>
         </div>
 
-        <div className="hero-grid">
-          <LoginPanel
-            authEnabled={authEnabled}
-            authLoading={authLoading}
-            authMessage={authMessage}
-            session={session}
-            onSendMagicLink={sendMagicLink}
-            onSignInWithGoogle={signInWithGoogle}
-            onSignOut={signOut}
-          />
-          <SetupPanel />
-        </div>
+        {view === "dashboard" ? null : (
+          <div className="hero-grid">
+            <LoginPanel
+              authEnabled={authEnabled}
+              authLoading={authLoading}
+              authMessage={authMessage}
+              session={session}
+              onSendMagicLink={sendMagicLink}
+              onSignInWithGoogle={signInWithGoogle}
+              onSignOut={signOut}
+            />
+            <SetupPanel />
+          </div>
+        )}
       </section>
 
       {view === "players" ? (
@@ -293,6 +297,7 @@ export function AppShell({ view = "dashboard" }: AppShellProps) {
           canManageTeam={canManageTeam}
           dataLoading={dataLoading}
           goalTemplates={goalTemplates}
+          players={players}
           positionMasters={positionMasters}
           setGoalTemplates={setGoalTemplates}
           setPositionMasters={setPositionMasters}
@@ -303,6 +308,20 @@ export function AppShell({ view = "dashboard" }: AppShellProps) {
           teamMessage={teamMessage}
           usingRemoteData={usingRemoteData}
           onResetLocalMode={resetLocalMode}
+        />
+      ) : view === "player" ? (
+        <PlayerPracticeEditor
+          canManageTeam={canManageTeam}
+          goalTemplates={goalTemplates}
+          player={players.find((player) => player.id === playerId) ?? null}
+          positionMasters={positionMasters}
+          setPlayers={setPlayers}
+          setTeamMessage={setTeamMessage}
+          supabase={supabase}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          teamMessage={teamMessage}
+          usingRemoteData={usingRemoteData}
         />
       ) : (
         <TeamDashboard

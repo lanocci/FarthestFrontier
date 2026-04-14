@@ -24,7 +24,8 @@ export const players: Player[] = [
     favoriteSkill: "はしる",
     offensePositionId: "op-runner",
     defensePositionId: "dp-cornerback",
-    recentGoalText: "こえを3回出す",
+    offenseGoal: "ボールを最後まで見る",
+    defenseGoal: "フラッグを1回ねらう",
   },
   {
     id: "p2",
@@ -36,7 +37,7 @@ export const players: Player[] = [
     favoriteSkill: "キャッチ",
     offensePositionId: "op-receiver",
     defensePositionId: "dp-safety",
-    recentGoalText: "ボールを最後まで見る",
+    offenseGoal: "スタートで1歩目を早く出す",
   },
   {
     id: "p3",
@@ -48,7 +49,7 @@ export const players: Player[] = [
     favoriteSkill: "よける",
     offensePositionId: "op-flex",
     defensePositionId: "dp-linebacker",
-    recentGoalText: "はたを1回取りにいく",
+    defenseGoal: "中のコースを守る",
   },
   {
     id: "p4",
@@ -60,7 +61,7 @@ export const players: Player[] = [
     favoriteSkill: "まもる",
     offensePositionId: "op-center",
     defensePositionId: "dp-rusher",
-    recentGoalText: "スタートで1歩目を早く出す",
+    offenseReflection: "声をかけながらスタートできた",
   },
   {
     id: "p5",

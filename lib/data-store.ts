@@ -17,6 +17,10 @@ type PlayerRow = {
   favorite_skill: string | null;
   offense_position_id: string;
   defense_position_id: string;
+  offense_goal: string | null;
+  offense_reflection: string | null;
+  defense_goal: string | null;
+  defense_reflection: string | null;
   active: boolean;
 };
 
@@ -64,7 +68,7 @@ export type TeamSnapshot = {
   positionMasters: PositionMaster[];
 };
 
-function toPlayer(row: PlayerRow, recentGoalText?: string): Player {
+function toPlayer(row: PlayerRow): Player {
   return {
     id: row.id,
     name: row.name,
@@ -74,8 +78,11 @@ function toPlayer(row: PlayerRow, recentGoalText?: string): Player {
     favoriteSkill: row.favorite_skill ?? "これから見つける",
     offensePositionId: row.offense_position_id,
     defensePositionId: row.defense_position_id,
+    offenseGoal: row.offense_goal ?? undefined,
+    offenseReflection: row.offense_reflection ?? undefined,
+    defenseGoal: row.defense_goal ?? undefined,
+    defenseReflection: row.defense_reflection ?? undefined,
     active: row.active,
-    recentGoalText,
   };
 }
 
@@ -123,20 +130,6 @@ function toPositionMaster(row: PositionMasterRow): PositionMaster {
   };
 }
 
-function buildRecentGoalMap(goalEntries: GoalLog[]) {
-  const recentGoalMap = new Map<string, { date: string; goalText: string }>();
-
-  goalEntries.forEach((entry) => {
-    const current = recentGoalMap.get(entry.playerId);
-
-    if (!current || entry.date >= current.date) {
-      recentGoalMap.set(entry.playerId, { date: entry.date, goalText: entry.goalText });
-    }
-  });
-
-  return recentGoalMap;
-}
-
 export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamSnapshot> {
   const [
     { data: playerRows, error: playerError },
@@ -146,11 +139,11 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     { data: positionRows, error: positionError },
   ] = await Promise.all([
     supabase
-      .from("players")
-      .select(
-        "id, name, grade_label, grade_band, guardian_name, favorite_skill, offense_position_id, defense_position_id, active",
-      )
-      .order("created_at", { ascending: true }),
+        .from("players")
+        .select(
+          "id, name, grade_label, grade_band, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, offense_reflection, defense_goal, defense_reflection, active",
+        )
+        .order("created_at", { ascending: true }),
     supabase
       .from("goal_templates")
       .select("id, title, prompt, emoji, color, template_text, input_placeholder")
@@ -174,10 +167,9 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
   }
 
   const goalEntries = (logRows ?? []).map(toGoalLog);
-  const recentGoalMap = buildRecentGoalMap(goalEntries);
 
   return {
-    players: (playerRows ?? []).map((row) => toPlayer(row, recentGoalMap.get(row.id)?.goalText)),
+    players: (playerRows ?? []).map((row) => toPlayer(row)),
     goalTemplates: (templateRows ?? []).map(toGoalTemplate),
     goalLogs: goalEntries,
     materials: (materialRows ?? []).map(toMaterial),
@@ -196,10 +188,14 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
       favorite_skill: player.favoriteSkill,
       offense_position_id: player.offensePositionId,
       defense_position_id: player.defensePositionId,
+      offense_goal: player.offenseGoal ?? null,
+      offense_reflection: player.offenseReflection ?? null,
+      defense_goal: player.defenseGoal ?? null,
+      defense_reflection: player.defenseReflection ?? null,
       active: player.active,
     })
     .select(
-      "id, name, grade_label, grade_band, guardian_name, favorite_skill, offense_position_id, defense_position_id, active",
+      "id, name, grade_label, grade_band, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, offense_reflection, defense_goal, defense_reflection, active",
     )
     .single();
 
@@ -207,7 +203,7 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
     throw new Error(error.message);
   }
 
-  return toPlayer(data, player.recentGoalText);
+  return toPlayer(data);
 }
 
 export async function updatePlayer(supabase: SupabaseClient, player: Player): Promise<void> {
@@ -221,6 +217,10 @@ export async function updatePlayer(supabase: SupabaseClient, player: Player): Pr
       favorite_skill: player.favoriteSkill,
       offense_position_id: player.offensePositionId,
       defense_position_id: player.defensePositionId,
+      offense_goal: player.offenseGoal ?? null,
+      offense_reflection: player.offenseReflection ?? null,
+      defense_goal: player.defenseGoal ?? null,
+      defense_reflection: player.defenseReflection ?? null,
       active: player.active,
     })
     .eq("id", player.id);
@@ -288,6 +288,21 @@ export async function upsertPositionMasters(
       side: position.side,
     })),
   );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function deletePositionMasters(
+  supabase: SupabaseClient,
+  positionIds: string[],
+): Promise<void> {
+  if (!positionIds.length) {
+    return;
+  }
+
+  const { error } = await supabase.from("position_masters").delete().in("id", positionIds);
 
   if (error) {
     throw new Error(error.message);

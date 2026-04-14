@@ -4,13 +4,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 import { Section } from "@/components/section";
-import { upsertGoalTemplates, upsertPositionMasters } from "@/lib/data-store";
-import { GoalTemplate, PositionMaster, PositionSide } from "@/lib/types";
+import { deletePositionMasters, upsertGoalTemplates, upsertPositionMasters } from "@/lib/data-store";
+import { GoalTemplate, Player, PositionMaster, PositionSide } from "@/lib/types";
 
 type MastersAdminProps = {
   canManageTeam: boolean;
   dataLoading: boolean;
   goalTemplates: GoalTemplate[];
+  players: Player[];
   positionMasters: PositionMaster[];
   setGoalTemplates: Dispatch<SetStateAction<GoalTemplate[]>>;
   setPositionMasters: Dispatch<SetStateAction<PositionMaster[]>>;
@@ -27,6 +28,7 @@ export function MastersAdmin({
   canManageTeam,
   dataLoading,
   goalTemplates,
+  players,
   positionMasters,
   setGoalTemplates,
   setPositionMasters,
@@ -87,6 +89,10 @@ export function MastersAdmin({
     ]);
   }
 
+  function removePosition(positionId: string) {
+    setDraftPositions((current) => current.filter((position) => position.id !== positionId));
+  }
+
   async function handleSaveMasters() {
     if (!canManageTeam || syncing) {
       return;
@@ -95,7 +101,12 @@ export function MastersAdmin({
     try {
       setSyncing(true);
 
+      const deletedPositionIds = positionMasters
+        .filter((position) => !draftPositions.some((draft) => draft.id === position.id))
+        .map((position) => position.id);
+
       if (usingRemoteData && supabase) {
+        await deletePositionMasters(supabase, deletedPositionIds);
         await upsertPositionMasters(supabase, draftPositions);
         await upsertGoalTemplates(supabase, draftTemplates);
       }
@@ -112,6 +123,13 @@ export function MastersAdmin({
 
   const offensePositions = draftPositions.filter((position) => position.side === "offense");
   const defensePositions = draftPositions.filter((position) => position.side === "defense");
+
+  function isPositionUsed(positionId: string) {
+    return players.some(
+      (player) =>
+        player.offensePositionId === positionId || player.defensePositionId === positionId,
+    );
+  }
 
   return (
     <div className="dashboard dashboard-wide">
@@ -153,15 +171,32 @@ export function MastersAdmin({
                     <div className="master-row" key={position.id}>
                       <span className="chip">オフェンス</span>
                       <input type="text" value={position.label} onChange={(event) => updatePosition(draftPositions.findIndex((item) => item.id === position.id), "label", event.target.value)} />
+                      <button
+                        className="button ghost"
+                        type="button"
+                        onClick={() => removePosition(position.id)}
+                        disabled={isPositionUsed(position.id)}
+                      >
+                        削除
+                      </button>
                     </div>
                   ))}
                   {defensePositions.map((position) => (
                     <div className="master-row" key={position.id}>
                       <span className="chip">ディフェンス</span>
                       <input type="text" value={position.label} onChange={(event) => updatePosition(draftPositions.findIndex((item) => item.id === position.id), "label", event.target.value)} />
+                      <button
+                        className="button ghost"
+                        type="button"
+                        onClick={() => removePosition(position.id)}
+                        disabled={isPositionUsed(position.id)}
+                      >
+                        削除
+                      </button>
                     </div>
                   ))}
                 </div>
+                <p className="footer-note">選手に割り当て済みのポジションは削除できません。</p>
               </div>
             </div>
 

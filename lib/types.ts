@@ -20,7 +20,10 @@ export type Player = {
   favoriteSkill: string;
   offensePositionId: string;
   defensePositionId: string;
-  recentGoalText?: string;
+  offenseGoal?: string;
+  offenseReflection?: string;
+  defenseGoal?: string;
+  defenseReflection?: string;
 };
 
 export type GoalTemplate = {

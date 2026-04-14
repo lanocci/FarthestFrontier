@@ -2,7 +2,7 @@ import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/
 import { GoalTemplate, Material, Player, PositionMaster, PositionSide } from "@/lib/types";
 
 export function getRecentGoalForPlayer(player: Player): string | undefined {
-  return player.recentGoalText;
+  return player.offenseGoal ?? player.defenseGoal;
 }
 
 export function countActivePlayers(): number {

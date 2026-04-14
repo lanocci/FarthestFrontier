@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 type GlobalHeaderProps = {
-  view: "dashboard" | "players" | "masters";
+  view: "dashboard" | "players" | "masters" | "player";
 };
 
 const navItems = [
@@ -24,7 +24,7 @@ export function GlobalHeader({ view }: GlobalHeaderProps) {
         {navItems.map((item) => (
           <Link
             key={item.href}
-            className={`tab-link ${view === item.view ? "is-active" : ""}`}
+            className={`tab-link ${view === item.view || (view === "player" && item.view === "dashboard") ? "is-active" : ""}`}
             href={item.href}
           >
             {item.label}

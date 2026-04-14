@@ -98,6 +98,204 @@ select:disabled {
   box-shadow: var(--shadow);
 }
 
+.dashboard-simple {
+  margin-top: 22px;
+}
+
+.week-panel {
+  padding: 28px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #1f8c3f, #17853a);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.week-panel .eyebrow {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  padding: 0;
+}
+
+.week-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.week-panel-header h2 {
+  margin: 8px 0 10px;
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.week-panel-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+}
+
+.coach-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+}
+
+.progress-rail {
+  width: 100%;
+  height: 14px;
+  margin-top: 22px;
+  border-radius: 999px;
+  background: rgba(7, 64, 28, 0.35);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8ff77d, #c6ff62);
+}
+
+.week-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 700;
+}
+
+.player-section {
+  display: grid;
+  gap: 16px;
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.practice-card {
+  padding: 18px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 30px rgba(30, 53, 78, 0.08);
+}
+
+.practice-card-link {
+  display: block;
+}
+
+.practice-card.is-selected {
+  border-color: rgba(104, 226, 143, 0.9);
+  box-shadow: 0 0 0 3px rgba(104, 226, 143, 0.18);
+}
+
+.practice-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.practice-card-head strong {
+  display: block;
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+
+.practice-summary {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.practice-summary span {
+  display: block;
+  margin-bottom: 4px;
+  color: #97a0b3;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.practice-summary strong {
+  display: block;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.practice-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.practice-editor-page {
+  margin-top: 22px;
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.entry-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 30px rgba(30, 53, 78, 0.08);
+}
+
+.entry-card input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 50, 77, 0.16);
+  border-radius: 14px;
+  background: var(--field);
+}
+
+.entry-label {
+  color: #97a0b3;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.template-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.chip-button.is-active {
+  border-color: rgba(232, 96, 45, 0.35);
+  background: rgba(232, 96, 45, 0.12);
+  color: var(--accent-strong);
+}
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -182,20 +380,25 @@ select:disabled {
 }
 
 .stat-card {
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 50, 77, 0.08);
+  background: rgba(255, 255, 255, 0.42);
 }
 
 .stat-card strong {
-  display: block;
-  font-size: 1.7rem;
+  display: inline;
+  font-size: 1.35rem;
+  line-height: 1.1;
 }
 
 .stat-card span {
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
+  white-space: nowrap;
 }
 
 .login-card {
@@ -390,7 +593,7 @@ select:disabled {
 
 .master-row {
   display: grid;
-  grid-template-columns: 130px 1fr;
+  grid-template-columns: 130px 1fr 88px;
   gap: 12px;
   align-items: center;
 }
@@ -614,6 +817,11 @@ select:disabled {
     display: grid;
   }
 
+  .player-grid,
+  .entry-grid {
+    grid-template-columns: 1fr;
+  }
+
   .toolbar {
     grid-template-columns: 1fr;
   }
@@ -643,7 +851,25 @@ select:disabled {
     padding: 18px;
   }
 
-  .stats,
+  .week-panel,
+  .entry-card {
+    padding: 18px;
+  }
+
+  .stats {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .stat-card {
+    min-width: max-content;
+  }
+
   .goal-actions,
   .inline-form,
   .admin-form,
@@ -654,7 +880,10 @@ select:disabled {
   .player-row,
   .doc-row,
   .selected-player-banner,
-  .section-row {
+  .section-row,
+  .practice-card-head,
+  .week-panel-header,
+  .week-panel-footer {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -662,4 +891,5 @@ select:disabled {
   .master-row {
     grid-template-columns: 1fr;
   }
+
 }

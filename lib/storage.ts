@@ -47,6 +47,7 @@ export function clearStorage() {
 function normalizePlayer(player: Player): Player {
   const legacyOffense = (player as Player & { offensePosition?: string }).offensePosition;
   const legacyDefense = (player as Player & { defensePosition?: string }).defensePosition;
+  const legacyRecentGoal = (player as Player & { recentGoalText?: string }).recentGoalText;
   const offenseMap: Record<string, string> = {
     center: "op-center",
     quarterback: "op-quarterback",
@@ -66,7 +67,10 @@ function normalizePlayer(player: Player): Player {
     ...player,
     offensePositionId: player.offensePositionId ?? offenseMap[legacyOffense ?? ""] ?? "op-flex",
     defensePositionId: player.defensePositionId ?? defenseMap[legacyDefense ?? ""] ?? "dp-linebacker",
-    recentGoalText: player.recentGoalText,
+    offenseGoal: player.offenseGoal ?? legacyRecentGoal,
+    defenseGoal: player.defenseGoal,
+    offenseReflection: player.offenseReflection,
+    defenseReflection: player.defenseReflection,
   };
 }
 
