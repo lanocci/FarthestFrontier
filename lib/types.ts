@@ -2,6 +2,13 @@ export type Role = "coach" | "guardian";
 export type GradeBand = "lower" | "middle" | "upper";
 export type MaterialType = "slide" | "sheet" | "doc";
 export type MaterialAudience = "all" | "guardians" | "coaches";
+export type PositionSide = "offense" | "defense";
+
+export type PositionMaster = {
+  id: string;
+  label: string;
+  side: PositionSide;
+};
 
 export type Player = {
   id: string;
@@ -11,7 +18,9 @@ export type Player = {
   active: boolean;
   guardianName: string;
   favoriteSkill: string;
-  recentGoalId?: string;
+  offensePositionId: string;
+  defensePositionId: string;
+  recentGoalText?: string;
 };
 
 export type GoalTemplate = {
@@ -20,12 +29,15 @@ export type GoalTemplate = {
   prompt: string;
   emoji: string;
   color: "orange" | "green" | "blue" | "yellow";
+  templateText: string;
+  inputPlaceholder?: string;
 };
 
 export type GoalLog = {
   id: string;
   playerId: string;
-  goalId: string;
+  goalText: string;
+  goalTemplateId?: string;
   date: string;
   note?: string;
   by: Role;

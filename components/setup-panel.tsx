@@ -12,7 +12,7 @@ export function SetupPanel() {
       <div className="panel-body">
         <h2 className="section-title">次のセットアップ</h2>
         <p className="section-copy">
-          今回のMVPはモックデータで画面まで作っています。ここからSupabase接続に置き換えるだけで、少人数チーム向けの最初の運用に入れます。
+          今回のMVPはローカル体験モードでも動きます。Supabase接続を有効にすると、ログイン後に同じ画面からチームデータを共有管理できます。
         </p>
         <div className="mini-list">
           {steps.map((step, index) => (

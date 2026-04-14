@@ -1,0 +1,204 @@
+"use client";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useState } from "react";
+import { Section } from "@/components/section";
+import { upsertGoalTemplates, upsertPositionMasters } from "@/lib/data-store";
+import { GoalTemplate, PositionMaster, PositionSide } from "@/lib/types";
+
+type MastersAdminProps = {
+  canManageTeam: boolean;
+  dataLoading: boolean;
+  goalTemplates: GoalTemplate[];
+  positionMasters: PositionMaster[];
+  setGoalTemplates: Dispatch<SetStateAction<GoalTemplate[]>>;
+  setPositionMasters: Dispatch<SetStateAction<PositionMaster[]>>;
+  setTeamMessage: Dispatch<SetStateAction<string | null>>;
+  supabase: SupabaseClient | null;
+  syncing: boolean;
+  setSyncing: Dispatch<SetStateAction<boolean>>;
+  teamMessage: string | null;
+  usingRemoteData: boolean;
+  onResetLocalMode: () => void;
+};
+
+export function MastersAdmin({
+  canManageTeam,
+  dataLoading,
+  goalTemplates,
+  positionMasters,
+  setGoalTemplates,
+  setPositionMasters,
+  setTeamMessage,
+  supabase,
+  syncing,
+  setSyncing,
+  teamMessage,
+  usingRemoteData,
+  onResetLocalMode,
+}: MastersAdminProps) {
+  const [draftPositions, setDraftPositions] = useState<PositionMaster[]>(positionMasters);
+  const [draftTemplates, setDraftTemplates] = useState<GoalTemplate[]>(goalTemplates);
+
+  useEffect(() => {
+    setDraftPositions(positionMasters);
+  }, [positionMasters]);
+
+  useEffect(() => {
+    setDraftTemplates(goalTemplates);
+  }, [goalTemplates]);
+
+  function updatePosition(index: number, key: keyof PositionMaster, value: string) {
+    setDraftPositions((current) =>
+      current.map((position, currentIndex) =>
+        currentIndex === index ? { ...position, [key]: value } : position,
+      ),
+    );
+  }
+
+  function updateTemplate(index: number, key: keyof GoalTemplate, value: string) {
+    setDraftTemplates((current) =>
+      current.map((template, currentIndex) =>
+        currentIndex === index ? { ...template, [key]: value } : template,
+      ),
+    );
+  }
+
+  function addPosition(side: PositionSide) {
+    setDraftPositions((current) => [
+      ...current,
+      { id: `pos-${Date.now()}-${side}`, label: side === "offense" ? "新しい攻撃ポジション" : "新しい守備ポジション", side },
+    ]);
+  }
+
+  function addTemplate() {
+    setDraftTemplates((current) => [
+      ...current,
+      {
+        id: `goal-${Date.now()}`,
+        title: "新しいテンプレート",
+        prompt: "説明を入れてください",
+        emoji: "⭐",
+        color: "orange",
+        templateText: "{input}をやってみる",
+        inputPlaceholder: "やること",
+      },
+    ]);
+  }
+
+  async function handleSaveMasters() {
+    if (!canManageTeam || syncing) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+
+      if (usingRemoteData && supabase) {
+        await upsertPositionMasters(supabase, draftPositions);
+        await upsertGoalTemplates(supabase, draftTemplates);
+      }
+
+      setPositionMasters(draftPositions);
+      setGoalTemplates(draftTemplates);
+      setTeamMessage("ポジションと目標テンプレートのマスターを更新しました。");
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "マスター更新に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  const offensePositions = draftPositions.filter((position) => position.side === "offense");
+  const defensePositions = draftPositions.filter((position) => position.side === "defense");
+
+  return (
+    <div className="dashboard dashboard-wide">
+      <div className="stack">
+        <Section
+          title="マスター管理"
+          copy="ポジション候補と目標テンプレートをここで管理します。ホームや選手管理の入力候補にそのまま反映されます。"
+        >
+          <div className="status-strip">
+            <span className={`chip ${usingRemoteData ? "ok" : "warn"}`}>
+              {dataLoading ? "読込中" : usingRemoteData ? "Supabase同期中" : "ローカル保存中"}
+            </span>
+            {syncing ? <span className="chip">保存しています…</span> : null}
+            {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
+            {!usingRemoteData ? (
+              <button className="button ghost" type="button" onClick={onResetLocalMode} disabled={syncing}>
+                体験データに戻す
+              </button>
+            ) : null}
+          </div>
+
+          <div className="masters-grid">
+            <div className="panel inset-panel">
+              <div className="panel-body">
+                <div className="section-row">
+                  <h3 className="section-title">ポジションマスター</h3>
+                  <div className="card-actions">
+                    <button className="button secondary" type="button" onClick={() => addPosition("offense")}>
+                      攻撃ポジション追加
+                    </button>
+                    <button className="button secondary" type="button" onClick={() => addPosition("defense")}>
+                      守備ポジション追加
+                    </button>
+                  </div>
+                </div>
+
+                <div className="masters-list">
+                  {offensePositions.map((position) => (
+                    <div className="master-row" key={position.id}>
+                      <span className="chip">オフェンス</span>
+                      <input type="text" value={position.label} onChange={(event) => updatePosition(draftPositions.findIndex((item) => item.id === position.id), "label", event.target.value)} />
+                    </div>
+                  ))}
+                  {defensePositions.map((position) => (
+                    <div className="master-row" key={position.id}>
+                      <span className="chip">ディフェンス</span>
+                      <input type="text" value={position.label} onChange={(event) => updatePosition(draftPositions.findIndex((item) => item.id === position.id), "label", event.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="panel inset-panel">
+              <div className="panel-body">
+                <div className="section-row">
+                  <h3 className="section-title">目標テンプレート</h3>
+                  <button className="button secondary" type="button" onClick={addTemplate}>
+                    テンプレート追加
+                  </button>
+                </div>
+
+                <div className="masters-list">
+                  {draftTemplates.map((template, index) => (
+                    <div className="template-editor" key={template.id}>
+                      <div className="template-grid">
+                        <input type="text" value={template.title} onChange={(event) => updateTemplate(index, "title", event.target.value)} />
+                        <input type="text" value={template.emoji} onChange={(event) => updateTemplate(index, "emoji", event.target.value)} />
+                        <input type="text" value={template.prompt} onChange={(event) => updateTemplate(index, "prompt", event.target.value)} />
+                        <input type="text" value={template.templateText} onChange={(event) => updateTemplate(index, "templateText", event.target.value)} />
+                        <input type="text" value={template.inputPlaceholder ?? ""} onChange={(event) => updateTemplate(index, "inputPlaceholder", event.target.value)} />
+                      </div>
+                      <p className="subtle">`{"{input}"}` を入れると差し込み入力つき、入れないとワンタップ用テンプレートになります。</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-actions">
+            <button className="button" type="button" onClick={handleSaveMasters} disabled={!canManageTeam || syncing}>
+              マスターを保存
+            </button>
+          </div>
+        </Section>
+      </div>
+    </div>
+  );
+}

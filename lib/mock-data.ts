@@ -1,4 +1,17 @@
-import { GoalLog, GoalTemplate, Material, Player } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
+
+export const positionMasters: PositionMaster[] = [
+  { id: "op-center", label: "センター", side: "offense" },
+  { id: "op-quarterback", label: "QB", side: "offense" },
+  { id: "op-runner", label: "ランナー", side: "offense" },
+  { id: "op-receiver", label: "レシーバー", side: "offense" },
+  { id: "op-flex", label: "フレックス", side: "offense" },
+  { id: "dp-rusher", label: "ラッシャー", side: "defense" },
+  { id: "dp-linebacker", label: "LB", side: "defense" },
+  { id: "dp-cornerback", label: "CB", side: "defense" },
+  { id: "dp-safety", label: "セーフティ", side: "defense" },
+  { id: "dp-flag-keeper", label: "フラッグキーパー", side: "defense" },
+];
 
 export const players: Player[] = [
   {
@@ -9,7 +22,9 @@ export const players: Player[] = [
     active: true,
     guardianName: "佐藤さん",
     favoriteSkill: "はしる",
-    recentGoalId: "g1",
+    offensePositionId: "op-runner",
+    defensePositionId: "dp-cornerback",
+    recentGoalText: "こえを3回出す",
   },
   {
     id: "p2",
@@ -19,7 +34,9 @@ export const players: Player[] = [
     active: true,
     guardianName: "田中さん",
     favoriteSkill: "キャッチ",
-    recentGoalId: "g2",
+    offensePositionId: "op-receiver",
+    defensePositionId: "dp-safety",
+    recentGoalText: "ボールを最後まで見る",
   },
   {
     id: "p3",
@@ -29,7 +46,9 @@ export const players: Player[] = [
     active: true,
     guardianName: "山田さん",
     favoriteSkill: "よける",
-    recentGoalId: "g4",
+    offensePositionId: "op-flex",
+    defensePositionId: "dp-linebacker",
+    recentGoalText: "はたを1回取りにいく",
   },
   {
     id: "p4",
@@ -39,7 +58,9 @@ export const players: Player[] = [
     active: true,
     guardianName: "井上さん",
     favoriteSkill: "まもる",
-    recentGoalId: "g3",
+    offensePositionId: "op-center",
+    defensePositionId: "dp-rusher",
+    recentGoalText: "スタートで1歩目を早く出す",
   },
   {
     id: "p5",
@@ -49,37 +70,46 @@ export const players: Player[] = [
     active: false,
     guardianName: "中村さん",
     favoriteSkill: "こえだし",
+    offensePositionId: "op-quarterback",
+    defensePositionId: "dp-flag-keeper",
   },
 ];
 
 export const goalTemplates: GoalTemplate[] = [
   {
     id: "g1",
-    title: "こえをだす",
-    prompt: "れんしゅうのあいだに 3かい こえをだしてみよう",
+    title: "こえをかける",
+    prompt: "短い言葉を差し込んで、今日の声かけ目標にします。",
     emoji: "📣",
     color: "orange",
+    templateText: "{input}を3回言う",
+    inputPlaceholder: "ナイス",
   },
   {
     id: "g2",
-    title: "ボールをみる",
-    prompt: "パスのときに ボールをさいごまで みよう",
+    title: "見るポイント",
+    prompt: "どこを見るかを入れると、そのまま今日の目標になります。",
     emoji: "👀",
     color: "blue",
+    templateText: "{input}を最後まで見る",
+    inputPlaceholder: "ボール",
   },
   {
     id: "g3",
-    title: "はやくうごく",
-    prompt: "スタートのあいずで すぐに 1ぽ でよう",
+    title: "すぐ動く",
+    prompt: "テンプレートだけで使える、入力なしの目標です。",
     emoji: "💨",
     color: "green",
+    templateText: "スタートの合図で1歩目を早く出す",
   },
   {
     id: "g4",
-    title: "はたをとる",
-    prompt: "まもりのときに 1かい はたをとりにいこう",
+    title: "守りをがんばる",
+    prompt: "守備で何をするかを差し込めます。",
     emoji: "🏈",
     color: "yellow",
+    templateText: "{input}を1回ねらう",
+    inputPlaceholder: "はた取り",
   },
 ];
 
@@ -87,21 +117,24 @@ export const goalLogs: GoalLog[] = [
   {
     id: "l1",
     playerId: "p1",
-    goalId: "g1",
+    goalTemplateId: "g1",
+    goalText: "こえを3回出す",
     date: "2026-04-14",
     by: "guardian",
   },
   {
     id: "l2",
     playerId: "p2",
-    goalId: "g2",
+    goalTemplateId: "g2",
+    goalText: "ボールを最後まで見る",
     date: "2026-04-14",
     by: "guardian",
   },
   {
     id: "l3",
     playerId: "p4",
-    goalId: "g3",
+    goalTemplateId: "g3",
+    goalText: "スタートの合図で1歩目を早く出す",
     date: "2026-04-13",
     note: "コーチがタブレットで補助",
     by: "coach",

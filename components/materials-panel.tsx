@@ -1,7 +1,15 @@
-import { materials } from "@/lib/mock-data";
+import { Material } from "@/lib/types";
 import { formatAudience, formatMaterialType } from "@/lib/utils";
 
-export function MaterialsPanel() {
+type MaterialsPanelProps = {
+  materials: Material[];
+};
+
+export function MaterialsPanel({ materials }: MaterialsPanelProps) {
+  if (!materials.length) {
+    return <p className="empty-state">まだ資料がありません。Google資料のURLを追加するとここに並びます。</p>;
+  }
+
   return (
     <div className="grid-cards">
       {materials.map((material) => (

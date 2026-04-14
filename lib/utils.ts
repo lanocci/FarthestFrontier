@@ -1,12 +1,8 @@
-import { goalLogs, goalTemplates, materials, players } from "@/lib/mock-data";
-import { GoalTemplate, Material, Player } from "@/lib/types";
+import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/lib/mock-data";
+import { GoalTemplate, Material, Player, PositionMaster, PositionSide } from "@/lib/types";
 
-export function getRecentGoalForPlayer(player: Player): GoalTemplate | undefined {
-  if (!player.recentGoalId) {
-    return undefined;
-  }
-
-  return goalTemplates.find((goal) => goal.id === player.recentGoalId);
+export function getRecentGoalForPlayer(player: Player): string | undefined {
+  return player.recentGoalText;
 }
 
 export function countActivePlayers(): number {
@@ -45,4 +41,46 @@ export function formatAudience(material: Material): string {
     default:
       return material.audience;
   }
+}
+
+export function isValidUrl(value: string): boolean {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function getPositionLabel(positionId: string, masters: PositionMaster[] = positionMasters): string {
+  return masters.find((position) => position.id === positionId)?.label ?? "未設定";
+}
+
+export function getPositionsBySide(
+  side: PositionSide,
+  masters: PositionMaster[] = positionMasters,
+): PositionMaster[] {
+  return masters.filter((position) => position.side === side);
+}
+
+export function buildGoalText(template: GoalTemplate, input: string): string {
+  const trimmed = input.trim();
+
+  if (template.templateText.includes("{input}")) {
+    return template.templateText.replace("{input}", trimmed || template.inputPlaceholder || "");
+  }
+
+  return template.templateText;
+}
+
+export function formatGoalTemplatePreview(template: GoalTemplate, input: string): string {
+  return buildGoalText(template, input).trim();
+}
+
+export function findGoalTemplate(goalTemplateId?: string, templates: GoalTemplate[] = goalTemplates) {
+  if (!goalTemplateId) {
+    return undefined;
+  }
+
+  return templates.find((template) => template.id === goalTemplateId);
 }
