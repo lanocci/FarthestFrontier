@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Farthest Frontier",
+  title: "FFFC 2025",
   description: "Flag football team goals and shared materials hub.",
 };
 

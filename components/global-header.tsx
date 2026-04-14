@@ -17,7 +17,7 @@ export function GlobalHeader({ view }: GlobalHeaderProps) {
     <header className="global-header">
       <div>
         <p className="header-eyebrow">Flag Football Team Hub</p>
-        <h1 className="header-title">Farthest Frontier</h1>
+        <h1 className="header-title">FFFC 2025</h1>
       </div>
 
       <nav className="header-nav" aria-label="グローバルナビゲーション">

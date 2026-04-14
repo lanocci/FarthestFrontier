@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { GlobalHeader } from "@/components/global-header";
-import { LoginPanel } from "@/components/login-panel";
 import { MastersAdmin } from "@/components/masters-admin";
 import { PlayerPracticeEditor } from "@/components/player-practice-editor";
-import { SetupPanel } from "@/components/setup-panel";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
 import { fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
-import { getSupabaseClient } from "@/lib/supabase";
 import {
   clearStorage,
   loadGoalLogs,
@@ -24,7 +19,10 @@ import {
   savePlayers,
   savePositionMasters,
 } from "@/lib/storage";
+import { getSupabaseClient } from "@/lib/supabase";
 import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
+import type { Session } from "@supabase/supabase-js";
+import { useEffect, useMemo, useState } from "react";
 
 type AppShellProps = {
   view?: "dashboard" | "players" | "masters" | "player";
@@ -239,6 +237,7 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
     <main className="page-shell">
       <GlobalHeader view={view} />
 
+{/*
       <section className="hero">
         <span className="eyebrow">Flag Football Team Hub</span>
         <h2>目標をえらぶ、のこす、みんなで伸びる。</h2>
@@ -276,6 +275,7 @@ export function AppShell({ view = "dashboard", playerId }: AppShellProps) {
           </div>
         )}
       </section>
+      */}
 
       {view === "players" ? (
         <TeamAdmin

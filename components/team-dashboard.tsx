@@ -1,9 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Dispatch, SetStateAction } from "react";
-import { useMemo, useState } from "react";
 import { formatDateInput } from "@/lib/date";
 import {
   GoalLog,
@@ -14,6 +10,10 @@ import {
   PositionMaster,
 } from "@/lib/types";
 import { getPositionLabel } from "@/lib/utils";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
+import type { Dispatch, SetStateAction } from "react";
+import { useMemo, useState } from "react";
 
 type TeamDashboardProps = {
   canManageTeam: boolean;
@@ -76,7 +76,7 @@ export function TeamDashboard({
             <h2>今週の練習</h2>
             <p>{getWeekLabel()}</p>
           </div>
-          <span className="coach-badge">コーチ</span>
+          {/*<span className="coach-badge">コーチ</span>*/}
         </div>
         <div className="progress-rail">
           <div className="progress-fill" style={{ width: `${completionRatio}%` }} />
