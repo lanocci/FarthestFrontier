@@ -1,0 +1,29 @@
+import { materials } from "@/lib/mock-data";
+import { formatAudience, formatMaterialType } from "@/lib/utils";
+
+export function MaterialsPanel() {
+  return (
+    <div className="grid-cards">
+      {materials.map((material) => (
+        <article className="doc-card" key={material.id}>
+          <div className="doc-row">
+            <div>
+              <strong>{material.title}</strong>
+              <div className="subtle">{material.description}</div>
+            </div>
+            <a className="button ghost" href={material.url} target="_blank" rel="noreferrer">
+              ひらく
+            </a>
+          </div>
+          <div className="chip-row">
+            <span className="chip">{formatMaterialType(material)}</span>
+            <span className={`chip ${material.audience === "all" ? "ok" : "warn"}`}>
+              {formatAudience(material)}
+            </span>
+            <span className="chip">更新: {material.updatedAt}</span>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
