@@ -78,4 +78,5 @@ export type TeamMember = {
   role: TeamRole;
   status: MembershipStatus;
   playerIds: string[];
+  registrationMessage?: string;
 };

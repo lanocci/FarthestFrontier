@@ -89,6 +89,7 @@ type TeamMemberRow = {
   role: TeamRole;
   status: MembershipStatus;
   player_ids: string[] | null;
+  registration_message: string | null;
 };
 
 function toPlayer(row: PlayerRow): Player {
@@ -276,7 +277,7 @@ export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<
 
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, email, role, status, player_ids")
+    .select("user_id, email, role, status, player_ids, registration_message")
     .eq("user_id", user.id)
     .maybeSingle<TeamMemberRow>();
 
@@ -294,6 +295,7 @@ export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<
     role: data.role,
     status: data.status,
     playerIds: data.player_ids ?? [],
+    registrationMessage: data.registration_message ?? undefined,
   };
 }
 
@@ -327,6 +329,7 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
         role: claimed.role,
         status: claimed.status,
         playerIds: claimed.player_ids ?? [],
+        registrationMessage: claimed.registration_message ?? undefined,
       };
     }
   }
@@ -346,7 +349,7 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
       status: "pending",
       player_ids: [],
     })
-    .select("user_id, email, role, status, player_ids")
+    .select("user_id, email, role, status, player_ids, registration_message")
     .single<TeamMemberRow>();
 
   if (error) {
@@ -359,13 +362,14 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
     role: data.role,
     status: data.status,
     playerIds: data.player_ids ?? [],
+    registrationMessage: data.registration_message ?? undefined,
   };
 }
 
 export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise<TeamMember[]> {
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, email, role, status, player_ids")
+    .select("user_id, email, role, status, player_ids, registration_message")
     .eq("status", "pending");
 
   if (error) {
@@ -378,13 +382,14 @@ export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise
     role: member.role,
     status: member.status,
     playerIds: member.player_ids ?? [],
+    registrationMessage: member.registration_message ?? undefined,
   }));
 }
 
 export async function fetchTeamMembersForAdmin(supabase: SupabaseClient): Promise<TeamMember[]> {
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, email, role, status, player_ids")
+    .select("user_id, email, role, status, player_ids, registration_message")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -397,7 +402,31 @@ export async function fetchTeamMembersForAdmin(supabase: SupabaseClient): Promis
     role: member.role,
     status: member.status,
     playerIds: member.player_ids ?? [],
+    registrationMessage: member.registration_message ?? undefined,
   }));
+}
+
+export async function updateRegistrationMessage(
+  supabase: SupabaseClient,
+  message: string,
+): Promise<void> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error(authError?.message ?? "ユーザー情報を取得できませんでした。");
+  }
+
+  const { error } = await supabase
+    .from("team_members")
+    .update({ registration_message: message })
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function updateTeamMemberStatus(

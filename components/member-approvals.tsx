@@ -68,6 +68,9 @@ export function MemberApprovals({ supabase, teamMessage, setTeamMessage }: Membe
             <div className="admin-player-item" key={member.userId}>
               <strong>{member.email ?? member.userId}</strong>
               <span>{member.role === "coach" ? "コーチ" : "保護者"}</span>
+              {member.registrationMessage ? (
+                <p className="registration-message-text">{member.registrationMessage}</p>
+              ) : null}
               <div className="card-actions">
                 <button
                   className="button secondary button-compact"

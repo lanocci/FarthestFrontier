@@ -46,6 +46,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
   const [linkedPlayerIds, setLinkedPlayerIds] = useState<string[]>([]);
+  const [registrationMessage, setRegistrationMessage] = useState<string | undefined>(undefined);
   const [membershipResolved, setMembershipResolved] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -162,6 +163,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         setTeamRole(member?.role ?? null);
         setMembershipStatus(member?.status ?? null);
         setLinkedPlayerIds(member?.playerIds ?? []);
+        setRegistrationMessage(member?.registrationMessage);
         setMembershipResolved(true);
         setPlayers(snapshot.players);
         setGoalLogs(snapshot.goalLogs);
@@ -227,7 +229,12 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   }
 
   if (authEnabled && session && membershipStatus !== "approved") {
-    return <PendingApprovalScreen />;
+    return (
+      <PendingApprovalScreen
+        registrationMessage={registrationMessage}
+        onMessageSaved={(msg) => setRegistrationMessage(msg)}
+      />
+    );
   }
 
   return (

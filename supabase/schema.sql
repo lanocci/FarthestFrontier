@@ -15,6 +15,9 @@ add column if not exists email text;
 alter table if exists public.team_members
 add column if not exists player_ids text[] not null default '{}'::text[];
 
+alter table if exists public.team_members
+add column if not exists registration_message text;
+
 update public.team_members tm
 set email = lower(au.email)
 from auth.users au
@@ -292,7 +295,8 @@ returns table (
   email text,
   player_ids text[],
   role text,
-  status text
+  status text,
+  registration_message text
 )
 language plpgsql
 security definer
@@ -307,7 +311,7 @@ begin
 
   return query
   with existing_self as (
-    select tm.user_id, tm.email, tm.player_ids, tm.role, tm.status
+    select tm.user_id, tm.email, tm.player_ids, tm.role, tm.status, tm.registration_message
     from public.team_members tm
     where tm.user_id = auth.uid()
   ),
@@ -317,12 +321,12 @@ begin
         email = normalized_email
     where not exists (select 1 from existing_self)
       and lower(coalesce(tm.email, '')) = normalized_email
-    returning tm.user_id, tm.email, tm.player_ids, tm.role, tm.status
+    returning tm.user_id, tm.email, tm.player_ids, tm.role, tm.status, tm.registration_message
   )
-  select es.user_id, es.email, es.player_ids, es.role, es.status
+  select es.user_id, es.email, es.player_ids, es.role, es.status, es.registration_message
   from existing_self es
   union all
-  select c.user_id, c.email, c.player_ids, c.role, c.status
+  select c.user_id, c.email, c.player_ids, c.role, c.status, c.registration_message
   from claimed c
   limit 1;
 end;
@@ -361,6 +365,14 @@ with check (
   and role = 'guardian'
   and status = 'pending'
 );
+
+drop policy if exists "team_members_update_self_message" on public.team_members;
+create policy "team_members_update_self_message"
+on public.team_members
+for update
+to authenticated
+using (user_id = auth.uid() and status = 'pending')
+with check (user_id = auth.uid() and status = 'pending');
 
 drop policy if exists "team_members_manage_coaches" on public.team_members;
 create policy "team_members_manage_coaches"

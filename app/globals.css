@@ -1014,6 +1014,56 @@ select:disabled {
   font-size: 0.92rem;
 }
 
+.registration-message-display {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(47, 143, 91, 0.2);
+  border-radius: 14px;
+  background: rgba(47, 143, 91, 0.06);
+}
+
+.registration-message-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ok);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.registration-message-text {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.form-field {
+  margin-bottom: 12px;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 50, 77, 0.16);
+  border-radius: 14px;
+  background: var(--field);
+  font: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: rgba(232, 96, 45, 0.5);
+  box-shadow: 0 0 0 3px rgba(232, 96, 45, 0.1);
+}
+
+.form-error {
+  margin: 0 0 12px;
+  color: var(--accent-strong);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 @media (max-width: 980px) {
   .hero-grid,
   .dashboard,
