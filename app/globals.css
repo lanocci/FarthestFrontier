@@ -747,11 +747,22 @@ select:disabled {
   gap: 12px;
 }
 
+.master-group {
+  display: grid;
+  gap: 12px;
+}
+
 .master-row {
   display: grid;
   grid-template-columns: 130px 1fr 88px;
   gap: 12px;
   align-items: center;
+}
+
+.master-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .master-row input,
@@ -774,6 +785,18 @@ select:disabled {
   display: grid;
   grid-template-columns: 1fr 120px;
   gap: 10px;
+}
+
+.compact-row {
+  margin-bottom: 8px;
+}
+
+.compact-row .section-title {
+  margin-bottom: 4px;
+}
+
+.sticky-actions {
+  margin-top: 16px;
 }
 
 .goal-composer {
@@ -1151,7 +1174,17 @@ select:disabled {
   }
 
   .master-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 72px minmax(0, 1fr) 64px;
+    gap: 8px;
+  }
+
+  .master-row input {
+    min-width: 0;
+    padding: 10px 12px;
+  }
+
+  .master-label {
+    font-size: 0.74rem;
   }
 
 }

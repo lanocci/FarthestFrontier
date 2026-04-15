@@ -45,6 +45,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   const [session, setSession] = useState<Session | null>(null);
   const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
+  const [membershipResolved, setMembershipResolved] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -136,6 +137,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
     if (!supabase || !session) {
       setTeamRole(null);
       setMembershipStatus(null);
+      setMembershipResolved(!authEnabled || !session);
       setTeamMessage(
         authEnabled
           ? "ログインするとSupabaseのチームデータを読み込みます。"
@@ -149,6 +151,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
     async function syncTeam() {
       setDataLoading(true);
+      setMembershipResolved(false);
 
       try {
         const member = await fetchCurrentTeamMember(client);
@@ -160,17 +163,12 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
         setTeamRole(member?.role ?? null);
         setMembershipStatus(member?.status ?? null);
+        setMembershipResolved(true);
         setPlayers(snapshot.players);
         setGoalLogs(snapshot.goalLogs);
         setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
-        setGoalTemplates(
-          snapshot.goalTemplates.length ? snapshot.goalTemplates : getFallbackTeamSnapshot().goalTemplates,
-        );
-        setPositionMasters(
-          snapshot.positionMasters.length
-            ? snapshot.positionMasters
-            : getFallbackTeamSnapshot().positionMasters,
-        );
+        setGoalTemplates(snapshot.goalTemplates);
+        setPositionMasters(snapshot.positionMasters);
         setTeamMessage("Supabaseのチームデータを読み込みました。");
       } catch (error) {
         if (!mounted) {
@@ -178,6 +176,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         }
 
         const message = error instanceof Error ? error.message : "チームデータの読み込みに失敗しました。";
+        setMembershipResolved(true);
         setTeamMessage(`Supabase読込に失敗したため、直前のローカル状態を表示しています。${message}`);
       } finally {
         if (mounted) {
@@ -207,13 +206,13 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   const canManageAdmin = !authEnabled || teamRole === "coach";
   const canEditPractice = !authEnabled || Boolean(session);
 
-  if (authEnabled && (!authResolved || !session)) {
+  if (authEnabled && (!authResolved || !session || !membershipResolved)) {
     return (
       <main className="page-shell">
         <div className="panel">
           <div className="panel-body">
             <h2 className="section-title">ログインを確認しています</h2>
-            <p className="section-copy">セッションを確認して、必要ならログイン画面へ移動します。</p>
+            <p className="section-copy">セッションと利用状態を確認しています。</p>
           </div>
         </div>
       </main>

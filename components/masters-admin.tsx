@@ -94,6 +94,55 @@ export function MastersAdmin({
     setDraftPositions((current) => current.filter((position) => position.id !== positionId));
   }
 
+  function renderPositionGroup(side: PositionSide, title: string) {
+    const positions = draftPositions.filter((position) => position.side === side);
+
+    return (
+      <div className="master-group">
+        <div className="section-row compact-row">
+          <div>
+            <h4 className="section-title">{title}</h4>
+            <p className="subtle">名前を変えたあと、保存ボタンで反映されます。</p>
+          </div>
+          <button className="button secondary" type="button" onClick={() => addPosition(side)}>
+            追加
+          </button>
+        </div>
+
+        <div className="masters-list">
+          {positions.length ? (
+            positions.map((position) => (
+              <div className="master-row" key={position.id}>
+                <span className="master-label">{title}</span>
+                <input
+                  type="text"
+                  value={position.label}
+                  onChange={(event) =>
+                    updatePosition(
+                      draftPositions.findIndex((item) => item.id === position.id),
+                      "label",
+                      event.target.value,
+                    )
+                  }
+                />
+                <button
+                  className="button ghost"
+                  type="button"
+                  onClick={() => removePosition(position.id)}
+                  disabled={isPositionUsed(position.id)}
+                >
+                  削除
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="subtle">まだ登録がありません。</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   async function handleSaveMasters() {
     if (!canManageTeam || syncing) {
       return;
@@ -122,10 +171,16 @@ export function MastersAdmin({
     }
   }
 
-  const offensePositions = draftPositions.filter((position) => position.side === "offense");
-  const defensePositions = draftPositions.filter((position) => position.side === "defense");
   const offenseTemplates = draftTemplates.filter((template) => template.side === "offense");
   const defenseTemplates = draftTemplates.filter((template) => template.side === "defense");
+  const templateGroups: Array<{
+    side: "offense" | "defense";
+    title: string;
+    templates: GoalTemplate[];
+  }> = [
+    { side: "offense", title: "オフェンステンプレート", templates: offenseTemplates },
+    { side: "defense", title: "ディフェンステンプレート", templates: defenseTemplates },
+  ];
 
   function isPositionUsed(positionId: string) {
     return players.some(
@@ -147,6 +202,7 @@ export function MastersAdmin({
             </span>
             {syncing ? <span className="chip">保存しています…</span> : null}
             {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
+            <span className="subtle">変更後は「マスターを保存」で反映されます。</span>
             {!usingRemoteData ? (
               <button className="button ghost" type="button" onClick={onResetLocalMode} disabled={syncing}>
                 体験データに戻す
@@ -159,46 +215,14 @@ export function MastersAdmin({
               <div className="panel-body">
                 <div className="section-row">
                   <h3 className="section-title">ポジションマスター</h3>
-                  <div className="card-actions">
-                    <button className="button secondary" type="button" onClick={() => addPosition("offense")}>
-                      攻撃ポジション追加
-                    </button>
-                    <button className="button secondary" type="button" onClick={() => addPosition("defense")}>
-                      守備ポジション追加
-                    </button>
-                  </div>
+                  <button className="button" type="button" onClick={handleSaveMasters} disabled={!canManageTeam || syncing}>
+                    マスターを保存
+                  </button>
                 </div>
 
-                <div className="masters-list">
-                  {offensePositions.map((position) => (
-                    <div className="master-row" key={position.id}>
-                      <span className="chip">オフェンス</span>
-                      <input type="text" value={position.label} onChange={(event) => updatePosition(draftPositions.findIndex((item) => item.id === position.id), "label", event.target.value)} />
-                      <button
-                        className="button ghost"
-                        type="button"
-                        onClick={() => removePosition(position.id)}
-                        disabled={isPositionUsed(position.id)}
-                      >
-                        削除
-                      </button>
-                    </div>
-                  ))}
-                  {defensePositions.map((position) => (
-                    <div className="master-row" key={position.id}>
-                      <span className="chip">ディフェンス</span>
-                      <input type="text" value={position.label} onChange={(event) => updatePosition(draftPositions.findIndex((item) => item.id === position.id), "label", event.target.value)} />
-                      <button
-                        className="button ghost"
-                        type="button"
-                        onClick={() => removePosition(position.id)}
-                        disabled={isPositionUsed(position.id)}
-                      >
-                        削除
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                {renderPositionGroup("offense", "オフェンス")}
+                <div className="divider" />
+                {renderPositionGroup("defense", "ディフェンス")}
                 <p className="footer-note">選手に割り当て済みのポジションは削除できません。</p>
               </div>
             </div>
@@ -218,31 +242,51 @@ export function MastersAdmin({
                 </div>
 
                 <div className="masters-list">
-                  {[...offenseTemplates, ...defenseTemplates].map((template) => {
-                    const index = draftTemplates.findIndex((item) => item.id === template.id);
-
-                    return (
-                      <div className="template-editor" key={template.id}>
-                        <div className="chip-row">
-                          <span className="chip">{template.side === "offense" ? "オフェンス" : "ディフェンス"}</span>
+                  {templateGroups.map(({ side, title, templates }) => (
+                    <div className="master-group" key={side}>
+                      <div className="section-row compact-row">
+                        <div>
+                          <h4 className="section-title">{title}</h4>
+                          <p className="subtle">`{"{input}"}` を入れると差し込み入力つきになります。</p>
                         </div>
-                        <div className="template-grid">
-                          <input type="text" value={template.title} onChange={(event) => updateTemplate(index, "title", event.target.value)} />
-                          <input type="text" value={template.emoji} onChange={(event) => updateTemplate(index, "emoji", event.target.value)} />
-                          <input type="text" value={template.prompt} onChange={(event) => updateTemplate(index, "prompt", event.target.value)} />
-                          <input type="text" value={template.templateText} onChange={(event) => updateTemplate(index, "templateText", event.target.value)} />
-                          <input type="text" value={template.inputPlaceholder ?? ""} onChange={(event) => updateTemplate(index, "inputPlaceholder", event.target.value)} />
-                        </div>
-                        <p className="subtle">`{"{input}"}` を入れると差し込み入力つき、入れないとワンタップ用テンプレートになります。</p>
+                        <button
+                          className="button secondary"
+                          type="button"
+                          onClick={() => addTemplateBySide(side)}
+                        >
+                          追加
+                        </button>
                       </div>
-                    );
-                  })}
+
+                      <div className="masters-list">
+                        {templates.length ? (
+                          templates.map((template) => {
+                            const index = draftTemplates.findIndex((item) => item.id === template.id);
+
+                            return (
+                              <div className="template-editor" key={template.id}>
+                                <div className="template-grid">
+                                  <input type="text" value={template.title} onChange={(event) => updateTemplate(index, "title", event.target.value)} />
+                                  <input type="text" value={template.emoji} onChange={(event) => updateTemplate(index, "emoji", event.target.value)} />
+                                  <input type="text" value={template.prompt} onChange={(event) => updateTemplate(index, "prompt", event.target.value)} />
+                                  <input type="text" value={template.templateText} onChange={(event) => updateTemplate(index, "templateText", event.target.value)} />
+                                  <input type="text" value={template.inputPlaceholder ?? ""} onChange={(event) => updateTemplate(index, "inputPlaceholder", event.target.value)} />
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="subtle">まだ登録がありません。</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="card-actions">
+          <div className="card-actions sticky-actions">
             <button className="button" type="button" onClick={handleSaveMasters} disabled={!canManageTeam || syncing}>
               マスターを保存
             </button>

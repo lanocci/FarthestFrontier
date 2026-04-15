@@ -34,7 +34,7 @@ create table if not exists public.players (
 );
 
 create table if not exists public.goal_templates (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   side text not null check (side in ('offense', 'defense')),
   title text not null,
   prompt text not null,
@@ -48,13 +48,29 @@ create table if not exists public.goal_templates (
 create table if not exists public.goal_logs (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references public.players(id) on delete cascade,
-  goal_template_id uuid references public.goal_templates(id) on delete set null,
+  goal_template_id text references public.goal_templates(id) on delete set null,
   goal_text text not null,
   log_date date not null default current_date,
   note text,
   submitted_by_role text not null check (submitted_by_role in ('coach', 'guardian')),
   created_at timestamptz not null default now()
 );
+
+alter table if exists public.goal_logs
+drop constraint if exists goal_logs_goal_template_id_fkey;
+
+alter table if exists public.goal_templates
+alter column id drop default;
+
+alter table if exists public.goal_templates
+alter column id type text using id::text;
+
+alter table if exists public.goal_logs
+alter column goal_template_id type text using goal_template_id::text;
+
+alter table if exists public.goal_logs
+add constraint goal_logs_goal_template_id_fkey
+foreign key (goal_template_id) references public.goal_templates(id) on delete set null;
 
 create table if not exists public.practice_entries (
   id uuid primary key default gen_random_uuid(),
