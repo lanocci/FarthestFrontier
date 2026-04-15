@@ -26,7 +26,6 @@ type MastersAdminProps = {
 
 export function MastersAdmin({
   canManageTeam,
-  dataLoading,
   goalTemplates,
   players,
   positionMasters,
@@ -185,7 +184,7 @@ export function MastersAdmin({
   function isPositionUsed(positionId: string) {
     return players.some(
       (player) =>
-        player.offensePositionId === positionId || player.defensePositionId === positionId,
+        player.offensePositionIds.includes(positionId) || player.defensePositionIds.includes(positionId),
     );
   }
 
@@ -197,9 +196,6 @@ export function MastersAdmin({
           copy="ポジション候補と目標テンプレートをここで管理します。ホームや選手管理の入力候補にそのまま反映されます。"
         >
           <div className="status-strip">
-            <span className={`chip ${usingRemoteData ? "ok" : "warn"}`}>
-              {dataLoading ? "読込中" : usingRemoteData ? "Supabase同期中" : "ローカル保存中"}
-            </span>
             {syncing ? <span className="chip">保存しています…</span> : null}
             {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
             <span className="subtle">変更後は「マスターを保存」で反映されます。</span>

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 type GlobalHeaderProps = {
   view: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
+  onSignOut?: () => void;
 };
 
 const navItems = [
@@ -12,7 +13,7 @@ const navItems = [
   { href: "/settings", label: "設定", view: "settings" },
 ] as const;
 
-export function GlobalHeader({ view }: GlobalHeaderProps) {
+export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
   return (
     <header className="global-header">
       <div>
@@ -30,6 +31,11 @@ export function GlobalHeader({ view }: GlobalHeaderProps) {
             {item.label}
           </Link>
         ))}
+        {onSignOut ? (
+          <button className="button secondary button-compact" type="button" onClick={onSignOut}>
+            ログアウト
+          </button>
+        ) : null}
       </nav>
     </header>
   );

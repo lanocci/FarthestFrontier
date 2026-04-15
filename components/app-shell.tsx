@@ -138,11 +138,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
       setTeamRole(null);
       setMembershipStatus(null);
       setMembershipResolved(!authEnabled || !session);
-      setTeamMessage(
-        authEnabled
-          ? "ログインするとSupabaseのチームデータを読み込みます。"
-          : "ローカル体験モードではブラウザに保存されます。",
-      );
+      setTeamMessage(null);
       return;
     }
 
@@ -169,7 +165,6 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
         setGoalTemplates(snapshot.goalTemplates);
         setPositionMasters(snapshot.positionMasters);
-        setTeamMessage("Supabaseのチームデータを読み込みました。");
       } catch (error) {
         if (!mounted) {
           return;
@@ -203,6 +198,15 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
     setTeamMessage("ローカル体験モードを初期データに戻しました。");
   }
 
+  async function handleSignOut() {
+    if (!supabase) {
+      return;
+    }
+
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }
+
   const canManageAdmin = !authEnabled || teamRole === "coach";
   const canEditPractice = !authEnabled || Boolean(session);
 
@@ -225,7 +229,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
   return (
     <main className="page-shell">
-      <GlobalHeader view={view} />
+      <GlobalHeader view={view} onSignOut={authEnabled && session ? handleSignOut : undefined} />
 
       {view === "players" ? (
         <TeamAdmin
@@ -261,7 +265,6 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         />
       ) : view === "materials" ? (
         <MaterialsLibrary
-          dataLoading={dataLoading}
           materials={materials}
           teamMessage={teamMessage}
         />
@@ -320,7 +323,6 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         />
       ) : (
         <TeamDashboard
-          dataLoading={dataLoading}
           players={players}
           positionMasters={positionMasters}
           teamMessage={teamMessage}

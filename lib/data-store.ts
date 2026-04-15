@@ -16,8 +16,8 @@ type PlayerRow = {
   grade_label: string;
   guardian_name: string;
   favorite_skill: string | null;
-  offense_position_id: string;
-  defense_position_id: string;
+  offense_position_ids: string[] | null;
+  defense_position_ids: string[] | null;
   offense_goal: string | null;
   defense_goal: string | null;
   offense_reflection_rating: 1 | 2 | 3 | 4 | 5 | null;
@@ -103,8 +103,8 @@ function toPlayer(row: PlayerRow): Player {
     gradeLabel: row.grade_label,
     guardianName: row.guardian_name,
     favoriteSkill: row.favorite_skill ?? "これから見つける",
-    offensePositionId: row.offense_position_id,
-    defensePositionId: row.defense_position_id,
+    offensePositionIds: row.offense_position_ids ?? [],
+    defensePositionIds: row.defense_position_ids ?? [],
     practiceEntries: [],
     offenseGoal: row.offense_goal ?? undefined,
     defenseGoal: row.defense_goal ?? undefined,
@@ -185,7 +185,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     supabase
       .from("players")
       .select(
-        "id, name, jersey_number, grade_label, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, active",
+        "id, name, jersey_number, grade_label, guardian_name, favorite_skill, offense_position_ids, defense_position_ids, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, active",
       )
       .order("created_at", { ascending: true }),
     supabase
@@ -381,8 +381,8 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
       grade_label: player.gradeLabel,
       guardian_name: player.guardianName,
       favorite_skill: player.favoriteSkill,
-      offense_position_id: player.offensePositionId,
-      defense_position_id: player.defensePositionId,
+      offense_position_ids: player.offensePositionIds,
+      defense_position_ids: player.defensePositionIds,
       offense_goal: player.offenseGoal ?? null,
       defense_goal: player.defenseGoal ?? null,
       offense_reflection_rating: player.offenseReflectionRating ?? null,
@@ -392,7 +392,7 @@ export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player
       active: player.active,
     })
     .select(
-      "id, name, jersey_number, grade_label, guardian_name, favorite_skill, offense_position_id, defense_position_id, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, active",
+      "id, name, jersey_number, grade_label, guardian_name, favorite_skill, offense_position_ids, defense_position_ids, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, active",
     )
     .single();
 
@@ -433,8 +433,8 @@ export async function updatePlayer(supabase: SupabaseClient, player: Player): Pr
       grade_label: player.gradeLabel,
       guardian_name: player.guardianName,
       favorite_skill: player.favoriteSkill,
-      offense_position_id: player.offensePositionId,
-      defense_position_id: player.defensePositionId,
+      offense_position_ids: player.offensePositionIds,
+      defense_position_ids: player.defensePositionIds,
       offense_goal: player.offenseGoal ?? null,
       defense_goal: player.defenseGoal ?? null,
       offense_reflection_rating: player.offenseReflectionRating ?? null,

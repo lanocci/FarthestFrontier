@@ -8,7 +8,7 @@ import { Section } from "@/components/section";
 import { upsertPracticeEntry } from "@/lib/data-store";
 import { formatDisplayDate, getDashboardPracticeDate, getRecentPracticeDates } from "@/lib/date";
 import { GoalTemplate, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating } from "@/lib/types";
-import { buildGoalText, getPositionLabel, getPracticeEntry, upsertPracticeEntryForPlayer } from "@/lib/utils";
+import { buildGoalText, getPositionLabels, getPracticeEntry, upsertPracticeEntryForPlayer } from "@/lib/utils";
 
 type EditorMode = "goal" | "reflection";
 
@@ -222,7 +222,7 @@ export function PlayerPracticeEditor({
   }
 
   const pageTitle = mode === "goal" ? "目標入力" : "振り返り入力";
-  const pageCopy = `${player.jerseyNumber ? `#${player.jerseyNumber} / ` : ""}${player.gradeLabel} / OF: ${getPositionLabel(player.offensePositionId, positionMasters)} / DF: ${getPositionLabel(player.defensePositionId, positionMasters)}`;
+  const pageCopy = `${player.jerseyNumber ? `#${player.jerseyNumber} / ` : ""}${player.gradeLabel} / OF: ${getPositionLabels(player.offensePositionIds, positionMasters)} / DF: ${getPositionLabels(player.defensePositionIds, positionMasters)}`;
   const selectedEntry = getPracticeEntry(player, selectedPracticeDate);
   const canOpenReflection = Boolean(selectedEntry?.offenseGoal || selectedEntry?.defenseGoal);
   const practiceDateOptions = Array.from(

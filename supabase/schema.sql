@@ -21,8 +21,8 @@ create table if not exists public.players (
   grade_label text not null,
   guardian_name text not null,
   favorite_skill text,
-  offense_position_id text not null references public.position_masters(id),
-  defense_position_id text not null references public.position_masters(id),
+  offense_position_ids text[] not null default '{}'::text[],
+  defense_position_ids text[] not null default '{}'::text[],
   offense_goal text,
   defense_goal text,
   offense_reflection_rating smallint check (offense_reflection_rating between 1 and 5),
@@ -71,6 +71,51 @@ alter column goal_template_id type text using goal_template_id::text;
 alter table if exists public.goal_logs
 add constraint goal_logs_goal_template_id_fkey
 foreign key (goal_template_id) references public.goal_templates(id) on delete set null;
+
+alter table if exists public.players
+drop constraint if exists players_offense_position_id_fkey;
+
+alter table if exists public.players
+drop constraint if exists players_defense_position_id_fkey;
+
+alter table if exists public.players
+add column if not exists offense_position_ids text[] not null default '{}'::text[];
+
+alter table if exists public.players
+add column if not exists defense_position_ids text[] not null default '{}'::text[];
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'players' and column_name = 'offense_position_id'
+  ) then
+    execute '
+      update public.players
+      set offense_position_ids = array[offense_position_id]
+      where offense_position_id is not null
+        and cardinality(offense_position_ids) = 0
+    ';
+
+    execute 'alter table public.players drop column if exists offense_position_id';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'players' and column_name = 'defense_position_id'
+  ) then
+    execute '
+      update public.players
+      set defense_position_ids = array[defense_position_id]
+      where defense_position_id is not null
+        and cardinality(defense_position_ids) = 0
+    ';
+
+    execute 'alter table public.players drop column if exists defense_position_id';
+  end if;
+end $$;
 
 create table if not exists public.practice_entries (
   id uuid primary key default gen_random_uuid(),

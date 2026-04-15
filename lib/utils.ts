@@ -87,6 +87,14 @@ export function getPositionLabel(positionId: string, masters: PositionMaster[] =
   return masters.find((position) => position.id === positionId)?.label ?? "未設定";
 }
 
+export function getPositionLabels(positionIds: string[], masters: PositionMaster[] = positionMasters): string {
+  if (!positionIds.length) {
+    return "未設定";
+  }
+
+  return positionIds.map((positionId) => getPositionLabel(positionId, masters)).join(" / ");
+}
+
 export function getPositionsBySide(
   side: PositionSide,
   masters: PositionMaster[] = positionMasters,

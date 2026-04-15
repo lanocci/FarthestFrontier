@@ -828,6 +828,21 @@ select:disabled {
   font-weight: 700;
 }
 
+.position-picker {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(23, 50, 77, 0.16);
+  border-radius: 14px;
+  background: var(--field);
+}
+
+.position-picker .checkbox-row {
+  min-height: 0;
+  padding: 0;
+  font-weight: 600;
+}
+
 .grid-cards {
   display: grid;
   gap: 12px;

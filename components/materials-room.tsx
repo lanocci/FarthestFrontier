@@ -41,7 +41,6 @@ const initialForm: MaterialForm = {
 
 export function MaterialsRoom({
   canManageTeam,
-  dataLoading,
   materials,
   setMaterials,
   setTeamMessage,
@@ -102,9 +101,6 @@ export function MaterialsRoom({
           copy="コーチ向けの管理画面です。共有資料の追加や確認をここで行います。"
         >
           <div className="status-strip">
-            <span className={`chip ${usingRemoteData ? "ok" : "warn"}`}>
-              {dataLoading ? "読込中" : usingRemoteData ? "Supabase同期中" : "ローカル保存中"}
-            </span>
             {syncing ? <span className="chip">保存しています…</span> : null}
             {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
             {!usingRemoteData ? (

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Section } from "@/components/section";
 import { insertPlayer, updatePlayer } from "@/lib/data-store";
 import { Player, PositionMaster } from "@/lib/types";
-import { getPositionLabel, getPositionsBySide } from "@/lib/utils";
+import { getPositionLabels, getPositionsBySide } from "@/lib/utils";
 
 type TeamAdminProps = {
   canManageTeam: boolean;
@@ -29,8 +29,8 @@ type PlayerForm = {
   gradeLabel: string;
   guardianName: string;
   favoriteSkill: string;
-  offensePositionId: string;
-  defensePositionId: string;
+  offensePositionIds: string[];
+  defensePositionIds: string[];
   active: boolean;
 };
 
@@ -41,8 +41,12 @@ function createInitialPlayerForm(positionMasters: PositionMaster[]): PlayerForm 
     gradeLabel: "1ねん",
     guardianName: "",
     favoriteSkill: "",
-    offensePositionId: getPositionsBySide("offense", positionMasters)[0]?.id ?? "",
-    defensePositionId: getPositionsBySide("defense", positionMasters)[0]?.id ?? "",
+    offensePositionIds: getPositionsBySide("offense", positionMasters)[0]?.id
+      ? [getPositionsBySide("offense", positionMasters)[0]!.id]
+      : [],
+    defensePositionIds: getPositionsBySide("defense", positionMasters)[0]?.id
+      ? [getPositionsBySide("defense", positionMasters)[0]!.id]
+      : [],
     active: true,
   };
 }
@@ -54,15 +58,14 @@ function createFormFromPlayer(player: Player): PlayerForm {
     gradeLabel: player.gradeLabel,
     guardianName: player.guardianName,
     favoriteSkill: player.favoriteSkill,
-    offensePositionId: player.offensePositionId,
-    defensePositionId: player.defensePositionId,
+    offensePositionIds: player.offensePositionIds,
+    defensePositionIds: player.defensePositionIds,
     active: player.active,
   };
 }
 
 export function TeamAdmin({
   canManageTeam,
-  dataLoading,
   players,
   positionMasters,
   setPlayers,
@@ -84,15 +87,15 @@ export function TeamAdmin({
   useEffect(() => {
     setCreateForm((current) => ({
       ...current,
-      offensePositionId: current.offensePositionId || defaultForm.offensePositionId,
-      defensePositionId: current.defensePositionId || defaultForm.defensePositionId,
+      offensePositionIds: current.offensePositionIds.length ? current.offensePositionIds : defaultForm.offensePositionIds,
+      defensePositionIds: current.defensePositionIds.length ? current.defensePositionIds : defaultForm.defensePositionIds,
     }));
     setEditForm((current) => ({
       ...current,
-      offensePositionId: current.offensePositionId || defaultForm.offensePositionId,
-      defensePositionId: current.defensePositionId || defaultForm.defensePositionId,
+      offensePositionIds: current.offensePositionIds.length ? current.offensePositionIds : defaultForm.offensePositionIds,
+      defensePositionIds: current.defensePositionIds.length ? current.defensePositionIds : defaultForm.defensePositionIds,
     }));
-  }, [defaultForm.defensePositionId, defaultForm.offensePositionId]);
+  }, [defaultForm.defensePositionIds, defaultForm.offensePositionIds]);
 
   useEffect(() => {
     if (selectedPlayerId && players.some((player) => player.id === selectedPlayerId)) {
@@ -123,8 +126,35 @@ export function TeamAdmin({
     setEditForm((current) => ({ ...current, [key]: value }));
   }
 
+  function togglePosition(
+    formKey: "create" | "edit",
+    side: "offensePositionIds" | "defensePositionIds",
+    positionId: string,
+  ) {
+    const updater = formKey === "create" ? setCreateForm : setEditForm;
+
+    updater((current) => {
+      const currentIds = current[side];
+      const nextIds = currentIds.includes(positionId)
+        ? currentIds.filter((id) => id !== positionId)
+        : [...currentIds, positionId];
+
+      return {
+        ...current,
+        [side]: nextIds,
+      };
+    });
+  }
+
   async function handleCreatePlayer() {
-    if (!canManageTeam || syncing || !createForm.name.trim() || !createForm.guardianName.trim()) {
+    if (
+      !canManageTeam ||
+      syncing ||
+      !createForm.name.trim() ||
+      !createForm.guardianName.trim() ||
+      !createForm.offensePositionIds.length ||
+      !createForm.defensePositionIds.length
+    ) {
       return;
     }
 
@@ -170,7 +200,12 @@ export function TeamAdmin({
       favoriteSkill: editForm.favoriteSkill.trim() || "これから見つける",
     };
 
-    if (!nextPlayer.name || !nextPlayer.guardianName) {
+    if (
+      !nextPlayer.name ||
+      !nextPlayer.guardianName ||
+      !nextPlayer.offensePositionIds.length ||
+      !nextPlayer.defensePositionIds.length
+    ) {
       return;
     }
 
@@ -198,9 +233,6 @@ export function TeamAdmin({
           copy="追加、学年、保護者、とくいなこと、攻守ポジションをこのページで管理できます。ポジション候補はマスター管理ページで変更できます。"
         >
           <div className="status-strip">
-            <span className={`chip ${usingRemoteData ? "ok" : "warn"}`}>
-              {dataLoading ? "読込中" : usingRemoteData ? "Supabase同期中" : "ローカル保存中"}
-            </span>
             {syncing ? <span className="chip">保存しています…</span> : null}
             {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
             {!usingRemoteData ? (
@@ -237,19 +269,35 @@ export function TeamAdmin({
                   </label>
                   <label className="field-stack">
                     <span className="field-label">オフェンスポジション</span>
-                    <select value={createForm.offensePositionId} onChange={(event) => updateCreateForm("offensePositionId", event.target.value)} disabled={!canManageTeam || syncing}>
+                    <div className="position-picker">
                       {offensePositions.map((position) => (
-                        <option key={position.id} value={position.id}>{position.label}</option>
+                        <label className="checkbox-row" key={position.id}>
+                          <input
+                            type="checkbox"
+                            checked={createForm.offensePositionIds.includes(position.id)}
+                            onChange={() => togglePosition("create", "offensePositionIds", position.id)}
+                            disabled={!canManageTeam || syncing}
+                          />
+                          {position.label}
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </label>
                   <label className="field-stack">
                     <span className="field-label">ディフェンスポジション</span>
-                    <select value={createForm.defensePositionId} onChange={(event) => updateCreateForm("defensePositionId", event.target.value)} disabled={!canManageTeam || syncing}>
+                    <div className="position-picker">
                       {defensePositions.map((position) => (
-                        <option key={position.id} value={position.id}>{position.label}</option>
+                        <label className="checkbox-row" key={position.id}>
+                          <input
+                            type="checkbox"
+                            checked={createForm.defensePositionIds.includes(position.id)}
+                            onChange={() => togglePosition("create", "defensePositionIds", position.id)}
+                            disabled={!canManageTeam || syncing}
+                          />
+                          {position.label}
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </label>
                   <button className="button" type="button" onClick={handleCreatePlayer} disabled={!canManageTeam || syncing}>
                     選手を追加
@@ -305,19 +353,35 @@ export function TeamAdmin({
                 </label>
                 <label className="field-stack">
                   <span className="field-label">オフェンスポジション</span>
-                  <select value={editForm.offensePositionId} onChange={(event) => updateEditForm("offensePositionId", event.target.value)} disabled={!canManageTeam || syncing}>
+                  <div className="position-picker">
                     {offensePositions.map((position) => (
-                      <option key={position.id} value={position.id}>{position.label}</option>
+                      <label className="checkbox-row" key={position.id}>
+                        <input
+                          type="checkbox"
+                          checked={editForm.offensePositionIds.includes(position.id)}
+                          onChange={() => togglePosition("edit", "offensePositionIds", position.id)}
+                          disabled={!canManageTeam || syncing}
+                        />
+                        {position.label}
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </label>
                 <label className="field-stack">
                   <span className="field-label">ディフェンスポジション</span>
-                  <select value={editForm.defensePositionId} onChange={(event) => updateEditForm("defensePositionId", event.target.value)} disabled={!canManageTeam || syncing}>
+                  <div className="position-picker">
                     {defensePositions.map((position) => (
-                      <option key={position.id} value={position.id}>{position.label}</option>
+                      <label className="checkbox-row" key={position.id}>
+                        <input
+                          type="checkbox"
+                          checked={editForm.defensePositionIds.includes(position.id)}
+                          onChange={() => togglePosition("edit", "defensePositionIds", position.id)}
+                          disabled={!canManageTeam || syncing}
+                        />
+                        {position.label}
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </label>
                 <label className="field-stack">
                   <span className="field-label">在籍状態</span>
@@ -329,8 +393,8 @@ export function TeamAdmin({
               </div>
 
               <div className="chip-row">
-                <span className="chip">オフェンス: {getPositionLabel(editForm.offensePositionId, positionMasters)}</span>
-                <span className="chip">ディフェンス: {getPositionLabel(editForm.defensePositionId, positionMasters)}</span>
+                <span className="chip">オフェンス: {getPositionLabels(editForm.offensePositionIds, positionMasters)}</span>
+                <span className="chip">ディフェンス: {getPositionLabels(editForm.defensePositionIds, positionMasters)}</span>
               </div>
 
               <div className="card-actions">

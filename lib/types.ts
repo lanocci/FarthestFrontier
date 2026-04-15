@@ -30,8 +30,8 @@ export type Player = {
   active: boolean;
   guardianName: string;
   favoriteSkill: string;
-  offensePositionId: string;
-  defensePositionId: string;
+  offensePositionIds: string[];
+  defensePositionIds: string[];
   practiceEntries: PlayerPracticeEntry[];
   offenseGoal?: string;
   defenseGoal?: string;

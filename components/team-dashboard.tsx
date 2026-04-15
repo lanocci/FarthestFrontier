@@ -2,12 +2,11 @@
 
 import { formatDisplayDate, getDashboardPracticeDate } from "@/lib/date";
 import { Player, PositionMaster } from "@/lib/types";
-import { getPositionLabel, getPracticeEntry } from "@/lib/utils";
+import { getPositionLabels, getPracticeEntry } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type TeamDashboardProps = {
-  dataLoading: boolean;
   players: Player[];
   positionMasters: PositionMaster[];
   teamMessage: string | null;
@@ -16,7 +15,6 @@ type TeamDashboardProps = {
 };
 
 export function TeamDashboard({
-  dataLoading,
   players,
   positionMasters,
   teamMessage,
@@ -58,7 +56,6 @@ export function TeamDashboard({
         </div>
         <div className="week-panel-footer">
           <span>振り返り完了: {completedReflectionCount} / {activePlayerCount}人</span>
-          <span>{dataLoading ? "読込中" : usingRemoteData ? "Supabase同期中" : "ローカル保存中"}</span>
         </div>
       </section>
 
@@ -91,7 +88,7 @@ export function TeamDashboard({
                   <div>
                     <strong>{player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}</strong>
                     <div className="subtle">
-                      {getPositionLabel(player.offensePositionId, positionMasters)} / {getPositionLabel(player.defensePositionId, positionMasters)}
+                      {getPositionLabels(player.offensePositionIds, positionMasters)} / {getPositionLabels(player.defensePositionIds, positionMasters)}
                     </div>
                   </div>
                   <span className={`chip ${player.active ? "ok" : "warn"}`}>

@@ -48,6 +48,8 @@ export function clearStorage() {
 function normalizePlayer(player: Player): Player {
   const legacyOffense = (player as Player & { offensePosition?: string }).offensePosition;
   const legacyDefense = (player as Player & { defensePosition?: string }).defensePosition;
+  const legacyOffensePositionId = (player as Player & { offensePositionId?: string }).offensePositionId;
+  const legacyDefensePositionId = (player as Player & { defensePositionId?: string }).defensePositionId;
   const legacyRecentGoal = (player as Player & { recentGoalText?: string }).recentGoalText;
   const legacyJerseyNumber = (player as Player & { number?: string | number }).number;
   const legacyOffenseReflection = (player as Player & { offenseReflection?: string }).offenseReflection;
@@ -94,8 +96,14 @@ function normalizePlayer(player: Player): Player {
   return {
     ...player,
     jerseyNumber: player.jerseyNumber ?? String(legacyJerseyNumber ?? ""),
-    offensePositionId: player.offensePositionId ?? offenseMap[legacyOffense ?? ""] ?? "op-flex",
-    defensePositionId: player.defensePositionId ?? defenseMap[legacyDefense ?? ""] ?? "dp-linebacker",
+    offensePositionIds:
+      player.offensePositionIds?.length
+        ? player.offensePositionIds
+        : [legacyOffensePositionId ?? offenseMap[legacyOffense ?? ""] ?? "op-flex"],
+    defensePositionIds:
+      player.defensePositionIds?.length
+        ? player.defensePositionIds
+        : [legacyDefensePositionId ?? defenseMap[legacyDefense ?? ""] ?? "dp-linebacker"],
     gradeLabel: player.gradeLabel ?? "未設定",
     practiceEntries: normalizedEntries,
     offenseGoal: player.offenseGoal ?? legacyRecentGoal,

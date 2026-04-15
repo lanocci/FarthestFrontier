@@ -1,5 +1,5 @@
 import { Player, PositionMaster } from "@/lib/types";
-import { getPositionLabel, getRecentGoalForPlayer } from "@/lib/utils";
+import { getPositionLabels, getRecentGoalForPlayer } from "@/lib/utils";
 
 type PlayerListProps = {
   players: Player[];
@@ -36,8 +36,8 @@ export function PlayerList({
             </div>
             <div className="chip-row">
               <span className="chip">とくい: {player.favoriteSkill}</span>
-              <span className="chip">オフェンス: {getPositionLabel(player.offensePositionId, positionMasters)}</span>
-              <span className="chip">ディフェンス: {getPositionLabel(player.defensePositionId, positionMasters)}</span>
+              <span className="chip">オフェンス: {getPositionLabels(player.offensePositionIds, positionMasters)}</span>
+              <span className="chip">ディフェンス: {getPositionLabels(player.defensePositionIds, positionMasters)}</span>
               {recentGoal ? <span className="chip">最近の目標: {recentGoal}</span> : null}
             </div>
             <div className="card-actions">

@@ -22,8 +22,8 @@ export const players: Player[] = [
     active: true,
     guardianName: "佐藤さん",
     favoriteSkill: "はしる",
-    offensePositionId: "op-runner",
-    defensePositionId: "dp-cornerback",
+    offensePositionIds: ["op-runner"],
+    defensePositionIds: ["dp-cornerback"],
     practiceEntries: [
       {
         practiceDate: "2026-04-18",
@@ -40,8 +40,8 @@ export const players: Player[] = [
     active: true,
     guardianName: "田中さん",
     favoriteSkill: "キャッチ",
-    offensePositionId: "op-receiver",
-    defensePositionId: "dp-safety",
+    offensePositionIds: ["op-receiver"],
+    defensePositionIds: ["dp-safety"],
     practiceEntries: [
       {
         practiceDate: "2026-04-18",
@@ -57,8 +57,8 @@ export const players: Player[] = [
     active: true,
     guardianName: "山田さん",
     favoriteSkill: "よける",
-    offensePositionId: "op-flex",
-    defensePositionId: "dp-linebacker",
+    offensePositionIds: ["op-flex"],
+    defensePositionIds: ["dp-linebacker"],
     practiceEntries: [
       {
         practiceDate: "2026-04-18",
@@ -74,8 +74,8 @@ export const players: Player[] = [
     active: true,
     guardianName: "井上さん",
     favoriteSkill: "まもる",
-    offensePositionId: "op-center",
-    defensePositionId: "dp-rusher",
+    offensePositionIds: ["op-center"],
+    defensePositionIds: ["dp-rusher"],
     practiceEntries: [
       {
         practiceDate: "2026-04-12",
@@ -93,8 +93,8 @@ export const players: Player[] = [
     active: false,
     guardianName: "中村さん",
     favoriteSkill: "こえだし",
-    offensePositionId: "op-quarterback",
-    defensePositionId: "dp-flag-keeper",
+    offensePositionIds: ["op-quarterback"],
+    defensePositionIds: ["dp-flag-keeper"],
     practiceEntries: [],
   },
 ];

@@ -20,10 +20,6 @@ export function SettingsRoom({ canManageAdmin, supabase, teamMessage, setTeamMes
           title="設定"
           copy="ふだんは使わない管理系の画面を、ここにまとめています。選手、資料、マスターの編集が必要なときだけ開いてください。"
         >
-          <div className="status-strip">
-            {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
-          </div>
-
           {canManageAdmin ? (
             <div className="settings-grid">
               <Link className="settings-card" href="/materials/manage">
