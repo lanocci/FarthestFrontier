@@ -250,9 +250,11 @@ begin
       and lower(coalesce(tm.email, '')) = normalized_email
     returning tm.user_id, tm.email, tm.role, tm.status
   )
-  select user_id, email, role, status from existing_self
+  select es.user_id, es.email, es.role, es.status
+  from existing_self es
   union all
-  select user_id, email, role, status from claimed
+  select c.user_id, c.email, c.role, c.status
+  from claimed c
   limit 1;
 end;
 $$;

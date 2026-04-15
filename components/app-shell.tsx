@@ -12,7 +12,7 @@ import { PlayerPracticeEditor } from "@/components/player-practice-editor";
 import { SettingsRoom } from "@/components/settings-room";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
-import { fetchCurrentTeamMember, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
+import { ensurePendingTeamMember, fetchCurrentTeamMember, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
 import {
   clearStorage,
   loadGoalLogs,
@@ -150,7 +150,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
       setMembershipResolved(false);
 
       try {
-        const member = await fetchCurrentTeamMember(client);
+        const member = (await fetchCurrentTeamMember(client)) ?? (await ensurePendingTeamMember(client));
         const snapshot = await fetchTeamSnapshot(client);
 
         if (!mounted) {
