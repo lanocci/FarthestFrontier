@@ -9,8 +9,8 @@ type GlobalHeaderProps = {
 
 const navItems = [
   { href: "/", label: "🏠", view: "dashboard" },
-  { href: "/materials", label: "資料室", view: "materials" },
-  { href: "/settings", label: "設定", view: "settings" },
+  { href: "/materials", label: "資料室📕", view: "materials" },
+  { href: "/settings", label: "設定⚙️", view: "settings" },
 ] as const;
 
 export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
