@@ -315,13 +315,15 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
   const email = user.email?.trim().toLowerCase();
 
   if (email) {
-    const { data: claimed, error: claimError } = await supabase.rpc("claim_team_member_by_email", {
+    const { data: claimedRows, error: claimError } = await supabase.rpc("claim_team_member_by_email", {
       login_email: email,
     });
 
     if (claimError) {
       throw new Error(claimError.message);
     }
+
+    const claimed = Array.isArray(claimedRows) ? claimedRows[0] : claimedRows;
 
     if (claimed) {
       return {

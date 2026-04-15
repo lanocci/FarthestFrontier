@@ -18,6 +18,16 @@ where tm.user_id = au.id
   and au.email is not null
   and (tm.email is null or tm.email = '');
 
+insert into public.team_members (user_id, email, role, status)
+select au.id, lower(au.email), 'guardian', 'pending'
+from auth.users au
+where not exists (
+  select 1
+  from public.team_members tm
+  where tm.user_id = au.id
+)
+on conflict (user_id) do nothing;
+
 create unique index if not exists team_members_email_unique
 on public.team_members (lower(email))
 where email is not null;
@@ -168,8 +178,25 @@ begin
 end;
 $$;
 
+create or replace function public.handle_new_team_member()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.team_members (user_id, email, role, status)
+  values (new.id, lower(new.email), 'guardian', 'pending')
+  on conflict (user_id) do update
+    set email = excluded.email;
+
+  return new;
+end;
+$$;
+
 drop trigger if exists materials_set_updated_at on public.materials;
 drop trigger if exists practice_entries_set_updated_at on public.practice_entries;
+drop trigger if exists on_auth_user_created_team_member on auth.users;
 
 create trigger materials_set_updated_at
 before update on public.materials
@@ -180,6 +207,11 @@ create trigger practice_entries_set_updated_at
 before update on public.practice_entries
 for each row
 execute function public.set_updated_at();
+
+create trigger on_auth_user_created_team_member
+after insert on auth.users
+for each row
+execute function public.handle_new_team_member();
 
 create or replace function public.current_team_role()
 returns text
