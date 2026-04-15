@@ -30,7 +30,9 @@ export function LoginPanel({
       <div className="panel-body">
         <h2 className="section-title">FFFC2025 ログイン</h2>
         <p className="section-copy">
-          メールアドレスもしくはGoogleアカウントでログインしてください
+          メールアドレスもしくはGoogleアカウントでログインしてください。
+          <br />
+          メールアドレスでのログインの場合は、ログインリンクが入力されたメールアドレス宛に送信されます。
         </p>
         <div className="login-card">
           <input
