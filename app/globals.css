@@ -56,6 +56,11 @@ select:disabled {
   padding: 20px 0 32px;
 }
 
+.login-page-shell {
+  width: min(560px, calc(100% - 32px));
+  padding-top: 48px;
+}
+
 .global-header {
   display: flex;
   align-items: center;

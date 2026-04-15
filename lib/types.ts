@@ -1,5 +1,6 @@
 export type Role = "coach" | "guardian";
 export type TeamRole = Role;
+export type MembershipStatus = "pending" | "approved" | "rejected";
 export type MaterialType = "slide" | "sheet" | "doc";
 export type MaterialAudience = "all" | "guardians" | "coaches";
 export type PositionSide = "offense" | "defense";

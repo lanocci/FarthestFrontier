@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.team_members (
   user_id uuid primary key references auth.users(id) on delete cascade,
   role text not null check (role in ('coach', 'guardian')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now()
 );
 
@@ -114,12 +115,23 @@ as $$
   where tm.user_id = auth.uid()
 $$;
 
+create or replace function public.current_membership_status()
+returns text
+language sql
+stable
+as $$
+  select tm.status
+  from public.team_members tm
+  where tm.user_id = auth.uid()
+$$;
+
 create or replace function public.is_team_member()
 returns boolean
 language sql
 stable
 as $$
   select public.current_team_role() in ('coach', 'guardian')
+    and public.current_membership_status() = 'approved'
 $$;
 
 create or replace function public.is_coach()
@@ -144,6 +156,25 @@ on public.team_members
 for select
 to authenticated
 using (user_id = auth.uid());
+
+drop policy if exists "team_members_insert_self" on public.team_members;
+create policy "team_members_insert_self"
+on public.team_members
+for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and role = 'guardian'
+  and status = 'pending'
+);
+
+drop policy if exists "team_members_manage_coaches" on public.team_members;
+create policy "team_members_manage_coaches"
+on public.team_members
+for update
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
 
 drop policy if exists "position_masters_select_team_members" on public.position_masters;
 create policy "position_masters_select_team_members"

@@ -7,7 +7,7 @@ import {
   positionMasters as mockPositionMasters,
 } from "@/lib/mock-data";
 import { getDashboardPracticeDate } from "@/lib/date";
-import { GoalLog, GoalTemplate, Material, Player, PlayerPracticeEntry, PositionMaster, TeamRole } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, TeamRole } from "@/lib/types";
 
 type PlayerRow = {
   id: string;
@@ -84,7 +84,15 @@ export type TeamSnapshot = {
 };
 
 type TeamMemberRow = {
+  user_id: string;
   role: TeamRole;
+  status: MembershipStatus;
+};
+
+export type TeamMember = {
+  userId: string;
+  role: TeamRole;
+  status: MembershipStatus;
 };
 
 function toPlayer(row: PlayerRow): Player {
@@ -252,6 +260,11 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
 }
 
 export async function fetchCurrentTeamRole(supabase: SupabaseClient): Promise<TeamRole | null> {
+  const membership = await fetchCurrentTeamMember(supabase);
+  return membership?.role ?? null;
+}
+
+export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<TeamMember | null> {
   const {
     data: { user },
     error: authError,
@@ -267,7 +280,7 @@ export async function fetchCurrentTeamRole(supabase: SupabaseClient): Promise<Te
 
   const { data, error } = await supabase
     .from("team_members")
-    .select("role")
+    .select("user_id, role, status")
     .eq("user_id", user.id)
     .single<TeamMemberRow>();
 
@@ -275,7 +288,88 @@ export async function fetchCurrentTeamRole(supabase: SupabaseClient): Promise<Te
     throw new Error(error.message);
   }
 
-  return data?.role ?? null;
+  if (!data) {
+    return null;
+  }
+
+  return {
+    userId: data.user_id,
+    role: data.role,
+    status: data.status,
+  };
+}
+
+export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise<TeamMember> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error(authError?.message ?? "ユーザー情報を取得できませんでした。");
+  }
+
+  const existing = await fetchCurrentTeamMember(supabase);
+
+  if (existing) {
+    return existing;
+  }
+
+  const { data, error } = await supabase
+    .from("team_members")
+    .insert({
+      user_id: user.id,
+      role: "guardian",
+      status: "pending",
+    })
+    .select("user_id, role, status")
+    .single<TeamMemberRow>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    userId: data.user_id,
+    role: data.role,
+    status: data.status,
+  };
+}
+
+export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise<TeamMember[]> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("user_id, role, status")
+    .eq("status", "pending");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((member) => ({
+    userId: member.user_id,
+    role: member.role,
+    status: member.status,
+  }));
+}
+
+export async function updateTeamMemberStatus(
+  supabase: SupabaseClient,
+  userId: string,
+  status: MembershipStatus,
+  role?: TeamRole,
+): Promise<void> {
+  const payload: { status: MembershipStatus; role?: TeamRole } = { status };
+
+  if (role) {
+    payload.role = role;
+  }
+
+  const { error } = await supabase.from("team_members").update(payload).eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function insertPlayer(supabase: SupabaseClient, player: Omit<Player, "id">): Promise<Player> {

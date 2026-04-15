@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { MemberApprovals } from "@/components/member-approvals";
 import { Section } from "@/components/section";
 
 type SettingsRoomProps = {
   canManageAdmin: boolean;
+  supabase: SupabaseClient | null;
   teamMessage: string | null;
+  setTeamMessage: (message: string | null) => void;
 };
 
-export function SettingsRoom({ canManageAdmin, teamMessage }: SettingsRoomProps) {
+export function SettingsRoom({ canManageAdmin, supabase, teamMessage, setTeamMessage }: SettingsRoomProps) {
   return (
     <div className="dashboard dashboard-wide">
       <div className="stack">
@@ -41,6 +45,14 @@ export function SettingsRoom({ canManageAdmin, teamMessage }: SettingsRoomProps)
             <p className="empty-state">この画面はコーチ権限のあるアカウントだけが利用できます。</p>
           )}
         </Section>
+
+        {canManageAdmin ? (
+          <MemberApprovals
+            supabase={supabase}
+            teamMessage={teamMessage}
+            setTeamMessage={setTeamMessage}
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -1,16 +1,18 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import { MaterialsLibrary } from "@/components/materials-library";
 import { MastersAdmin } from "@/components/masters-admin";
 import { MaterialsRoom } from "@/components/materials-room";
+import { PendingApprovalScreen } from "@/components/pending-approval-screen";
 import { PlayerPracticeEditor } from "@/components/player-practice-editor";
 import { SettingsRoom } from "@/components/settings-room";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
-import { fetchCurrentTeamRole, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
+import { fetchCurrentTeamMember, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
 import {
   clearStorage,
   loadGoalLogs,
@@ -25,7 +27,7 @@ import {
   savePositionMasters,
 } from "@/lib/storage";
 import { getSupabaseClient } from "@/lib/supabase";
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster, TeamRole } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, TeamRole } from "@/lib/types";
 import { filterMaterialsForRole } from "@/lib/utils";
 
 type AppShellProps = {
@@ -42,12 +44,16 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
+  const [authResolved, setAuthResolved] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [teamMessage, setTeamMessage] = useState<string | null>(null);
   const [localReady, setLocalReady] = useState(false);
 
   const supabase = useMemo(() => getSupabaseClient(), []);
+  const router = useRouter();
+  const pathname = usePathname();
   const authEnabled = Boolean(supabase);
   const usingRemoteData = authEnabled && Boolean(session);
 
@@ -88,6 +94,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
   useEffect(() => {
     if (!supabase) {
+      setAuthResolved(true);
       return;
     }
 
@@ -101,10 +108,13 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
       if (!error) {
         setSession(data.session);
       }
+
+      setAuthResolved(true);
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      setAuthResolved(true);
     });
 
     return () => {
@@ -114,8 +124,18 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   }, [supabase]);
 
   useEffect(() => {
+    if (!authEnabled || !authResolved || session) {
+      return;
+    }
+
+    const next = pathname && pathname !== "/" ? pathname : "/";
+    router.replace(`/login?next=${encodeURIComponent(next)}`);
+  }, [authEnabled, authResolved, pathname, router, session]);
+
+  useEffect(() => {
     if (!supabase || !session) {
       setTeamRole(null);
+      setMembershipStatus(null);
       setTeamMessage(
         authEnabled
           ? "ログインするとSupabaseのチームデータを読み込みます。"
@@ -131,17 +151,18 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
       setDataLoading(true);
 
       try {
-        const role = await fetchCurrentTeamRole(client);
+        const member = await fetchCurrentTeamMember(client);
         const snapshot = await fetchTeamSnapshot(client);
 
         if (!mounted) {
           return;
         }
 
-        setTeamRole(role);
+        setTeamRole(member?.role ?? null);
+        setMembershipStatus(member?.status ?? null);
         setPlayers(snapshot.players);
         setGoalLogs(snapshot.goalLogs);
-        setMaterials(filterMaterialsForRole(snapshot.materials, role));
+        setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
         setGoalTemplates(
           snapshot.goalTemplates.length ? snapshot.goalTemplates : getFallbackTeamSnapshot().goalTemplates,
         );
@@ -185,6 +206,23 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
   const canManageAdmin = !authEnabled || teamRole === "coach";
   const canEditPractice = !authEnabled || Boolean(session);
+
+  if (authEnabled && (!authResolved || !session)) {
+    return (
+      <main className="page-shell">
+        <div className="panel">
+          <div className="panel-body">
+            <h2 className="section-title">ログインを確認しています</h2>
+            <p className="section-copy">セッションを確認して、必要ならログイン画面へ移動します。</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (authEnabled && session && membershipStatus !== "approved") {
+    return <PendingApprovalScreen />;
+  }
 
   return (
     <main className="page-shell">
@@ -243,7 +281,12 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           onResetLocalMode={resetLocalMode}
         />
       ) : view === "settings" ? (
-        <SettingsRoom canManageAdmin={canManageAdmin} teamMessage={teamMessage} />
+        <SettingsRoom
+          canManageAdmin={canManageAdmin}
+          supabase={supabase}
+          teamMessage={teamMessage}
+          setTeamMessage={setTeamMessage}
+        />
       ) : view === "player-goal" ? (
         <PlayerPracticeEditor
           mode="goal"
