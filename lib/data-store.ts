@@ -1,13 +1,13 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  goalLogs as mockGoalLogs,
-  goalTemplates as mockGoalTemplates,
-  materials as mockMaterials,
-  players as mockPlayers,
-  positionMasters as mockPositionMasters,
-} from "@/lib/mock-data";
 import { getDashboardPracticeDate } from "@/lib/date";
+import {
+    goalLogs as mockGoalLogs,
+    goalTemplates as mockGoalTemplates,
+    materials as mockMaterials,
+    players as mockPlayers,
+    positionMasters as mockPositionMasters,
+} from "@/lib/mock-data";
 import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, TeamMember, TeamRole } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type PlayerRow = {
   id: string;
@@ -496,16 +496,19 @@ export async function upsertPracticeEntry(
   playerId: string,
   entry: PlayerPracticeEntry,
 ): Promise<void> {
-  const { error } = await supabase.from("practice_entries").upsert({
-    player_id: playerId,
-    practice_date: entry.practiceDate,
-    offense_goal: entry.offenseGoal ?? null,
-    defense_goal: entry.defenseGoal ?? null,
-    offense_reflection_rating: entry.offenseReflectionRating ?? null,
-    offense_reflection_comment: entry.offenseReflectionComment ?? null,
-    defense_reflection_rating: entry.defenseReflectionRating ?? null,
-    defense_reflection_comment: entry.defenseReflectionComment ?? null,
-  });
+  const { error } = await supabase.from("practice_entries").upsert(
+    {
+      player_id: playerId,
+      practice_date: entry.practiceDate,
+      offense_goal: entry.offenseGoal ?? null,
+      defense_goal: entry.defenseGoal ?? null,
+      offense_reflection_rating: entry.offenseReflectionRating ?? null,
+      offense_reflection_comment: entry.offenseReflectionComment ?? null,
+      defense_reflection_rating: entry.defenseReflectionRating ?? null,
+      defense_reflection_comment: entry.defenseReflectionComment ?? null,
+    },
+    { onConflict: "player_id,practice_date" },
+  );
 
   if (error) {
     throw new Error(error.message);

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useState } from "react";
 
 type LoginPanelProps = {
   authEnabled: boolean;
@@ -14,16 +14,13 @@ type LoginPanelProps = {
 };
 
 export function LoginPanel({
-  authEnabled,
   authLoading,
-  authMessage,
   session,
   onSendMagicLink,
   onSignInWithGoogle,
   onSignOut,
 }: LoginPanelProps) {
   const [email, setEmail] = useState("");
-  const accountLabel = session?.user.email ?? "未ログイン";
 
   return (
     <div className="panel">
@@ -31,8 +28,9 @@ export function LoginPanel({
         <h2 className="section-title">FFFC2025 ログイン</h2>
         <p className="section-copy">
           メールアドレスもしくはGoogleアカウントでログインしてください。
-          <br />
-          メールアドレスでのログインの場合は、ログインリンクが入力されたメールアドレス宛に送信されます。
+        </p>
+        <p className="section-copy" style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+          ※ メールアドレスでのログインの場合は、入力されたメールアドレス宛にログインリンクが送信されます。
         </p>
         <div className="login-card">
           <input
