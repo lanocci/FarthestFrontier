@@ -2,7 +2,7 @@
 
 import { formatDisplayDate, getDashboardPracticeDate } from "@/lib/date";
 import { Player, PositionMaster, TeamRole } from "@/lib/types";
-import { getPositionLabels, getPracticeEntry } from "@/lib/utils";
+import { getPositionLabels, getPracticeEntry, getReflectionEmoji } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -119,11 +119,25 @@ export function TeamDashboard({
                 <div className="practice-summary">
                   <div>
                     <span>OF目標</span>
-                    <strong>{getPracticeEntry(player, practiceDate)?.offenseGoal ?? "未入力"}</strong>
+                    <strong>
+                      {getPracticeEntry(player, practiceDate)?.offenseGoal ?? "未入力"}
+                      {getReflectionEmoji(getPracticeEntry(player, practiceDate)?.offenseReflectionRating) ? (
+                        <span className="reflection-emoji" title={`振り返り: ${getReflectionEmoji(getPracticeEntry(player, practiceDate)?.offenseReflectionRating)}`}>
+                          {" "}{getReflectionEmoji(getPracticeEntry(player, practiceDate)?.offenseReflectionRating)}
+                        </span>
+                      ) : null}
+                    </strong>
                   </div>
                   <div>
                     <span>DF目標</span>
-                    <strong>{getPracticeEntry(player, practiceDate)?.defenseGoal ?? "未入力"}</strong>
+                    <strong>
+                      {getPracticeEntry(player, practiceDate)?.defenseGoal ?? "未入力"}
+                      {getReflectionEmoji(getPracticeEntry(player, practiceDate)?.defenseReflectionRating) ? (
+                        <span className="reflection-emoji" title={`振り返り: ${getReflectionEmoji(getPracticeEntry(player, practiceDate)?.defenseReflectionRating)}`}>
+                          {" "}{getReflectionEmoji(getPracticeEntry(player, practiceDate)?.defenseReflectionRating)}
+                        </span>
+                      ) : null}
+                    </strong>
                   </div>
                 </div>
 

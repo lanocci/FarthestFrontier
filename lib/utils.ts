@@ -1,5 +1,18 @@
 import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/lib/mock-data";
-import { GoalTemplate, Material, Player, PlayerPracticeEntry, PositionMaster, PositionSide, TeamRole } from "@/lib/types";
+import { GoalTemplate, Material, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating, TeamRole } from "@/lib/types";
+
+const reflectionEmojiMap: Record<ReflectionRating, string> = {
+  5: "🏆",
+  4: "🌟",
+  3: "👏",
+  2: "🙂",
+  1: "🌱",
+};
+
+export function getReflectionEmoji(rating?: ReflectionRating): string | undefined {
+  if (!rating) return undefined;
+  return reflectionEmojiMap[rating];
+}
 
 export function getRecentGoalForPlayer(player: Player): string | undefined {
   return player.offenseGoal ?? player.defenseGoal;

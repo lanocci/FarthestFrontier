@@ -8,7 +8,7 @@ type GlobalHeaderProps = {
 };
 
 const navItems = [
-  { href: "/", label: "ダッシュボード", view: "dashboard" },
+  { href: "/", label: "🏠", view: "dashboard" },
   { href: "/materials", label: "資料室", view: "materials" },
   { href: "/settings", label: "設定", view: "settings" },
 ] as const;
