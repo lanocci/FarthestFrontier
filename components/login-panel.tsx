@@ -28,10 +28,7 @@ export function LoginPanel({
   return (
     <div className="panel">
       <div className="panel-body">
-        <h2 className="section-title">かんたんログイン</h2>
-        <p className="section-copy">
-          選手本人ではなく、まずは保護者やコーチが使う前提です。SupabaseのMagic LinkかGoogleログインに差し替えやすい形にしています。
-        </p>
+        <h2 className="section-title">ログイン</h2>
         <div className="login-card">
           <input
             type="email"
@@ -63,16 +60,6 @@ export function LoginPanel({
             </button>
           ) : null}
         </div>
-        <div className="login-status">
-          <span className={`chip ${session ? "ok" : authEnabled ? "warn" : ""}`}>
-            {authLoading ? "セッション確認中" : authEnabled ? "Supabase認証あり" : "ローカル体験モード"}
-          </span>
-          <span className="subtle">現在: {accountLabel}</span>
-        </div>
-        {authMessage ? <p className="footer-note">{authMessage}</p> : null}
-        <p className="footer-note">
-          低学年チーム向けなので、選手が自分でIDとパスワードを覚える運用は避ける想定です。
-        </p>
       </div>
     </div>
   );
