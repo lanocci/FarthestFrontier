@@ -66,7 +66,7 @@ export function MemberApprovals({ supabase, teamMessage, setTeamMessage }: Membe
         <div className="admin-player-list">
           {members.map((member) => (
             <div className="admin-player-item" key={member.userId}>
-              <strong>{member.userId}</strong>
+              <strong>{member.email ?? member.userId}</strong>
               <span>{member.role === "coach" ? "コーチ" : "保護者"}</span>
               <div className="card-actions">
                 <button

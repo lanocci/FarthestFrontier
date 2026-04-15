@@ -85,12 +85,14 @@ export type TeamSnapshot = {
 
 type TeamMemberRow = {
   user_id: string;
+  email: string | null;
   role: TeamRole;
   status: MembershipStatus;
 };
 
 export type TeamMember = {
   userId: string;
+  email?: string;
   role: TeamRole;
   status: MembershipStatus;
 };
@@ -280,9 +282,9 @@ export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<
 
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, role, status")
+    .select("user_id, email, role, status")
     .eq("user_id", user.id)
-    .single<TeamMemberRow>();
+    .maybeSingle<TeamMemberRow>();
 
   if (error) {
     throw new Error(error.message);
@@ -294,6 +296,7 @@ export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<
 
   return {
     userId: data.user_id,
+    email: data.email ?? undefined,
     role: data.role,
     status: data.status,
   };
@@ -309,6 +312,27 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
     throw new Error(authError?.message ?? "ユーザー情報を取得できませんでした。");
   }
 
+  const email = user.email?.trim().toLowerCase();
+
+  if (email) {
+    const { data: claimed, error: claimError } = await supabase.rpc("claim_team_member_by_email", {
+      login_email: email,
+    });
+
+    if (claimError) {
+      throw new Error(claimError.message);
+    }
+
+    if (claimed) {
+      return {
+        userId: claimed.user_id,
+        email: claimed.email ?? undefined,
+        role: claimed.role,
+        status: claimed.status,
+      };
+    }
+  }
+
   const existing = await fetchCurrentTeamMember(supabase);
 
   if (existing) {
@@ -319,10 +343,11 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
     .from("team_members")
     .insert({
       user_id: user.id,
+      email: email ?? null,
       role: "guardian",
       status: "pending",
     })
-    .select("user_id, role, status")
+    .select("user_id, email, role, status")
     .single<TeamMemberRow>();
 
   if (error) {
@@ -331,6 +356,7 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
 
   return {
     userId: data.user_id,
+    email: data.email ?? undefined,
     role: data.role,
     status: data.status,
   };
@@ -339,7 +365,7 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
 export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise<TeamMember[]> {
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, role, status")
+    .select("user_id, email, role, status")
     .eq("status", "pending");
 
   if (error) {
@@ -348,6 +374,7 @@ export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise
 
   return (data ?? []).map((member) => ({
     userId: member.user_id,
+    email: member.email ?? undefined,
     role: member.role,
     status: member.status,
   }));

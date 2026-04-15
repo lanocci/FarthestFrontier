@@ -2,10 +2,25 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.team_members (
   user_id uuid primary key references auth.users(id) on delete cascade,
+  email text,
   role text not null check (role in ('coach', 'guardian')),
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now()
 );
+
+alter table if exists public.team_members
+add column if not exists email text;
+
+update public.team_members tm
+set email = lower(au.email)
+from auth.users au
+where tm.user_id = au.id
+  and au.email is not null
+  and (tm.email is null or tm.email = '');
+
+create unique index if not exists team_members_email_unique
+on public.team_members (lower(email))
+where email is not null;
 
 create table if not exists public.position_masters (
   id text primary key,
@@ -203,6 +218,45 @@ as $$
   select public.current_team_role() = 'coach'
 $$;
 
+create or replace function public.claim_team_member_by_email(login_email text)
+returns table (
+  user_id uuid,
+  email text,
+  role text,
+  status text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_email text := lower(trim(login_email));
+begin
+  if auth.uid() is null or normalized_email is null or normalized_email = '' then
+    return;
+  end if;
+
+  return query
+  with existing_self as (
+    select tm.user_id, tm.email, tm.role, tm.status
+    from public.team_members tm
+    where tm.user_id = auth.uid()
+  ),
+  claimed as (
+    update public.team_members tm
+    set user_id = auth.uid(),
+        email = normalized_email
+    where not exists (select 1 from existing_self)
+      and lower(coalesce(tm.email, '')) = normalized_email
+    returning tm.user_id, tm.email, tm.role, tm.status
+  )
+  select user_id, email, role, status from existing_self
+  union all
+  select user_id, email, role, status from claimed
+  limit 1;
+end;
+$$;
+
 alter table public.team_members enable row level security;
 alter table public.position_masters enable row level security;
 alter table public.players enable row level security;
@@ -225,6 +279,7 @@ for insert
 to authenticated
 with check (
   user_id = auth.uid()
+  and lower(coalesce(email, '')) = lower(coalesce(auth.jwt() ->> 'email', ''))
   and role = 'guardian'
   and status = 'pending'
 );
