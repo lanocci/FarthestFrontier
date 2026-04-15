@@ -618,7 +618,7 @@ select:disabled {
   margin-bottom: 18px;
 }
 
-.inline-form input,
+.inline-form input:not([type="checkbox"]),
 .inline-form select {
   width: 100%;
   padding: 12px 14px;
@@ -663,7 +663,7 @@ select:disabled {
   font-weight: 700;
 }
 
-.admin-form input,
+.admin-form input:not([type="checkbox"]),
 .admin-form select {
   width: 100%;
   padding: 12px 14px;
@@ -831,12 +831,15 @@ select:disabled {
 }
 
 .checkbox-row {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   min-height: 48px;
   padding: 0 4px;
   font-weight: 700;
+  cursor: pointer;
+  text-align: left;
 }
 
 .position-picker {
@@ -846,12 +849,14 @@ select:disabled {
   border: 1px solid rgba(23, 50, 77, 0.16);
   border-radius: 14px;
   background: var(--field);
+  text-align: left;
 }
 
 .position-picker .checkbox-row {
   min-height: 0;
   padding: 0;
   font-weight: 600;
+  width: 100%;
 }
 
 .grid-cards {

@@ -232,6 +232,8 @@ create or replace function public.current_team_role()
 returns text
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select tm.role
   from public.team_members tm
@@ -242,6 +244,8 @@ create or replace function public.current_membership_status()
 returns text
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select tm.status
   from public.team_members tm
@@ -269,6 +273,8 @@ create or replace function public.can_manage_player(target_player_id uuid)
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select public.is_coach()
     or exists (
