@@ -7,7 +7,7 @@ import {
   positionMasters as mockPositionMasters,
 } from "@/lib/mock-data";
 import { getDashboardPracticeDate } from "@/lib/date";
-import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, TeamRole } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, TeamMember, TeamRole } from "@/lib/types";
 
 type PlayerRow = {
   id: string;
@@ -88,13 +88,7 @@ type TeamMemberRow = {
   email: string | null;
   role: TeamRole;
   status: MembershipStatus;
-};
-
-export type TeamMember = {
-  userId: string;
-  email?: string;
-  role: TeamRole;
-  status: MembershipStatus;
+  player_ids: string[] | null;
 };
 
 function toPlayer(row: PlayerRow): Player {
@@ -282,7 +276,7 @@ export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<
 
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, email, role, status")
+    .select("user_id, email, role, status, player_ids")
     .eq("user_id", user.id)
     .maybeSingle<TeamMemberRow>();
 
@@ -299,6 +293,7 @@ export async function fetchCurrentTeamMember(supabase: SupabaseClient): Promise<
     email: data.email ?? undefined,
     role: data.role,
     status: data.status,
+    playerIds: data.player_ids ?? [],
   };
 }
 
@@ -331,6 +326,7 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
         email: claimed.email ?? undefined,
         role: claimed.role,
         status: claimed.status,
+        playerIds: claimed.player_ids ?? [],
       };
     }
   }
@@ -348,8 +344,9 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
       email: email ?? null,
       role: "guardian",
       status: "pending",
+      player_ids: [],
     })
-    .select("user_id, email, role, status")
+    .select("user_id, email, role, status, player_ids")
     .single<TeamMemberRow>();
 
   if (error) {
@@ -361,13 +358,14 @@ export async function ensurePendingTeamMember(supabase: SupabaseClient): Promise
     email: data.email ?? undefined,
     role: data.role,
     status: data.status,
+    playerIds: data.player_ids ?? [],
   };
 }
 
 export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise<TeamMember[]> {
   const { data, error } = await supabase
     .from("team_members")
-    .select("user_id, email, role, status")
+    .select("user_id, email, role, status, player_ids")
     .eq("status", "pending");
 
   if (error) {
@@ -379,6 +377,26 @@ export async function fetchPendingTeamMembers(supabase: SupabaseClient): Promise
     email: member.email ?? undefined,
     role: member.role,
     status: member.status,
+    playerIds: member.player_ids ?? [],
+  }));
+}
+
+export async function fetchTeamMembersForAdmin(supabase: SupabaseClient): Promise<TeamMember[]> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("user_id, email, role, status, player_ids")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((member) => ({
+    userId: member.user_id,
+    email: member.email ?? undefined,
+    role: member.role,
+    status: member.status,
+    playerIds: member.player_ids ?? [],
   }));
 }
 
@@ -395,6 +413,18 @@ export async function updateTeamMemberStatus(
   }
 
   const { error } = await supabase.from("team_members").update(payload).eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function updateTeamMemberPlayerIds(
+  supabase: SupabaseClient,
+  userId: string,
+  playerIds: string[],
+): Promise<void> {
+  const { error } = await supabase.from("team_members").update({ player_ids: playerIds }).eq("user_id", userId);
 
   if (error) {
     throw new Error(error.message);

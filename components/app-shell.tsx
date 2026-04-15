@@ -45,6 +45,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   const [session, setSession] = useState<Session | null>(null);
   const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
+  const [linkedPlayerIds, setLinkedPlayerIds] = useState<string[]>([]);
   const [membershipResolved, setMembershipResolved] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -137,6 +138,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
     if (!supabase || !session) {
       setTeamRole(null);
       setMembershipStatus(null);
+      setLinkedPlayerIds([]);
       setMembershipResolved(!authEnabled || !session);
       setTeamMessage(null);
       return;
@@ -159,6 +161,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
         setTeamRole(member?.role ?? null);
         setMembershipStatus(member?.status ?? null);
+        setLinkedPlayerIds(member?.playerIds ?? []);
         setMembershipResolved(true);
         setPlayers(snapshot.players);
         setGoalLogs(snapshot.goalLogs);
@@ -294,6 +297,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           mode="goal"
           initialPracticeDate={practiceDate}
           canManageTeam={canEditPractice}
+          canEditPlayer={!authEnabled || teamRole === "coach" || linkedPlayerIds.includes(playerId ?? "")}
+          linkedPlayerIds={linkedPlayerIds}
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
           positionMasters={positionMasters}
@@ -310,6 +315,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           mode="reflection"
           initialPracticeDate={practiceDate}
           canManageTeam={canEditPractice}
+          canEditPlayer={!authEnabled || teamRole === "coach" || linkedPlayerIds.includes(playerId ?? "")}
+          linkedPlayerIds={linkedPlayerIds}
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
           positionMasters={positionMasters}
@@ -325,6 +332,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         <TeamDashboard
           players={players}
           positionMasters={positionMasters}
+          linkedPlayerIds={linkedPlayerIds}
+          teamRole={teamRole}
           teamMessage={teamMessage}
           usingRemoteData={usingRemoteData}
           onResetLocalMode={resetLocalMode}

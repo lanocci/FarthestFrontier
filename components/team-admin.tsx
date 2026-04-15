@@ -4,8 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Section } from "@/components/section";
-import { insertPlayer, updatePlayer } from "@/lib/data-store";
-import { Player, PositionMaster } from "@/lib/types";
+import { fetchTeamMembersForAdmin, insertPlayer, updatePlayer, updateTeamMemberPlayerIds } from "@/lib/data-store";
+import { Player, PositionMaster, TeamMember } from "@/lib/types";
 import { getPositionLabels, getPositionsBySide } from "@/lib/utils";
 
 type TeamAdminProps = {
@@ -83,6 +83,7 @@ export function TeamAdmin({
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [createForm, setCreateForm] = useState<PlayerForm>(defaultForm);
   const [editForm, setEditForm] = useState<PlayerForm>(defaultForm);
+  const [guardianMembers, setGuardianMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     setCreateForm((current) => ({
@@ -116,6 +117,21 @@ export function TeamAdmin({
     setEditForm(createFormFromPlayer(selectedPlayer));
   }, [defaultForm, players, selectedPlayerId]);
 
+  useEffect(() => {
+    if (!supabase || !usingRemoteData || !canManageTeam) {
+      setGuardianMembers([]);
+      return;
+    }
+
+    fetchTeamMembersForAdmin(supabase)
+      .then((members) => {
+        setGuardianMembers(members.filter((member) => member.role === "guardian" && member.status === "approved"));
+      })
+      .catch((error) => {
+        setTeamMessage(error instanceof Error ? error.message : "保護者一覧の取得に失敗しました。");
+      });
+  }, [canManageTeam, setTeamMessage, supabase, usingRemoteData]);
+
   const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? null;
 
   function updateCreateForm<Key extends keyof PlayerForm>(key: Key, value: PlayerForm[Key]) {
@@ -144,6 +160,21 @@ export function TeamAdmin({
         [side]: nextIds,
       };
     });
+  }
+
+  function toggleGuardianAssignment(userId: string, playerId: string) {
+    setGuardianMembers((current) =>
+      current.map((member) =>
+        member.userId === userId
+          ? {
+              ...member,
+              playerIds: member.playerIds.includes(playerId)
+                ? member.playerIds.filter((id) => id !== playerId)
+                : [...member.playerIds, playerId],
+            }
+          : member,
+      ),
+    );
   }
 
   async function handleCreatePlayer() {
@@ -220,6 +251,24 @@ export function TeamAdmin({
       setTeamMessage(`選手「${nextPlayer.name}」の属性を更新しました。`);
     } catch (error) {
       setTeamMessage(error instanceof Error ? error.message : "選手の更新に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleSaveGuardianLinks() {
+    if (!supabase || !usingRemoteData || !canManageTeam || !selectedPlayer) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      await Promise.all(
+        guardianMembers.map((member) => updateTeamMemberPlayerIds(supabase, member.userId, member.playerIds)),
+      );
+      setTeamMessage(`「${selectedPlayer.name}」の保護者ひもづけを更新しました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "保護者ひもづけの保存に失敗しました。");
     } finally {
       setSyncing(false);
     }
@@ -402,6 +451,37 @@ export function TeamAdmin({
                   変更を保存
                 </button>
               </div>
+
+              {usingRemoteData ? (
+                <div className="panel inset-panel">
+                  <div className="panel-body">
+                    <h3 className="section-title">保護者ひもづけ</h3>
+                    <p className="subtle">この選手を編集できる保護者を選びます。選ばれていない保護者は閲覧のみです。</p>
+                    <div className="position-picker">
+                      {guardianMembers.length ? (
+                        guardianMembers.map((member) => (
+                          <label className="checkbox-row" key={member.userId}>
+                            <input
+                              type="checkbox"
+                              checked={member.playerIds.includes(selectedPlayer.id)}
+                              onChange={() => toggleGuardianAssignment(member.userId, selectedPlayer.id)}
+                              disabled={syncing}
+                            />
+                            {member.email ?? member.userId}
+                          </label>
+                        ))
+                      ) : (
+                        <span className="subtle">承認済みの保護者がまだいません。</span>
+                      )}
+                    </div>
+                    <div className="card-actions">
+                      <button className="button secondary" type="button" onClick={handleSaveGuardianLinks} disabled={syncing || !guardianMembers.length}>
+                        保護者ひもづけを保存
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <p className="empty-state">編集する選手を選ぶと、ここで属性を変更できます。</p>

@@ -3,8 +3,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { Section } from "@/components/section";
-import { fetchPendingTeamMembers, updateTeamMemberStatus, type TeamMember } from "@/lib/data-store";
-import type { TeamRole } from "@/lib/types";
+import { fetchPendingTeamMembers, updateTeamMemberStatus } from "@/lib/data-store";
+import type { TeamMember, TeamRole } from "@/lib/types";
 
 type MemberApprovalsProps = {
   supabase: SupabaseClient | null;

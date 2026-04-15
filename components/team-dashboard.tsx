@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDisplayDate, getDashboardPracticeDate } from "@/lib/date";
-import { Player, PositionMaster } from "@/lib/types";
+import { Player, PositionMaster, TeamRole } from "@/lib/types";
 import { getPositionLabels, getPracticeEntry } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -9,6 +9,8 @@ import { useMemo, useState } from "react";
 type TeamDashboardProps = {
   players: Player[];
   positionMasters: PositionMaster[];
+  linkedPlayerIds: string[];
+  teamRole: TeamRole | null;
   teamMessage: string | null;
   usingRemoteData: boolean;
   onResetLocalMode: () => void;
@@ -17,6 +19,8 @@ type TeamDashboardProps = {
 export function TeamDashboard({
   players,
   positionMasters,
+  linkedPlayerIds,
+  teamRole,
   teamMessage,
   usingRemoteData,
   onResetLocalMode,
@@ -24,13 +28,22 @@ export function TeamDashboard({
   const [searchText, setSearchText] = useState("");
   const practiceDate = getDashboardPracticeDate();
 
-  const filteredPlayers = useMemo(
-    () =>
-      players.filter((player) => {
-        return player.name.includes(searchText.trim());
-      }),
-    [players, searchText],
-  );
+  const filteredPlayers = useMemo(() => {
+    const normalizedSearch = searchText.trim();
+
+    return players
+      .filter((player) => player.name.includes(normalizedSearch))
+      .sort((left, right) => {
+        const leftOwn = linkedPlayerIds.includes(left.id) ? 1 : 0;
+        const rightOwn = linkedPlayerIds.includes(right.id) ? 1 : 0;
+
+        if (leftOwn !== rightOwn) {
+          return rightOwn - leftOwn;
+        }
+
+        return left.name.localeCompare(right.name, "ja");
+      });
+  }, [linkedPlayerIds, players, searchText]);
 
   const activePlayerCount = players.filter((player) => player.active).length;
   const completedReflectionCount = players.filter(
@@ -82,7 +95,7 @@ export function TeamDashboard({
 
         <div className="player-grid">
           {filteredPlayers.map((player) => (
-            <article className={`practice-card ${(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "has-goal" : "is-missing-goal"}`} key={player.id}>
+            <article className={`practice-card ${(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "has-goal" : "is-missing-goal"} ${linkedPlayerIds.includes(player.id) ? "is-linked-player" : ""}`} key={player.id}>
               <div className="practice-card-link">
                 <div className="practice-card-head">
                   <div>
@@ -97,6 +110,7 @@ export function TeamDashboard({
                 </div>
 
                 <div className="chip-row compact-chip-row">
+                  {linkedPlayerIds.includes(player.id) ? <span className="chip ok">うちの子</span> : null}
                   <span className={`chip ${(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "ok" : "warn"}`}>
                     {(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "目標設定済み" : "目標未設定"}
                   </span>
@@ -115,11 +129,11 @@ export function TeamDashboard({
 
                 <div className="practice-actions">
                   <Link className="button secondary button-compact" href={`/players/${player.id}/goals?date=${practiceDate}`}>
-                    目標
+                    {teamRole === "guardian" && !linkedPlayerIds.includes(player.id) ? "目標を見る" : "目標"}
                   </Link>
                   {getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal ? (
                     <Link className="button button-compact" href={`/players/${player.id}/reflections?date=${practiceDate}`}>
-                      振り返り
+                      {teamRole === "guardian" && !linkedPlayerIds.includes(player.id) ? "振り返りを見る" : "振り返り"}
                     </Link>
                   ) : (
                     <span className="button button-compact is-disabled">振り返り</span>

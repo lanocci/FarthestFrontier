@@ -71,3 +71,11 @@ export type Material = {
   updatedAt: string;
   url: string;
 };
+
+export type TeamMember = {
+  userId: string;
+  email?: string;
+  role: TeamRole;
+  status: MembershipStatus;
+  playerIds: string[];
+};

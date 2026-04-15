@@ -202,6 +202,13 @@ select:disabled {
   border-color: rgba(202, 150, 50, 0.2);
 }
 
+.practice-card.is-linked-player {
+  padding: 14px;
+  border-color: rgba(47, 143, 91, 0.36);
+  background: linear-gradient(180deg, rgba(244, 255, 248, 0.96), rgba(255, 255, 255, 0.92));
+  box-shadow: 0 14px 34px rgba(47, 143, 91, 0.12);
+}
+
 .practice-card-link {
   display: block;
 }
@@ -222,6 +229,10 @@ select:disabled {
   display: block;
   font-size: 1.05rem;
   line-height: 1.15;
+}
+
+.practice-card.is-linked-player .practice-card-head strong {
+  font-size: 1.12rem;
 }
 
 .practice-summary {

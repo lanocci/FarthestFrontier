@@ -16,6 +16,8 @@ type PlayerPracticeEditorProps = {
   mode: EditorMode;
   initialPracticeDate?: string;
   canManageTeam: boolean;
+  canEditPlayer: boolean;
+  linkedPlayerIds: string[];
   goalTemplates: GoalTemplate[];
   player: Player | null;
   positionMasters: PositionMaster[];
@@ -180,6 +182,8 @@ export function PlayerPracticeEditor({
   mode,
   initialPracticeDate,
   canManageTeam,
+  canEditPlayer,
+  linkedPlayerIds,
   goalTemplates,
   player,
   positionMasters,
@@ -195,6 +199,10 @@ export function PlayerPracticeEditor({
   const [selectedPracticeDate, setSelectedPracticeDate] = useState(defaultPracticeDate);
 
   async function persist(nextPlayer: Player, nextEntry: PlayerPracticeEntry, message: string) {
+    if (!canEditPlayer) {
+      return;
+    }
+
     try {
       setSyncing(true);
 
@@ -223,6 +231,7 @@ export function PlayerPracticeEditor({
 
   const pageTitle = mode === "goal" ? "目標入力" : "振り返り入力";
   const pageCopy = `${player.jerseyNumber ? `#${player.jerseyNumber} / ` : ""}${player.gradeLabel} / OF: ${getPositionLabels(player.offensePositionIds, positionMasters)} / DF: ${getPositionLabels(player.defensePositionIds, positionMasters)}`;
+  const isLinkedPlayer = linkedPlayerIds.includes(player.id);
   const selectedEntry = getPracticeEntry(player, selectedPracticeDate);
   const canOpenReflection = Boolean(selectedEntry?.offenseGoal || selectedEntry?.defenseGoal);
   const practiceDateOptions = Array.from(
@@ -252,6 +261,8 @@ export function PlayerPracticeEditor({
       <Section title={`${player.name}の${pageTitle}`} copy={pageCopy}>
         <div className="status-strip">
           {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
+          {!canEditPlayer ? <span className="chip">閲覧のみ</span> : null}
+          {isLinkedPlayer ? <span className="chip ok">うちの子</span> : null}
           <label className="field-stack week-select">
             <span className="field-label">練習日</span>
             <select value={selectedPracticeDate} onChange={(event) => setSelectedPracticeDate(event.target.value)}>
@@ -285,7 +296,7 @@ export function PlayerPracticeEditor({
             side="offense"
             currentValue={selectedEntry?.offenseGoal}
             templates={goalTemplates}
-            disabled={!canManageTeam || syncing}
+            disabled={!canManageTeam || !canEditPlayer || syncing}
             onSave={(value) => {
               const nextEntry = {
                 practiceDate: selectedPracticeDate,
@@ -301,7 +312,7 @@ export function PlayerPracticeEditor({
             side="defense"
             currentValue={selectedEntry?.defenseGoal}
             templates={goalTemplates}
-            disabled={!canManageTeam || syncing}
+            disabled={!canManageTeam || !canEditPlayer || syncing}
             onSave={(value) => {
               const nextEntry = {
                 practiceDate: selectedPracticeDate,
@@ -320,7 +331,7 @@ export function PlayerPracticeEditor({
             goal={selectedEntry?.offenseGoal}
             rating={selectedEntry?.offenseReflectionRating}
             comment={selectedEntry?.offenseReflectionComment}
-            disabled={!canManageTeam || syncing}
+            disabled={!canManageTeam || !canEditPlayer || syncing}
             onSave={({ rating, comment }) => {
               const nextEntry = {
                 practiceDate: selectedPracticeDate,
@@ -337,7 +348,7 @@ export function PlayerPracticeEditor({
             goal={selectedEntry?.defenseGoal}
             rating={selectedEntry?.defenseReflectionRating}
             comment={selectedEntry?.defenseReflectionComment}
-            disabled={!canManageTeam || syncing}
+            disabled={!canManageTeam || !canEditPlayer || syncing}
             onSave={({ rating, comment }) => {
               const nextEntry = {
                 practiceDate: selectedPracticeDate,

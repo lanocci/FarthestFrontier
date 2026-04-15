@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.team_members (
   user_id uuid primary key references auth.users(id) on delete cascade,
   email text,
+  player_ids text[] not null default '{}'::text[],
   role text not null check (role in ('coach', 'guardian')),
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now()
@@ -11,6 +12,9 @@ create table if not exists public.team_members (
 alter table if exists public.team_members
 add column if not exists email text;
 
+alter table if exists public.team_members
+add column if not exists player_ids text[] not null default '{}'::text[];
+
 update public.team_members tm
 set email = lower(au.email)
 from auth.users au
@@ -18,13 +22,18 @@ where tm.user_id = au.id
   and au.email is not null
   and (tm.email is null or tm.email = '');
 
-insert into public.team_members (user_id, email, role, status)
-select au.id, lower(au.email), 'guardian', 'pending'
+insert into public.team_members (user_id, email, player_ids, role, status)
+select au.id, lower(au.email), '{}'::text[], 'guardian', 'pending'
 from auth.users au
 where not exists (
   select 1
   from public.team_members tm
   where tm.user_id = au.id
+)
+and not exists (
+  select 1
+  from public.team_members tm
+  where lower(coalesce(tm.email, '')) = lower(coalesce(au.email, ''))
 )
 on conflict (user_id) do nothing;
 
@@ -185,10 +194,16 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.team_members (user_id, email, role, status)
-  values (new.id, lower(new.email), 'guardian', 'pending')
-  on conflict (user_id) do update
-    set email = excluded.email;
+  if not exists (
+    select 1
+    from public.team_members tm
+    where lower(coalesce(tm.email, '')) = lower(coalesce(new.email, ''))
+  ) then
+    insert into public.team_members (user_id, email, player_ids, role, status)
+    values (new.id, lower(new.email), '{}'::text[], 'guardian', 'pending')
+    on conflict (user_id) do update
+      set email = excluded.email;
+  end if;
 
   return new;
 end;
@@ -250,10 +265,26 @@ as $$
   select public.current_team_role() = 'coach'
 $$;
 
+create or replace function public.can_manage_player(target_player_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select public.is_coach()
+    or exists (
+      select 1
+      from public.team_members tm
+      where tm.user_id = auth.uid()
+        and tm.status = 'approved'
+        and target_player_id::text = any(tm.player_ids)
+    )
+$$;
+
 create or replace function public.claim_team_member_by_email(login_email text)
 returns table (
   user_id uuid,
   email text,
+  player_ids text[],
   role text,
   status text
 )
@@ -270,7 +301,7 @@ begin
 
   return query
   with existing_self as (
-    select tm.user_id, tm.email, tm.role, tm.status
+    select tm.user_id, tm.email, tm.player_ids, tm.role, tm.status
     from public.team_members tm
     where tm.user_id = auth.uid()
   ),
@@ -280,12 +311,12 @@ begin
         email = normalized_email
     where not exists (select 1 from existing_self)
       and lower(coalesce(tm.email, '')) = normalized_email
-    returning tm.user_id, tm.email, tm.role, tm.status
+    returning tm.user_id, tm.email, tm.player_ids, tm.role, tm.status
   )
-  select es.user_id, es.email, es.role, es.status
+  select es.user_id, es.email, es.player_ids, es.role, es.status
   from existing_self es
   union all
-  select c.user_id, c.email, c.role, c.status
+  select c.user_id, c.email, c.player_ids, c.role, c.status
   from claimed c
   limit 1;
 end;
@@ -305,6 +336,13 @@ on public.team_members
 for select
 to authenticated
 using (user_id = auth.uid());
+
+drop policy if exists "team_members_select_coaches" on public.team_members;
+create policy "team_members_select_coaches"
+on public.team_members
+for select
+to authenticated
+using (public.is_coach());
 
 drop policy if exists "team_members_insert_self" on public.team_members;
 create policy "team_members_insert_self"
@@ -398,8 +436,8 @@ create policy "practice_entries_manage_team_members"
 on public.practice_entries
 for all
 to authenticated
-using (public.is_team_member())
-with check (public.is_team_member());
+using (public.can_manage_player(player_id))
+with check (public.can_manage_player(player_id));
 
 drop policy if exists "materials_select_team_members" on public.materials;
 create policy "materials_select_team_members"
