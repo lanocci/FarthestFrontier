@@ -28,7 +28,7 @@ export function LoginPanel({
   return (
     <div className="panel">
       <div className="panel-body">
-        <h2 className="section-title">ログイン</h2>
+        <h2 className="section-title">FFFC2025 ログイン</h2>
         <div className="login-card">
           <input
             type="email"
