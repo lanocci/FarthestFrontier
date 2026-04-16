@@ -27,7 +27,6 @@ function SeasonManager({
   supabase,
   syncing,
   setSyncing,
-  setTeamMessage,
   usingRemoteData,
 }: {
   seasons: Season[];
@@ -35,7 +34,6 @@ function SeasonManager({
   supabase: SupabaseClient | null;
   syncing: boolean;
   setSyncing: Dispatch<SetStateAction<boolean>>;
-  setTeamMessage: (message: string | null) => void;
   usingRemoteData: boolean;
 }) {
   const [label, setLabel] = useState("");
@@ -45,6 +43,7 @@ function SeasonManager({
   const [editLabel, setEditLabel] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editTargetDate, setEditTargetDate] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
 
   function startEditing(season: Season) {
     setEditingId(season.id);
@@ -84,9 +83,9 @@ function SeasonManager({
       setLabel("");
       setStartDate("");
       setTargetDate("");
-      setTeamMessage("シーズンを追加しました。");
+      setMessage("シーズンを追加しました。");
     } catch (error) {
-      setTeamMessage(error instanceof Error ? error.message : "保存に失敗しました。");
+      setMessage(error instanceof Error ? error.message : "保存に失敗しました。");
     } finally {
       setSyncing(false);
     }
@@ -112,9 +111,9 @@ function SeasonManager({
         ),
       );
       setEditingId(null);
-      setTeamMessage("シーズンを更新しました。");
+      setMessage("シーズンを更新しました。");
     } catch (error) {
-      setTeamMessage(error instanceof Error ? error.message : "更新に失敗しました。");
+      setMessage(error instanceof Error ? error.message : "更新に失敗しました。");
     } finally {
       setSyncing(false);
     }
@@ -134,9 +133,9 @@ function SeasonManager({
         }
       }
       setSeasons(updated);
-      setTeamMessage("アクティブシーズンを変更しました。");
+      setMessage("アクティブシーズンを変更しました。");
     } catch (error) {
-      setTeamMessage(error instanceof Error ? error.message : "更新に失敗しました。");
+      setMessage(error instanceof Error ? error.message : "更新に失敗しました。");
     } finally {
       setSyncing(false);
     }
@@ -144,6 +143,7 @@ function SeasonManager({
 
   return (
     <Section title="シーズン管理" copy="春季・秋季の公式戦シーズンを登録し、アクティブなシーズンを切り替えます。">
+      {message ? <div className="status-strip"><span className="subtle compact-message">{message}</span></div> : null}
       <div className="admin-form" style={{ marginBottom: 16 }}>
         <label className="field-stack">
           <span className="field-label">シーズン名</span>
@@ -264,7 +264,6 @@ export function SettingsRoom({ canManageAdmin, supabase, teamMessage, setTeamMes
               supabase={supabase}
               syncing={syncing}
               setSyncing={setSyncing}
-              setTeamMessage={setTeamMessage}
               usingRemoteData={usingRemoteData}
             />
             <MemberApprovals
