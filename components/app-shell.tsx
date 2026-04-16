@@ -1,34 +1,15 @@
 "use client";
 
-import type { Session } from "@supabase/supabase-js";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import { GlobalHeader } from "@/components/global-header";
-import { MaterialsLibrary } from "@/components/materials-library";
 import { MastersAdmin } from "@/components/masters-admin";
+import { MaterialsLibrary } from "@/components/materials-library";
 import { MaterialsRoom } from "@/components/materials-room";
 import { PendingApprovalScreen } from "@/components/pending-approval-screen";
 import { PlayerPracticeEditor } from "@/components/player-practice-editor";
 import { SettingsRoom } from "@/components/settings-room";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
-import { ensurePendingTeamMember, fetchCurrentTeamMember, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
-import {
-  clearStorage,
-  loadGoalLogs,
-  loadGoalTemplates,
-  loadMaterials,
-  loadPlayers,
-  loadPositionMasters,
-  saveGoalLogs,
-  saveGoalTemplates,
-  saveMaterials,
-  savePlayers,
-  savePositionMasters,
-} from "@/lib/storage";
-import { getSupabaseClient } from "@/lib/supabase";
-import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, TeamRole } from "@/lib/types";
-import { filterMaterialsForRole } from "@/lib/utils";
+import { useTeam } from "@/lib/team-context";
 
 type AppShellProps = {
   view?: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
@@ -37,183 +18,20 @@ type AppShellProps = {
 };
 
 export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShellProps) {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [goalLogs, setGoalLogs] = useState<GoalLog[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([]);
-  const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
-  const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
-  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
-  const [linkedPlayerIds, setLinkedPlayerIds] = useState<string[]>([]);
-  const [registrationMessage, setRegistrationMessage] = useState<string | undefined>(undefined);
-  const [membershipResolved, setMembershipResolved] = useState(false);
-  const [authResolved, setAuthResolved] = useState(false);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [teamMessage, setTeamMessage] = useState<string | null>(null);
-  const [localReady, setLocalReady] = useState(false);
-
-  const supabase = useMemo(() => getSupabaseClient(), []);
-  const router = useRouter();
-  const pathname = usePathname();
-  const authEnabled = Boolean(supabase);
-  const usingRemoteData = authEnabled && Boolean(session);
-
-  useEffect(() => {
-    setPlayers(loadPlayers());
-    setGoalLogs(loadGoalLogs());
-    setMaterials(loadMaterials());
-    setGoalTemplates(loadGoalTemplates());
-    setPositionMasters(loadPositionMasters());
-    setLocalReady(true);
-    setDataLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (localReady && !usingRemoteData) {
-      savePlayers(players);
-    }
-  }, [localReady, players, usingRemoteData]);
-
-  useEffect(() => {
-    if (localReady && !usingRemoteData) {
-      saveGoalLogs(goalLogs);
-    }
-  }, [goalLogs, localReady, usingRemoteData]);
-
-  useEffect(() => {
-    if (localReady && !usingRemoteData) {
-      saveMaterials(materials);
-    }
-  }, [localReady, materials, usingRemoteData]);
-
-  useEffect(() => {
-    if (localReady && !usingRemoteData) {
-      saveGoalTemplates(goalTemplates);
-      savePositionMasters(positionMasters);
-    }
-  }, [goalTemplates, localReady, positionMasters, usingRemoteData]);
-
-  useEffect(() => {
-    if (!supabase) {
-      setAuthResolved(true);
-      return;
-    }
-
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) {
-        return;
-      }
-
-      if (!error) {
-        setSession(data.session);
-      }
-
-      setAuthResolved(true);
-    });
-
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setAuthResolved(true);
-    });
-
-    return () => {
-      mounted = false;
-      data.subscription.unsubscribe();
-    };
-  }, [supabase]);
-
-  useEffect(() => {
-    if (!authEnabled || !authResolved || session) {
-      return;
-    }
-
-    const next = pathname && pathname !== "/" ? pathname : "/";
-    router.replace(`/login?next=${encodeURIComponent(next)}`);
-  }, [authEnabled, authResolved, pathname, router, session]);
-
-  useEffect(() => {
-    if (!supabase || !session) {
-      setTeamRole(null);
-      setMembershipStatus(null);
-      setLinkedPlayerIds([]);
-      setMembershipResolved(!authEnabled || !session);
-      setTeamMessage(null);
-      return;
-    }
-
-    const client: NonNullable<typeof supabase> = supabase;
-    let mounted = true;
-
-    async function syncTeam() {
-      setDataLoading(true);
-      setMembershipResolved(false);
-
-      try {
-        const member = (await fetchCurrentTeamMember(client)) ?? (await ensurePendingTeamMember(client));
-        const snapshot = await fetchTeamSnapshot(client);
-
-        if (!mounted) {
-          return;
-        }
-
-        setTeamRole(member?.role ?? null);
-        setMembershipStatus(member?.status ?? null);
-        setLinkedPlayerIds(member?.playerIds ?? []);
-        setRegistrationMessage(member?.registrationMessage);
-        setMembershipResolved(true);
-        setPlayers(snapshot.players);
-        setGoalLogs(snapshot.goalLogs);
-        setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
-        setGoalTemplates(snapshot.goalTemplates);
-        setPositionMasters(snapshot.positionMasters);
-      } catch (error) {
-        if (!mounted) {
-          return;
-        }
-
-        const message = error instanceof Error ? error.message : "チームデータの読み込みに失敗しました。";
-        setMembershipResolved(true);
-        setTeamMessage(`Supabase読込に失敗したため、直前のローカル状態を表示しています。${message}`);
-      } finally {
-        if (mounted) {
-          setDataLoading(false);
-        }
-      }
-    }
-
-    syncTeam();
-
-    return () => {
-      mounted = false;
-    };
-  }, [authEnabled, session, supabase]);
-
-  function resetLocalMode() {
-    const fallback = getFallbackTeamSnapshot();
-    clearStorage();
-    setPlayers(fallback.players);
-    setGoalLogs(fallback.goalLogs);
-    setMaterials(fallback.materials);
-    setGoalTemplates(fallback.goalTemplates);
-    setPositionMasters(fallback.positionMasters);
-    setTeamMessage("ローカル体験モードを初期データに戻しました。");
-  }
-
-  async function handleSignOut() {
-    if (!supabase) {
-      return;
-    }
-
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
-  const canManageAdmin = !authEnabled || teamRole === "coach";
-  const canEditPractice = !authEnabled || Boolean(session);
+  const {
+    players, setPlayers,
+    materials, setMaterials,
+    goalTemplates, setGoalTemplates,
+    positionMasters, setPositionMasters,
+    session, teamRole, membershipStatus,
+    linkedPlayerIds, registrationMessage, setRegistrationMessage,
+    membershipResolved, authResolved, dataLoading,
+    syncing, setSyncing,
+    teamMessage, setTeamMessage,
+    supabase, authEnabled, usingRemoteData,
+    canManageAdmin, canEditPractice,
+    resetLocalMode, handleSignOut,
+  } = useTeam();
 
   if (authEnabled && (!authResolved || !session || !membershipResolved)) {
     return (

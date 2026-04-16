@@ -1,3 +1,4 @@
+import { TeamProvider } from "@/lib/team-context";
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <TeamProvider>{children}</TeamProvider>
+      </body>
     </html>
   );
 }
