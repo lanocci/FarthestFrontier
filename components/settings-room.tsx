@@ -41,6 +41,21 @@ function SeasonManager({
   const [label, setLabel] = useState("");
   const [startDate, setStartDate] = useState("");
   const [targetDate, setTargetDate] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editTargetDate, setEditTargetDate] = useState("");
+
+  function startEditing(season: Season) {
+    setEditingId(season.id);
+    setEditLabel(season.label);
+    setEditStartDate(season.startDate);
+    setEditTargetDate(season.targetDate);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+  }
 
   async function handleAdd() {
     if (!label.trim() || !startDate || !targetDate) return;
@@ -77,12 +92,39 @@ function SeasonManager({
     }
   }
 
+  async function handleSaveEdit() {
+    if (!editingId || !editLabel.trim() || !editStartDate || !editTargetDate) return;
+
+    try {
+      setSyncing(true);
+      if (usingRemoteData && supabase) {
+        const { error } = await supabase
+          .from("seasons")
+          .update({ label: editLabel.trim(), start_date: editStartDate, target_date: editTargetDate })
+          .eq("id", editingId);
+        if (error) throw new Error(error.message);
+      }
+      setSeasons((prev) =>
+        prev.map((s) =>
+          s.id === editingId
+            ? { ...s, label: editLabel.trim(), startDate: editStartDate, targetDate: editTargetDate }
+            : s,
+        ),
+      );
+      setEditingId(null);
+      setTeamMessage("シーズンを更新しました。");
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "更新に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function handleToggleActive(seasonId: string) {
     try {
       setSyncing(true);
       const updated = seasons.map((s) => ({ ...s, active: s.id === seasonId ? !s.active : false }));
       if (usingRemoteData && supabase) {
-        // Deactivate all first, then activate the selected one
         const { error: resetError } = await supabase.from("seasons").update({ active: false }).neq("id", "");
         if (resetError) throw new Error(resetError.message);
         const target = updated.find((s) => s.id === seasonId);
@@ -125,22 +167,55 @@ function SeasonManager({
       {seasons.length ? (
         <div className="admin-player-list">
           {seasons.map((season) => (
-            <div className={`admin-player-item ${season.active ? "is-selected" : ""}`} key={season.id}>
-              <div>
-                <strong>{season.label}</strong>
-                <span className="subtle" style={{ display: "block", fontSize: "0.82rem" }}>
-                  {formatDisplayDate(season.startDate)} 〜 {formatDisplayDate(season.targetDate)}
-                </span>
+            <div key={season.id}>
+              <div className={`admin-player-item ${season.active ? "is-selected" : ""}`}>
+                <div>
+                  <strong>{season.label}</strong>
+                  <span className="subtle" style={{ display: "block", fontSize: "0.82rem" }}>
+                    {formatDisplayDate(season.startDate)} 〜 {formatDisplayDate(season.targetDate)}
+                  </span>
+                </div>
+                <span className={`chip ${season.active ? "ok" : ""}`}>{season.active ? "アクティブ" : "非アクティブ"}</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    className="button secondary button-compact"
+                    type="button"
+                    onClick={() => editingId === season.id ? cancelEditing() : startEditing(season)}
+                    disabled={syncing}
+                  >
+                    {editingId === season.id ? "閉じる" : "編集"}
+                  </button>
+                  <button
+                    className={`button ${season.active ? "secondary" : ""} button-compact`}
+                    type="button"
+                    onClick={() => handleToggleActive(season.id)}
+                    disabled={syncing}
+                  >
+                    {season.active ? "無効にする" : "有効にする"}
+                  </button>
+                </div>
               </div>
-              <span className={`chip ${season.active ? "ok" : ""}`}>{season.active ? "アクティブ" : "非アクティブ"}</span>
-              <button
-                className={`button ${season.active ? "secondary" : ""} button-compact`}
-                type="button"
-                onClick={() => handleToggleActive(season.id)}
-                disabled={syncing}
-              >
-                {season.active ? "無効にする" : "有効にする"}
-              </button>
+              {editingId === season.id ? (
+                <div className="admin-form" style={{ padding: "12px 16px", borderTop: "1px solid var(--line)" }}>
+                  <label className="field-stack">
+                    <span className="field-label">シーズン名</span>
+                    <input type="text" value={editLabel} onChange={(e) => setEditLabel(e.target.value)} disabled={syncing} />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">開始日</span>
+                    <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} disabled={syncing} />
+                  </label>
+                  <label className="field-stack">
+                    <span className="field-label">大会日</span>
+                    <input type="date" value={editTargetDate} onChange={(e) => setEditTargetDate(e.target.value)} disabled={syncing} />
+                  </label>
+                  <div className="field-stack" style={{ justifyContent: "end" }}>
+                    <button className="button button-compact" type="button" onClick={handleSaveEdit} disabled={syncing || !editLabel.trim() || !editStartDate || !editTargetDate}>
+                      保存
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>

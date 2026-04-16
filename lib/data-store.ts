@@ -722,22 +722,25 @@ export async function upsertSeasonGoal(
   supabase: SupabaseClient,
   goal: SeasonGoal,
 ): Promise<SeasonGoal> {
+  const payload: Record<string, unknown> = {
+    player_id: goal.playerId,
+    season_id: goal.seasonId,
+    offense_goal: goal.offenseGoal ?? null,
+    defense_goal: goal.defenseGoal ?? null,
+    offense_reflection_rating: goal.offenseReflectionRating ?? null,
+    offense_reflection_comment: goal.offenseReflectionComment ?? null,
+    defense_reflection_rating: goal.defenseReflectionRating ?? null,
+    defense_reflection_comment: goal.defenseReflectionComment ?? null,
+  };
+
+  // Only include id when it's a real UUID (i.e. previously saved to DB)
+  if (goal.id && !goal.id.startsWith("sg-")) {
+    payload.id = goal.id;
+  }
+
   const { data, error } = await supabase
     .from("season_goals")
-    .upsert(
-      {
-        id: goal.id,
-        player_id: goal.playerId,
-        season_id: goal.seasonId,
-        offense_goal: goal.offenseGoal ?? null,
-        defense_goal: goal.defenseGoal ?? null,
-        offense_reflection_rating: goal.offenseReflectionRating ?? null,
-        offense_reflection_comment: goal.offenseReflectionComment ?? null,
-        defense_reflection_rating: goal.defenseReflectionRating ?? null,
-        defense_reflection_comment: goal.defenseReflectionComment ?? null,
-      },
-      { onConflict: "player_id,season_id" },
-    )
+    .upsert(payload, { onConflict: "player_id,season_id" })
     .select("id, player_id, season_id, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, created_at, updated_at")
     .single();
 
