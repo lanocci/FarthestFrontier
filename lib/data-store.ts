@@ -1,12 +1,14 @@
 import { getDashboardPracticeDate } from "@/lib/date";
 import {
-    goalLogs as mockGoalLogs,
-    goalTemplates as mockGoalTemplates,
-    materials as mockMaterials,
-    players as mockPlayers,
-    positionMasters as mockPositionMasters,
+  goalLogs as mockGoalLogs,
+  goalTemplates as mockGoalTemplates,
+  materials as mockMaterials,
+  players as mockPlayers,
+  positionMasters as mockPositionMasters,
+  seasonGoals as mockSeasonGoals,
+  seasons as mockSeasons
 } from "@/lib/mock-data";
-import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, TeamMember, TeamRole } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, Season, SeasonGoal, TeamMember, TeamRole } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type PlayerRow = {
@@ -75,12 +77,36 @@ type PositionMasterRow = {
   side: PositionMaster["side"];
 };
 
+type SeasonRow = {
+  id: string;
+  label: string;
+  start_date: string;
+  target_date: string;
+  active: boolean;
+};
+
+type SeasonGoalRow = {
+  id: string;
+  player_id: string;
+  season_id: string;
+  offense_goal: string | null;
+  defense_goal: string | null;
+  offense_reflection_rating: 1 | 2 | 3 | 4 | 5 | null;
+  offense_reflection_comment: string | null;
+  defense_reflection_rating: 1 | 2 | 3 | 4 | 5 | null;
+  defense_reflection_comment: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type TeamSnapshot = {
   goalLogs: GoalLog[];
   goalTemplates: GoalTemplate[];
   materials: Material[];
   players: Player[];
   positionMasters: PositionMaster[];
+  seasons: Season[];
+  seasonGoals: SeasonGoal[];
 };
 
 type TeamMemberRow = {
@@ -170,6 +196,32 @@ function toPositionMaster(row: PositionMasterRow): PositionMaster {
   };
 }
 
+function toSeason(row: SeasonRow): Season {
+  return {
+    id: row.id,
+    label: row.label,
+    startDate: row.start_date,
+    targetDate: row.target_date,
+    active: row.active,
+  };
+}
+
+function toSeasonGoal(row: SeasonGoalRow): SeasonGoal {
+  return {
+    id: row.id,
+    playerId: row.player_id,
+    seasonId: row.season_id,
+    offenseGoal: row.offense_goal ?? undefined,
+    defenseGoal: row.defense_goal ?? undefined,
+    offenseReflectionRating: row.offense_reflection_rating ?? undefined,
+    offenseReflectionComment: row.offense_reflection_comment ?? undefined,
+    defenseReflectionRating: row.defense_reflection_rating ?? undefined,
+    defenseReflectionComment: row.defense_reflection_comment ?? undefined,
+    createdAt: row.created_at.slice(0, 10),
+    updatedAt: row.updated_at.slice(0, 10),
+  };
+}
+
 export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamSnapshot> {
   const [
     { data: playerRows, error: playerError },
@@ -178,6 +230,8 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     { data: materialRows, error: materialError },
     { data: positionRows, error: positionError },
     { data: practiceRows, error: practiceError },
+    { data: seasonRows, error: seasonError },
+    { data: seasonGoalRows, error: seasonGoalError },
   ] = await Promise.all([
     supabase
       .from("players")
@@ -202,10 +256,18 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
       .from("practice_entries")
       .select("player_id, practice_date, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment")
       .order("practice_date", { ascending: false }),
+    supabase
+      .from("seasons")
+      .select("id, label, start_date, target_date, active")
+      .order("start_date", { ascending: false }),
+    supabase
+      .from("season_goals")
+      .select("id, player_id, season_id, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, created_at, updated_at")
+      .order("created_at", { ascending: false }),
   ]);
 
   const firstError =
-    playerError ?? templateError ?? logError ?? materialError ?? positionError ?? practiceError;
+    playerError ?? templateError ?? logError ?? materialError ?? positionError ?? practiceError ?? seasonError ?? seasonGoalError;
 
   if (firstError) {
     throw new Error(firstError.message);
@@ -253,6 +315,8 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     goalLogs: goalEntries,
     materials: (materialRows ?? []).map(toMaterial),
     positionMasters: (positionRows ?? []).map(toPositionMaster),
+    seasons: (seasonRows ?? []).map(toSeason),
+    seasonGoals: (seasonGoalRows ?? []).map(toSeasonGoal),
   };
 }
 
@@ -649,5 +713,37 @@ export function getFallbackTeamSnapshot(): TeamSnapshot {
     goalLogs: mockGoalLogs,
     materials: mockMaterials,
     positionMasters: mockPositionMasters,
+    seasons: mockSeasons,
+    seasonGoals: mockSeasonGoals,
   };
+}
+
+export async function upsertSeasonGoal(
+  supabase: SupabaseClient,
+  goal: SeasonGoal,
+): Promise<SeasonGoal> {
+  const { data, error } = await supabase
+    .from("season_goals")
+    .upsert(
+      {
+        id: goal.id,
+        player_id: goal.playerId,
+        season_id: goal.seasonId,
+        offense_goal: goal.offenseGoal ?? null,
+        defense_goal: goal.defenseGoal ?? null,
+        offense_reflection_rating: goal.offenseReflectionRating ?? null,
+        offense_reflection_comment: goal.offenseReflectionComment ?? null,
+        defense_reflection_rating: goal.defenseReflectionRating ?? null,
+        defense_reflection_comment: goal.defenseReflectionComment ?? null,
+      },
+      { onConflict: "player_id,season_id" },
+    )
+    .select("id, player_id, season_id, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment, created_at, updated_at")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return toSeasonGoal(data);
 }

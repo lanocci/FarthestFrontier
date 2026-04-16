@@ -8,14 +8,18 @@ import {
     loadMaterials,
     loadPlayers,
     loadPositionMasters,
+    loadSeasonGoals,
+    loadSeasons,
     saveGoalLogs,
     saveGoalTemplates,
     saveMaterials,
     savePlayers,
     savePositionMasters,
+    saveSeasonGoals,
+    saveSeasons,
 } from "@/lib/storage";
 import { getSupabaseClient } from "@/lib/supabase";
-import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, TeamRole } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, Season, SeasonGoal, TeamRole } from "@/lib/types";
 import { filterMaterialsForRole } from "@/lib/utils";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
@@ -32,6 +36,10 @@ interface TeamContextValue {
   setGoalTemplates: React.Dispatch<React.SetStateAction<GoalTemplate[]>>;
   positionMasters: PositionMaster[];
   setPositionMasters: React.Dispatch<React.SetStateAction<PositionMaster[]>>;
+  seasons: Season[];
+  setSeasons: React.Dispatch<React.SetStateAction<Season[]>>;
+  seasonGoals: SeasonGoal[];
+  setSeasonGoals: React.Dispatch<React.SetStateAction<SeasonGoal[]>>;
   session: Session | null;
   teamRole: TeamRole | null;
   membershipStatus: MembershipStatus | null;
@@ -70,6 +78,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([]);
   const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [seasonGoals, setSeasonGoals] = useState<SeasonGoal[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
@@ -98,6 +108,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setMaterials(loadMaterials());
     setGoalTemplates(loadGoalTemplates());
     setPositionMasters(loadPositionMasters());
+    setSeasons(loadSeasons());
+    setSeasonGoals(loadSeasonGoals());
     setLocalReady(true);
     setDataLoading(false);
   }, []);
@@ -127,6 +139,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       savePositionMasters(positionMasters);
     }
   }, [goalTemplates, localReady, positionMasters, usingRemoteData]);
+
+  useEffect(() => {
+    if (localReady && !usingRemoteData) {
+      saveSeasons(seasons);
+      saveSeasonGoals(seasonGoals);
+    }
+  }, [localReady, seasonGoals, seasons, usingRemoteData]);
 
   // Auth: resolve session once, then listen for changes
   useEffect(() => {
@@ -205,6 +224,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
         setGoalTemplates(snapshot.goalTemplates);
         setPositionMasters(snapshot.positionMasters);
+        setSeasons(snapshot.seasons);
+        setSeasonGoals(snapshot.seasonGoals);
         teamSyncedRef.current = true;
       } catch (error) {
         if (!mounted) return;
@@ -229,6 +250,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setMaterials(fallback.materials);
     setGoalTemplates(fallback.goalTemplates);
     setPositionMasters(fallback.positionMasters);
+    setSeasons(fallback.seasons);
+    setSeasonGoals(fallback.seasonGoals);
     setTeamMessage("ローカル体験モードを初期データに戻しました。");
   }
 
@@ -248,6 +271,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     materials, setMaterials,
     goalTemplates, setGoalTemplates,
     positionMasters, setPositionMasters,
+    seasons, setSeasons,
+    seasonGoals, setSeasonGoals,
     session, teamRole, membershipStatus,
     linkedPlayerIds, registrationMessage, setRegistrationMessage,
     membershipResolved, authResolved, dataLoading,

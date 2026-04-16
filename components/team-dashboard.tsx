@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDisplayDate, getDashboardPracticeDate } from "@/lib/date";
-import { Player, PositionMaster, TeamRole } from "@/lib/types";
+import { Player, PositionMaster, Season, SeasonGoal, TeamRole } from "@/lib/types";
 import { getPositionLabels, getPracticeEntry, getReflectionEmoji } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -13,6 +13,8 @@ type TeamDashboardProps = {
   teamRole: TeamRole | null;
   teamMessage: string | null;
   usingRemoteData: boolean;
+  seasons: Season[];
+  seasonGoals: SeasonGoal[];
   onResetLocalMode: () => void;
 };
 
@@ -23,6 +25,8 @@ export function TeamDashboard({
   teamRole,
   teamMessage,
   usingRemoteData,
+  seasons,
+  seasonGoals,
   onResetLocalMode,
 }: TeamDashboardProps) {
   const [searchText, setSearchText] = useState("");
@@ -46,6 +50,7 @@ export function TeamDashboard({
   }, [linkedPlayerIds, players, searchText]);
 
   const activePlayerCount = players.filter((player) => player.active).length;
+  const activeSeason = seasons.find((s) => s.active);
   const completedReflectionCount = players.filter(
     (player) => {
       const entry = getPracticeEntry(player, practiceDate);
@@ -143,7 +148,7 @@ export function TeamDashboard({
 
                 <div className="practice-actions">
                   <Link className="button secondary button-compact" href={`/players/${player.id}/goals?date=${practiceDate}`}>
-                    {teamRole === "guardian" && !linkedPlayerIds.includes(player.id) ? "目標を見る" : "目標"}
+                    {teamRole === "guardian" && !linkedPlayerIds.includes(player.id) ? "目標を見る" : "週次目標"}
                   </Link>
                   {getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal ? (
                     <Link className="button button-compact" href={`/players/${player.id}/reflections?date=${practiceDate}`}>
@@ -153,6 +158,21 @@ export function TeamDashboard({
                     <span className="button button-compact is-disabled">振り返り</span>
                   )}
                 </div>
+
+                {activeSeason ? (() => {
+                  const sg = seasonGoals.find((g) => g.playerId === player.id && g.seasonId === activeSeason.id);
+                  return (
+                    <div className="season-goal-summary">
+                      <span className="season-goal-label">🏆 {activeSeason.label}</span>
+                      {sg?.offenseGoal || sg?.defenseGoal ? (
+                        <span className="season-goal-text">{sg.offenseGoal ?? ""}{sg.offenseGoal && sg.defenseGoal ? " / " : ""}{sg.defenseGoal ?? ""}</span>
+                      ) : null}
+                      <Link className="button secondary button-compact" href={`/players/${player.id}/season-goals`}>
+                        {sg ? "シーズン目標" : "シーズン目標を設定"}
+                      </Link>
+                    </div>
+                  );
+                })() : null}
               </div>
             </article>
           ))}

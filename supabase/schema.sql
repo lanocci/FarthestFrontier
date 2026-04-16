@@ -477,3 +477,69 @@ for all
 to authenticated
 using (public.is_coach())
 with check (public.is_coach());
+
+-- Seasons and season goals
+
+create table if not exists public.seasons (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  start_date date not null,
+  target_date date not null,
+  active boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.season_goals (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid not null references public.players(id) on delete cascade,
+  season_id uuid not null references public.seasons(id) on delete cascade,
+  offense_goal text,
+  defense_goal text,
+  offense_reflection_rating smallint check (offense_reflection_rating between 1 and 5),
+  offense_reflection_comment text,
+  defense_reflection_rating smallint check (defense_reflection_rating between 1 and 5),
+  defense_reflection_comment text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (player_id, season_id)
+);
+
+drop trigger if exists season_goals_set_updated_at on public.season_goals;
+
+create trigger season_goals_set_updated_at
+before update on public.season_goals
+for each row
+execute function public.set_updated_at();
+
+alter table public.seasons enable row level security;
+alter table public.season_goals enable row level security;
+
+drop policy if exists "seasons_select_team_members" on public.seasons;
+create policy "seasons_select_team_members"
+on public.seasons
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "seasons_manage_coaches" on public.seasons;
+create policy "seasons_manage_coaches"
+on public.seasons
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "season_goals_select_team_members" on public.season_goals;
+create policy "season_goals_select_team_members"
+on public.season_goals
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "season_goals_manage_team_members" on public.season_goals;
+create policy "season_goals_manage_team_members"
+on public.season_goals
+for all
+to authenticated
+using (public.can_manage_player(player_id))
+with check (public.can_manage_player(player_id));

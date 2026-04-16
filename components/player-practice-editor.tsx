@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Dispatch, SetStateAction } from "react";
-import { useMemo, useState } from "react";
 import { Section } from "@/components/section";
 import { upsertPracticeEntry } from "@/lib/data-store";
 import { formatDisplayDate, getDashboardPracticeDate, getRecentPracticeDates } from "@/lib/date";
-import { GoalTemplate, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating } from "@/lib/types";
+import { GoalTemplate, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating, Season, SeasonGoal } from "@/lib/types";
 import { buildGoalText, getPositionLabels, getPracticeEntry, upsertPracticeEntryForPlayer } from "@/lib/utils";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
+import type { Dispatch, SetStateAction } from "react";
+import { useMemo, useState } from "react";
 
 type EditorMode = "goal" | "reflection";
 
@@ -21,6 +21,8 @@ type PlayerPracticeEditorProps = {
   goalTemplates: GoalTemplate[];
   player: Player | null;
   positionMasters: PositionMaster[];
+  seasons: Season[];
+  seasonGoals: SeasonGoal[];
   setPlayers: Dispatch<SetStateAction<Player[]>>;
   setTeamMessage: Dispatch<SetStateAction<string | null>>;
   supabase: SupabaseClient | null;
@@ -81,22 +83,21 @@ function GoalField({
   }
 
   return (
-    <div className="entry-card">
+    <div className="entry-card entry-card-compact">
       <span className="entry-label">{label}</span>
-      <strong>{currentValue ?? "未入力"}</strong>
-      <div className="template-chips">
+      {currentValue ? <strong className="current-goal-value">{currentValue}</strong> : null}
+      <select
+        value={selectedTemplateId}
+        onChange={(e) => setSelectedTemplateId(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="">自由入力</option>
         {scopedTemplates.map((template) => (
-          <button
-            key={template.id}
-            className={`chip-button ${selectedTemplateId === template.id ? "is-active" : ""}`}
-            type="button"
-            onClick={() => setSelectedTemplateId(selectedTemplateId === template.id ? "" : template.id)}
-            disabled={disabled}
-          >
+          <option key={template.id} value={template.id}>
             {template.emoji} {template.title}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
       <input
         type="text"
         placeholder={selectedTemplate?.inputPlaceholder ?? "自由入力"}
@@ -104,8 +105,8 @@ function GoalField({
         onChange={(event) => setInput(event.target.value)}
         disabled={disabled}
       />
-      <div className="preview-card">{preview || "ここに登録内容が表示されます"}</div>
-      <button className="button" type="button" onClick={handleSave} disabled={disabled || !preview}>
+      {preview ? <div className="preview-card preview-card-compact">{preview}</div> : null}
+      <button className="button button-compact" type="button" onClick={handleSave} disabled={disabled || !preview}>
         保存
       </button>
     </div>
@@ -139,12 +140,9 @@ function ReflectionField({
   }
 
   return (
-    <div className="entry-card">
+    <div className="entry-card entry-card-compact">
       <span className="entry-label">{label}</span>
-      <div className="goal-preview-block">
-        <span>目標</span>
-        <strong>{goal ?? "先に目標を入れてください"}</strong>
-      </div>
+      {goal ? <strong className="current-goal-value">{goal}</strong> : <span className="subtle">先に目標を入れてください</span>}
       <div className="rating-grid">
         {reflectionChoices.map((choice) => (
           <button
@@ -167,7 +165,7 @@ function ReflectionField({
         disabled={disabled || !goal}
       />
       <button
-        className="button secondary"
+        className="button secondary button-compact"
         type="button"
         onClick={handleSave}
         disabled={disabled || !goal || !selectedRating}
@@ -187,6 +185,8 @@ export function PlayerPracticeEditor({
   goalTemplates,
   player,
   positionMasters,
+  seasons,
+  seasonGoals,
   setPlayers,
   setTeamMessage,
   supabase,
@@ -291,6 +291,18 @@ export function PlayerPracticeEditor({
 
       {mode === "goal" ? (
         <div className="entry-grid">
+          {(() => {
+            const activeSeason = seasons.find((s) => s.active);
+            const sg = activeSeason ? seasonGoals.find((g) => g.playerId === player.id && g.seasonId === activeSeason.id) : undefined;
+            if (!activeSeason || !sg?.offenseGoal && !sg?.defenseGoal) return null;
+            return (
+              <div className="season-ref-banner" style={{ gridColumn: "1 / -1" }}>
+                <span className="entry-label">🏆 {activeSeason.label}の目標</span>
+                {sg?.offenseGoal ? <span>OF: {sg.offenseGoal}</span> : null}
+                {sg?.defenseGoal ? <span>DF: {sg.defenseGoal}</span> : null}
+              </div>
+            );
+          })()}
           <GoalField
             label="オフェンス目標"
             side="offense"

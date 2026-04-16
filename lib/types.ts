@@ -72,6 +72,28 @@ export type Material = {
   url: string;
 };
 
+export type Season = {
+  id: string;
+  label: string;
+  startDate: string;
+  targetDate: string;
+  active: boolean;
+};
+
+export type SeasonGoal = {
+  id: string;
+  playerId: string;
+  seasonId: string;
+  offenseGoal?: string;
+  defenseGoal?: string;
+  offenseReflectionRating?: ReflectionRating;
+  offenseReflectionComment?: string;
+  defenseReflectionRating?: ReflectionRating;
+  defenseReflectionComment?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TeamMember = {
   userId: string;
   email?: string;

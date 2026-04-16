@@ -1,6 +1,6 @@
-import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/lib/mock-data";
 import { getDashboardPracticeDate } from "@/lib/date";
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
+import { goalLogs, goalTemplates, materials, players, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
+import { GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal } from "@/lib/types";
 import { findGoalTemplate } from "@/lib/utils";
 
 const KEYS = {
@@ -9,6 +9,8 @@ const KEYS = {
   materials: "ff-team-materials",
   positionMasters: "ff-team-position-masters",
   goalTemplates: "ff-team-goal-templates",
+  seasons: "ff-team-seasons",
+  seasonGoals: "ff-team-season-goals",
 } as const;
 
 function readJson<T>(key: string, fallback: T): T {
@@ -162,4 +164,20 @@ export function loadGoalTemplates(): GoalTemplate[] {
 
 export function saveGoalTemplates(nextTemplates: GoalTemplate[]) {
   writeJson(KEYS.goalTemplates, nextTemplates);
+}
+
+export function loadSeasons(): Season[] {
+  return readJson(KEYS.seasons, seasons);
+}
+
+export function saveSeasons(next: Season[]) {
+  writeJson(KEYS.seasons, next);
+}
+
+export function loadSeasonGoals(): SeasonGoal[] {
+  return readJson(KEYS.seasonGoals, seasonGoals);
+}
+
+export function saveSeasonGoals(next: SeasonGoal[]) {
+  writeJson(KEYS.seasonGoals, next);
 }

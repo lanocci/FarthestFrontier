@@ -1,4 +1,4 @@
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster } from "@/lib/types";
+import { GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal } from "@/lib/types";
 
 export const positionMasters: PositionMaster[] = [
   { id: "op-center", label: "センター", side: "offense" },
@@ -196,5 +196,45 @@ export const materials: Material[] = [
     audience: "coaches",
     updatedAt: "2026-04-10",
     url: "https://docs.google.com/document/",
+  },
+];
+
+export const seasons: Season[] = [
+  {
+    id: "s1",
+    label: "2026年春季大会",
+    startDate: "2026-03-01",
+    targetDate: "2026-05-25",
+    active: true,
+  },
+  {
+    id: "s2",
+    label: "2025年秋季大会",
+    startDate: "2025-09-01",
+    targetDate: "2025-11-16",
+    active: false,
+  },
+];
+
+export const seasonGoals: SeasonGoal[] = [
+  {
+    id: "sg1",
+    playerId: "p1",
+    seasonId: "s1",
+    offenseGoal: "パスキャッチを3回せいこうさせる",
+    defenseGoal: "フラッグを毎回ねらう",
+    createdAt: "2026-03-08",
+    updatedAt: "2026-03-08",
+  },
+  {
+    id: "sg2",
+    playerId: "p4",
+    seasonId: "s1",
+    offenseGoal: "スナップを毎回せいかくにする",
+    defenseGoal: "ラッシュで2回QBにプレッシャーをかける",
+    offenseReflectionRating: 4,
+    offenseReflectionComment: "スナップはほぼ完ぺきだった",
+    createdAt: "2026-03-08",
+    updatedAt: "2026-04-10",
   },
 ];

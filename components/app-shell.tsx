@@ -6,13 +6,14 @@ import { MaterialsLibrary } from "@/components/materials-library";
 import { MaterialsRoom } from "@/components/materials-room";
 import { PendingApprovalScreen } from "@/components/pending-approval-screen";
 import { PlayerPracticeEditor } from "@/components/player-practice-editor";
+import { SeasonGoalEditor } from "@/components/season-goal-editor";
 import { SettingsRoom } from "@/components/settings-room";
 import { TeamAdmin } from "@/components/team-admin";
 import { TeamDashboard } from "@/components/team-dashboard";
 import { useTeam } from "@/lib/team-context";
 
 type AppShellProps = {
-  view?: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
+  view?: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
   playerId?: string;
   practiceDate?: string;
 };
@@ -23,6 +24,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
     materials, setMaterials,
     goalTemplates, setGoalTemplates,
     positionMasters, setPositionMasters,
+    seasons, 
+    seasonGoals, setSeasonGoals,
     session, teamRole, membershipStatus,
     linkedPlayerIds, registrationMessage, setRegistrationMessage,
     membershipResolved, authResolved, dataLoading,
@@ -127,6 +130,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
           positionMasters={positionMasters}
+          seasons={seasons}
+          seasonGoals={seasonGoals}
           setPlayers={setPlayers}
           setTeamMessage={setTeamMessage}
           supabase={supabase}
@@ -145,6 +150,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           goalTemplates={goalTemplates}
           player={players.find((player) => player.id === playerId) ?? null}
           positionMasters={positionMasters}
+          seasons={seasons}
+          seasonGoals={seasonGoals}
           setPlayers={setPlayers}
           setTeamMessage={setTeamMessage}
           supabase={supabase}
@@ -152,6 +159,22 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           setSyncing={setSyncing}
           teamMessage={teamMessage}
           usingRemoteData={usingRemoteData}
+        />
+      ) : view === "player-season-goal" ? (
+        <SeasonGoalEditor
+          canEditPlayer={!authEnabled || teamRole === "coach" || linkedPlayerIds.includes(playerId ?? "")}
+          player={players.find((player) => player.id === playerId) ?? null}
+          positionMasters={positionMasters}
+          seasons={seasons}
+          seasonGoals={seasonGoals}
+          setSeasonGoals={setSeasonGoals}
+          setTeamMessage={setTeamMessage}
+          supabase={supabase}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          teamMessage={teamMessage}
+          usingRemoteData={usingRemoteData}
+          linkedPlayerIds={linkedPlayerIds}
         />
       ) : (
         <TeamDashboard
@@ -161,6 +184,8 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           teamRole={teamRole}
           teamMessage={teamMessage}
           usingRemoteData={usingRemoteData}
+          seasons={seasons}
+          seasonGoals={seasonGoals}
           onResetLocalMode={resetLocalMode}
         />
       )}

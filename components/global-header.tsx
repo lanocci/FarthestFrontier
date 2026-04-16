@@ -4,7 +4,7 @@ import { BookOpen, Home, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
 type GlobalHeaderProps = {
-  view: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection";
+  view: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
   onSignOut?: () => void;
 };
 
@@ -26,7 +26,7 @@ export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
         {navItems.map((item) => (
           <Link
             key={item.href}
-            className={`tab-link ${view === item.view || ((view === "player-goal" || view === "player-reflection") && item.view === "dashboard") || ((view === "players" || view === "masters" || view === "materials-manage") && item.view === "settings") ? "is-active" : ""}`}
+            className={`tab-link ${view === item.view || ((view === "player-goal" || view === "player-reflection" || view === "player-season-goal") && item.view === "dashboard") || ((view === "players" || view === "masters" || view === "materials-manage") && item.view === "settings") ? "is-active" : ""}`}
             href={item.href}
           >
             <item.icon size={18} aria-hidden="true" />
