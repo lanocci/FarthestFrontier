@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Home, Settings } from "lucide-react";
+import { BookOpen, Home, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
 type GlobalHeaderProps = {
@@ -34,7 +34,8 @@ export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
           </Link>
         ))}
         {onSignOut ? (
-          <button className="button secondary button-compact" type="button" onClick={onSignOut}>
+          <button className="tab-link" type="button" onClick={onSignOut}>
+            <LogOut size={18} aria-hidden="true" />
             ログアウト
           </button>
         ) : null}
