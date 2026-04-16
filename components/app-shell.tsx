@@ -24,7 +24,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
     materials, setMaterials,
     goalTemplates, setGoalTemplates,
     positionMasters, setPositionMasters,
-    seasons, 
+    seasons, setSeasons,
     seasonGoals, setSeasonGoals,
     session, teamRole, membershipStatus,
     linkedPlayerIds, registrationMessage, setRegistrationMessage,
@@ -119,6 +119,11 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           supabase={supabase}
           teamMessage={teamMessage}
           setTeamMessage={setTeamMessage}
+          seasons={seasons}
+          setSeasons={setSeasons}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          usingRemoteData={usingRemoteData}
         />
       ) : view === "player-goal" ? (
         <PlayerPracticeEditor
