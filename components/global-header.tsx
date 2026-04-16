@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, Home, Settings } from "lucide-react";
 import Link from "next/link";
 
 type GlobalHeaderProps = {
@@ -8,9 +9,9 @@ type GlobalHeaderProps = {
 };
 
 const navItems = [
-  { href: "/", label: "🏠", view: "dashboard" },
-  { href: "/materials", label: "資料室📕", view: "materials" },
-  { href: "/settings", label: "設定⚙️", view: "settings" },
+  { href: "/", label: "ホーム", icon: Home, view: "dashboard" },
+  { href: "/materials", label: "資料室", icon: BookOpen, view: "materials" },
+  { href: "/settings", label: "設定", icon: Settings, view: "settings" },
 ] as const;
 
 export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
@@ -28,6 +29,7 @@ export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
             className={`tab-link ${view === item.view || ((view === "player-goal" || view === "player-reflection") && item.view === "dashboard") || ((view === "players" || view === "masters" || view === "materials-manage") && item.view === "settings") ? "is-active" : ""}`}
             href={item.href}
           >
+            <item.icon size={18} aria-hidden="true" />
             {item.label}
           </Link>
         ))}
