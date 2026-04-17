@@ -278,6 +278,43 @@ select:disabled {
   margin-top: 22px;
 }
 
+.practice-editor-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.practice-editor-header-main {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.practice-editor-message {
+  line-height: 1.4;
+}
+
+.practice-editor-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.practice-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.practice-editor-badge {
+  flex-shrink: 0;
+}
+
 .entry-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -940,6 +977,15 @@ select:disabled {
   color: #855f09;
 }
 
+.icon-chip {
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .goal-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1238,6 +1284,18 @@ select:disabled {
   .admin-form,
   .inline-form-tight {
     grid-template-columns: 1fr;
+  }
+
+  .practice-editor-header {
+    display: grid;
+  }
+
+  .practice-editor-badge {
+    justify-self: end;
+  }
+
+  .practice-editor-controls {
+    align-items: stretch;
   }
 
   .player-grid {

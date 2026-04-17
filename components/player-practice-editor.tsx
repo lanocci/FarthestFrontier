@@ -259,33 +259,43 @@ export function PlayerPracticeEditor({
   return (
     <div className="stack practice-editor-page">
       <Section title={`${player.name}の${pageTitle}`} copy={pageCopy}>
-        <div className="status-strip">
-          {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
-          {!canEditPlayer ? <span className="chip">閲覧のみ</span> : null}
-          {isLinkedPlayer ? <span className="chip ok">うちの子</span> : null}
-          <label className="field-stack week-select">
-            <span className="field-label">練習日</span>
-            <select value={selectedPracticeDate} onChange={(event) => setSelectedPracticeDate(event.target.value)}>
-              {practiceDateOptions.map((practiceDate) => (
-                <option key={practiceDate} value={practiceDate}>
-                  {formatDisplayDate(practiceDate)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Link className={`button secondary ${mode === "goal" ? "is-current" : ""}`} href={`/players/${player.id}/goals?date=${selectedPracticeDate}`}>
-            目標
-          </Link>
-          {canOpenReflection ? (
-            <Link className={`button secondary ${mode === "reflection" ? "is-current" : ""}`} href={`/players/${player.id}/reflections?date=${selectedPracticeDate}`}>
-              振り返り
-            </Link>
-          ) : (
-            <span className="button secondary is-disabled">振り返り</span>
-          )}
-          <Link className="button secondary" href="/">
-            トップへ戻る
-          </Link>
+        <div className="practice-editor-header">
+          <div className="practice-editor-header-main">
+            {teamMessage ? <span className="subtle practice-editor-message">{teamMessage}</span> : null}
+            <div className="practice-editor-controls">
+              {!canEditPlayer ? <span className="chip">閲覧のみ</span> : null}
+              <label className="field-stack week-select">
+                <span className="field-label">練習日</span>
+                <select value={selectedPracticeDate} onChange={(event) => setSelectedPracticeDate(event.target.value)}>
+                  {practiceDateOptions.map((practiceDate) => (
+                    <option key={practiceDate} value={practiceDate}>
+                      {formatDisplayDate(practiceDate)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="practice-editor-actions">
+                <Link className={`button secondary ${mode === "goal" ? "is-current" : ""}`} href={`/players/${player.id}/goals?date=${selectedPracticeDate}`}>
+                  目標
+                </Link>
+                {canOpenReflection ? (
+                  <Link className={`button secondary ${mode === "reflection" ? "is-current" : ""}`} href={`/players/${player.id}/reflections?date=${selectedPracticeDate}`}>
+                    振り返り
+                  </Link>
+                ) : (
+                  <span className="button secondary is-disabled">振り返り</span>
+                )}
+                <Link className="button secondary" href="/">
+                  トップへ戻る
+                </Link>
+              </div>
+            </div>
+          </div>
+          {isLinkedPlayer ? (
+            <span className="chip ok icon-chip practice-editor-badge" title="うちの子" aria-label="うちの子">
+              ⭐
+            </span>
+          ) : null}
         </div>
       </Section>
 

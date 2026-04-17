@@ -144,7 +144,11 @@ export function SeasonGoalEditor({
         <div className="status-strip">
           {teamMessage ? <span className="subtle compact-message">{teamMessage}</span> : null}
           {!canEditPlayer ? <span className="chip">閲覧のみ</span> : null}
-          {isLinked ? <span className="chip ok">うちの子</span> : null}
+          {isLinked ? (
+            <span className="chip ok icon-chip" title="うちの子" aria-label="うちの子">
+              ⭐
+            </span>
+          ) : null}
           <label className="field-stack week-select">
             <span className="field-label">シーズン</span>
             <select value={selectedSeasonId} onChange={(e) => handleSeasonChange(e.target.value)}>

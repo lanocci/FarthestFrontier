@@ -115,10 +115,20 @@ export function TeamDashboard({
                 </div>
 
                 <div className="chip-row compact-chip-row">
-                  {linkedPlayerIds.includes(player.id) ? <span className="chip ok">うちの子</span> : null}
-                  <span className={`chip ${(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "ok" : "warn"}`}>
-                    {(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? "目標設定済み" : "目標未設定"}
-                  </span>
+                  {linkedPlayerIds.includes(player.id) ? (
+                    <span className="chip ok icon-chip" title="うちの子" aria-label="うちの子">
+                      ⭐
+                    </span>
+                  ) : null}
+                  {(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? (
+                    <span className="chip ok icon-chip" title="目標できた" aria-label="目標できた">
+                      👏
+                    </span>
+                  ) : (
+                    <span className="chip warn icon-chip" title="これからかく" aria-label="これからかく">
+                      ✏️
+                    </span>
+                  )}
                 </div>
 
                 <div className="practice-summary">
