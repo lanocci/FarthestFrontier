@@ -16,6 +16,7 @@ export function LoginScreen({ nextPath }: LoginScreenProps) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [sendingMagicLink, setSendingMagicLink] = useState(false);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const authEnabled = Boolean(supabase);
 
@@ -73,14 +74,21 @@ export function LoginScreen({ nextPath }: LoginScreenProps) {
       return;
     }
 
-    const redirectTo =
-      typeof window === "undefined" ? undefined : `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`;
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo },
-    });
+    setSendingMagicLink(true);
+    setAuthMessage(null);
 
-    setAuthMessage(error ? error.message : "ログインリンクを送りました。メールを確認してください。");
+    try {
+      const redirectTo =
+        typeof window === "undefined" ? undefined : `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: redirectTo },
+      });
+
+      setAuthMessage(error ? error.message : "ログインリンクを送りました。メールを確認してください。");
+    } finally {
+      setSendingMagicLink(false);
+    }
   }
 
   async function signInWithGoogle() {
@@ -115,6 +123,7 @@ export function LoginScreen({ nextPath }: LoginScreenProps) {
       <LoginPanel
         authEnabled={authEnabled}
         authLoading={authLoading}
+        sendingMagicLink={sendingMagicLink}
         authMessage={authMessage}
         session={session}
         onSendMagicLink={sendMagicLink}

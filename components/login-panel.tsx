@@ -6,6 +6,7 @@ import { useState } from "react";
 type LoginPanelProps = {
   authEnabled: boolean;
   authLoading: boolean;
+  sendingMagicLink: boolean;
   authMessage: string | null;
   session: Session | null;
   onSendMagicLink: (email: string) => Promise<void>;
@@ -14,7 +15,10 @@ type LoginPanelProps = {
 };
 
 export function LoginPanel({
+  authEnabled,
   authLoading,
+  sendingMagicLink,
+  authMessage,
   session,
   onSendMagicLink,
   onSignInWithGoogle,
@@ -39,21 +43,21 @@ export function LoginPanel({
             aria-label="メールアドレス"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            disabled={authLoading}
+            disabled={authLoading || sendingMagicLink || !authEnabled}
           />
           <button
             className="button"
             type="button"
             onClick={() => onSendMagicLink(email)}
-            disabled={authLoading || !email.trim()}
+            disabled={authLoading || sendingMagicLink || !email.trim() || !authEnabled}
           >
-            ログインリンクを送る
+            {sendingMagicLink ? "送信中..." : "ログインリンクを送る"}
           </button>
           <button
             className="button secondary"
             type="button"
             onClick={onSignInWithGoogle}
-            disabled={authLoading}
+            disabled={authLoading || !authEnabled}
           >
             Googleでログイン
           </button>
@@ -63,6 +67,11 @@ export function LoginPanel({
             </button>
           ) : null}
         </div>
+        {authMessage ? (
+          <div className="status-strip">
+            <span className="subtle compact-message">{authMessage}</span>
+          </div>
+        ) : null}
       </div>
     </div>
   );
