@@ -104,7 +104,12 @@ export function TeamDashboard({
               <div className="practice-card-link">
                 <div className="practice-card-head">
                   <div>
-                    <strong>{player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}</strong>
+                    <strong>
+                      {linkedPlayerIds.includes(player.id) ? (
+                        <span className="player-name-mark" title="うちの子" aria-label="うちの子">⭐️</span>
+                      ) : null}
+                      {player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}
+                    </strong>
                     <div className="subtle">
                       {getPositionLabels(player.offensePositionIds, positionMasters)} / {getPositionLabels(player.defensePositionIds, positionMasters)}
                     </div>
@@ -115,11 +120,6 @@ export function TeamDashboard({
                 </div>
 
                 <div className="chip-row compact-chip-row">
-                  {linkedPlayerIds.includes(player.id) ? (
-                    <span className="chip ok icon-chip" title="うちの子" aria-label="うちの子">
-                      ⭐
-                    </span>
-                  ) : null}
                   {(getPracticeEntry(player, practiceDate)?.offenseGoal || getPracticeEntry(player, practiceDate)?.defenseGoal) ? (
                     <span className="chip ok icon-chip" title="目標できた" aria-label="目標できた">
                       👏

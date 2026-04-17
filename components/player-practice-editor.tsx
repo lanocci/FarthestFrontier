@@ -258,7 +258,7 @@ export function PlayerPracticeEditor({
 
   return (
     <div className="stack practice-editor-page">
-      <Section title={`${player.name}の${pageTitle}`} copy={pageCopy}>
+      <Section title={`${isLinkedPlayer ? "⭐️ " : ""}${player.name}の${pageTitle}`} copy={pageCopy}>
         <div className="practice-editor-header">
           <div className="practice-editor-header-main">
             {teamMessage ? <span className="subtle practice-editor-message">{teamMessage}</span> : null}
@@ -291,11 +291,6 @@ export function PlayerPracticeEditor({
               </div>
             </div>
           </div>
-          {isLinkedPlayer ? (
-            <span className="chip ok icon-chip practice-editor-badge" title="うちの子" aria-label="うちの子">
-              ⭐
-            </span>
-          ) : null}
         </div>
       </Section>
 

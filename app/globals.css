@@ -311,10 +311,6 @@ select:disabled {
   flex-wrap: wrap;
 }
 
-.practice-editor-badge {
-  flex-shrink: 0;
-}
-
 .entry-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -986,6 +982,10 @@ select:disabled {
   line-height: 1;
 }
 
+.player-name-mark {
+  margin-right: 4px;
+}
+
 .goal-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1288,10 +1288,6 @@ select:disabled {
 
   .practice-editor-header {
     display: grid;
-  }
-
-  .practice-editor-badge {
-    justify-self: end;
   }
 
   .practice-editor-controls {
