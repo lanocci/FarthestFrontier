@@ -45,6 +45,19 @@ export function TeamDashboard({
           return rightOwn - leftOwn;
         }
 
+        const leftNumber = Number(left.jerseyNumber);
+        const rightNumber = Number(right.jerseyNumber);
+        const leftHasNumber = Number.isFinite(leftNumber) && left.jerseyNumber !== "";
+        const rightHasNumber = Number.isFinite(rightNumber) && right.jerseyNumber !== "";
+
+        if (leftHasNumber && rightHasNumber && leftNumber !== rightNumber) {
+          return leftNumber - rightNumber;
+        }
+
+        if (leftHasNumber !== rightHasNumber) {
+          return leftHasNumber ? -1 : 1;
+        }
+
         return left.name.localeCompare(right.name, "ja");
       });
   }, [linkedPlayerIds, players, searchText]);
