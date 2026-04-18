@@ -3,6 +3,7 @@
 import { ensurePendingTeamMember, fetchCurrentTeamMember, fetchTeamSnapshot, getFallbackTeamSnapshot } from "@/lib/data-store";
 import {
     clearStorage,
+    loadFilmRoomVideos,
     loadGoalLogs,
     loadGoalTemplates,
     loadMaterials,
@@ -11,6 +12,7 @@ import {
     loadSeasonGoals,
     loadSeasons,
     saveGoalLogs,
+    saveFilmRoomVideos,
     saveGoalTemplates,
     saveMaterials,
     savePlayers,
@@ -19,8 +21,8 @@ import {
     saveSeasons,
 } from "@/lib/storage";
 import { getSupabaseClient } from "@/lib/supabase";
-import { GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, Season, SeasonGoal, TeamRole } from "@/lib/types";
-import { filterMaterialsForRole } from "@/lib/utils";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, Season, SeasonGoal, TeamRole } from "@/lib/types";
+import { filterAudiencesForRole, filterMaterialsForRole } from "@/lib/utils";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -32,6 +34,8 @@ interface TeamContextValue {
   setGoalLogs: React.Dispatch<React.SetStateAction<GoalLog[]>>;
   materials: Material[];
   setMaterials: React.Dispatch<React.SetStateAction<Material[]>>;
+  filmRoomVideos: FilmRoomVideo[];
+  setFilmRoomVideos: React.Dispatch<React.SetStateAction<FilmRoomVideo[]>>;
   goalTemplates: GoalTemplate[];
   setGoalTemplates: React.Dispatch<React.SetStateAction<GoalTemplate[]>>;
   positionMasters: PositionMaster[];
@@ -76,6 +80,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [goalLogs, setGoalLogs] = useState<GoalLog[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [filmRoomVideos, setFilmRoomVideos] = useState<FilmRoomVideo[]>([]);
   const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([]);
   const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -106,6 +111,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setPlayers(loadPlayers());
     setGoalLogs(loadGoalLogs());
     setMaterials(loadMaterials());
+    setFilmRoomVideos(loadFilmRoomVideos());
     setGoalTemplates(loadGoalTemplates());
     setPositionMasters(loadPositionMasters());
     setSeasons(loadSeasons());
@@ -132,6 +138,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       saveMaterials(materials);
     }
   }, [localReady, materials, usingRemoteData]);
+
+  useEffect(() => {
+    if (localReady && !usingRemoteData) {
+      saveFilmRoomVideos(filmRoomVideos);
+    }
+  }, [filmRoomVideos, localReady, usingRemoteData]);
 
   useEffect(() => {
     if (localReady && !usingRemoteData) {
@@ -222,6 +234,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         setPlayers(snapshot.players);
         setGoalLogs(snapshot.goalLogs);
         setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
+        setFilmRoomVideos(filterAudiencesForRole(snapshot.filmRoomVideos, member?.role ?? null));
         setGoalTemplates(snapshot.goalTemplates);
         setPositionMasters(snapshot.positionMasters);
         setSeasons(snapshot.seasons);
@@ -248,6 +261,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setPlayers(fallback.players);
     setGoalLogs(fallback.goalLogs);
     setMaterials(fallback.materials);
+    setFilmRoomVideos(fallback.filmRoomVideos);
     setGoalTemplates(fallback.goalTemplates);
     setPositionMasters(fallback.positionMasters);
     setSeasons(fallback.seasons);
@@ -269,6 +283,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     players, setPlayers,
     goalLogs, setGoalLogs,
     materials, setMaterials,
+    filmRoomVideos, setFilmRoomVideos,
     goalTemplates, setGoalTemplates,
     positionMasters, setPositionMasters,
     seasons, setSeasons,

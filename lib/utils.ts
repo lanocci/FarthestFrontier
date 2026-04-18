@@ -1,5 +1,5 @@
 import { goalLogs, goalTemplates, materials, players, positionMasters } from "@/lib/mock-data";
-import { GoalTemplate, Material, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating, TeamRole } from "@/lib/types";
+import { GoalTemplate, Material, MaterialAudience, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating, TeamRole } from "@/lib/types";
 
 const reflectionEmojiMap: Record<ReflectionRating, string> = {
   5: "🏆",
@@ -67,7 +67,11 @@ export function formatMaterialType(material: Material): string {
 }
 
 export function formatAudience(material: Material): string {
-  switch (material.audience) {
+  return formatAudienceLabel(material.audience);
+}
+
+export function formatAudienceLabel(audience: MaterialAudience): string {
+  switch (audience) {
     case "all":
       return "チーム全体";
     case "guardians":
@@ -75,16 +79,20 @@ export function formatAudience(material: Material): string {
     case "coaches":
       return "コーチのみ";
     default:
-      return material.audience;
+      return audience;
   }
 }
 
-export function filterMaterialsForRole(materialsList: Material[], role: TeamRole | null): Material[] {
+export function filterAudiencesForRole<T extends { audience: MaterialAudience }>(items: T[], role: TeamRole | null): T[] {
   if (role === "coach" || role === null) {
-    return materialsList;
+    return items;
   }
 
-  return materialsList.filter((material) => material.audience !== "coaches");
+  return items.filter((item) => item.audience !== "coaches");
+}
+
+export function filterMaterialsForRole(materialsList: Material[], role: TeamRole | null): Material[] {
+  return filterAudiencesForRole(materialsList, role);
 }
 
 export function isValidUrl(value: string): boolean {
@@ -135,4 +143,47 @@ export function findGoalTemplate(goalTemplateId?: string, templates: GoalTemplat
   }
 
   return templates.find((template) => template.id === goalTemplateId);
+}
+
+export function parseYouTubeVideoId(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+
+    if (url.hostname.includes("youtu.be")) {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+
+    if (url.hostname.includes("youtube.com")) {
+      const watchId = url.searchParams.get("v");
+      if (watchId && /^[a-zA-Z0-9_-]{11}$/.test(watchId)) {
+        return watchId;
+      }
+
+      const segments = url.pathname.split("/").filter(Boolean);
+      const embedId = segments.at(-1);
+      return embedId && /^[a-zA-Z0-9_-]{11}$/.test(embedId) ? embedId : null;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function formatSecondsAsTime(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }

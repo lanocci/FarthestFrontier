@@ -1,4 +1,4 @@
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal } from "@/lib/types";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal } from "@/lib/types";
 
 export const positionMasters: PositionMaster[] = [
   { id: "op-center", label: "センター", side: "offense" },
@@ -196,6 +196,83 @@ export const materials: Material[] = [
     audience: "coaches",
     updatedAt: "2026-04-10",
     url: "https://docs.google.com/document/",
+  },
+];
+
+export const filmRoomVideos: FilmRoomVideo[] = [
+  {
+    id: "fv1",
+    title: "春季大会 vs Blue Falcons",
+    description: "限定公開の試合動画。オフェンスの隊形とキャッチ後の動きを見返す用です。",
+    sourceLabel: "2026年春季大会 第2試合",
+    matchDate: "2026-04-14",
+    audience: "all",
+    updatedAt: "2026-04-15",
+    youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    clips: [
+      {
+        id: "fc1",
+        title: "右サイドのショートパス",
+        startSeconds: 42,
+        endSeconds: 58,
+        down: 1,
+        toGoYards: "8",
+        formation: "Trips Right",
+        playType: "ショートパス",
+        playerLinks: [
+          { playerId: "p1", positionId: "op-runner" },
+          { playerId: "p2", positionId: "op-receiver" },
+        ],
+        comment: "スナップ後の一歩目が早く、レシーバーの角度もそろっています。",
+      },
+      {
+        id: "fc2",
+        title: "中央ランで前進",
+        startSeconds: 78,
+        endSeconds: 93,
+        down: 2,
+        toGoYards: "4",
+        formation: "Balanced",
+        playType: "ラン",
+        playerLinks: [{ playerId: "p4", positionId: "op-center" }],
+        comment: "センターの声かけからスタートまでが安定しているプレーです。",
+      },
+      {
+        id: "fc3",
+        title: "守備でフラッグを取り切る",
+        startSeconds: 126,
+        endSeconds: 139,
+        down: 3,
+        toGoYards: "6",
+        penaltyType: "なし",
+        formation: "Zone",
+        playType: "守備",
+        playerLinks: [{ playerId: "p3", positionId: "dp-linebacker" }],
+        comment: "中のコースを消しながら、最後にしっかり寄せてフラッグを取れています。",
+      },
+    ],
+  },
+  {
+    id: "fv2",
+    title: "プレー合わせメモ",
+    description: "限定公開の事前共有動画。プレーの入り方を短く切り出して確認できます。",
+    sourceLabel: "プレー合わせ",
+    matchDate: "2026-04-16",
+    audience: "coaches",
+    updatedAt: "2026-04-16",
+    youtubeUrl: "https://youtu.be/dQw4w9WgXcQ",
+    clips: [
+      {
+        id: "fc4",
+        title: "モーション確認",
+        startSeconds: 15,
+        endSeconds: 29,
+        formation: "Motion Left",
+        playType: "プレー合わせ",
+        playerLinks: [{ playerId: "p5", positionId: "op-quarterback" }],
+        comment: "動き出すタイミングをそろえるための確認用です。",
+      },
+    ],
   },
 ];
 

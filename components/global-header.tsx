@@ -1,16 +1,17 @@
 "use client";
 
-import { BookOpen, Home, LogOut, Settings } from "lucide-react";
+import { BookOpen, Clapperboard, Home, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
 type GlobalHeaderProps = {
-  view: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
+  view: "dashboard" | "players" | "masters" | "materials" | "audiovisual" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
   onSignOut?: () => void;
 };
 
 const navItems = [
   { href: "/", label: "ホーム", icon: Home, view: "dashboard" },
   { href: "/materials", label: "資料室", icon: BookOpen, view: "materials" },
+  { href: "/videos", label: "ビデオ", icon: Clapperboard, view: "audiovisual" },
   { href: "/settings", label: "設定", icon: Settings, view: "settings" },
 ] as const;
 

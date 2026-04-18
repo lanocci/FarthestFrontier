@@ -1,5 +1,6 @@
 "use client";
 
+import { AudiovisualRoom } from "@/components/audiovisual-room";
 import { GlobalHeader } from "@/components/global-header";
 import { MastersAdmin } from "@/components/masters-admin";
 import { MaterialsLibrary } from "@/components/materials-library";
@@ -13,7 +14,7 @@ import { TeamDashboard } from "@/components/team-dashboard";
 import { useTeam } from "@/lib/team-context";
 
 type AppShellProps = {
-  view?: "dashboard" | "players" | "masters" | "materials" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
+  view?: "dashboard" | "players" | "masters" | "materials" | "audiovisual" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
   playerId?: string;
   practiceDate?: string;
 };
@@ -22,6 +23,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
   const {
     players, setPlayers,
     materials, setMaterials,
+    filmRoomVideos, setFilmRoomVideos,
     goalTemplates, setGoalTemplates,
     positionMasters, setPositionMasters,
     seasons, setSeasons,
@@ -98,6 +100,22 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
         <MaterialsLibrary
           materials={materials}
           teamMessage={teamMessage}
+        />
+      ) : view === "audiovisual" ? (
+        <AudiovisualRoom
+          canManageTeam={canManageAdmin}
+          dataLoading={dataLoading}
+          filmRoomVideos={filmRoomVideos}
+          players={players}
+          positionMasters={positionMasters}
+          setFilmRoomVideos={setFilmRoomVideos}
+          setTeamMessage={setTeamMessage}
+          supabase={supabase}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          teamMessage={teamMessage}
+          usingRemoteData={usingRemoteData}
+          onResetLocalMode={resetLocalMode}
         />
       ) : view === "materials-manage" ? (
         <MaterialsRoom

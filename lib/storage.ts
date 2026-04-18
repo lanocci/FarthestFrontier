@@ -1,12 +1,13 @@
 import { getDashboardPracticeDate } from "@/lib/date";
-import { goalLogs, goalTemplates, materials, players, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
-import { GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal } from "@/lib/types";
+import { filmRoomVideos, goalLogs, goalTemplates, materials, players, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal, VideoClip } from "@/lib/types";
 import { findGoalTemplate } from "@/lib/utils";
 
 const KEYS = {
   players: "ff-team-players",
   goalLogs: "ff-team-goal-logs",
   materials: "ff-team-materials",
+  filmRoomVideos: "ff-team-film-room-videos",
   positionMasters: "ff-team-position-masters",
   goalTemplates: "ff-team-goal-templates",
   seasons: "ff-team-seasons",
@@ -148,6 +149,42 @@ export function loadMaterials(): Material[] {
 
 export function saveMaterials(nextMaterials: Material[]) {
   writeJson(KEYS.materials, nextMaterials);
+}
+
+export function loadFilmRoomVideos(): FilmRoomVideo[] {
+  return readJson(KEYS.filmRoomVideos, filmRoomVideos).map(normalizeFilmRoomVideo);
+}
+
+export function saveFilmRoomVideos(nextVideos: FilmRoomVideo[]) {
+  writeJson(KEYS.filmRoomVideos, nextVideos);
+}
+
+function normalizeVideoClip(clip: VideoClip & { playerLabel?: string }): VideoClip {
+  const legacyDown = (clip as unknown as { down?: string | number }).down;
+  const parsedDown =
+    typeof legacyDown === "number"
+      ? legacyDown
+      : typeof legacyDown === "string"
+        ? Number.parseInt(legacyDown, 10) || Number.parseInt(legacyDown.replace(/\D/g, ""), 10) || undefined
+        : undefined;
+
+  return {
+    ...clip,
+    down: clip.down ?? parsedDown,
+    toGoYards: clip.toGoYards ?? undefined,
+    penaltyType: clip.penaltyType ?? undefined,
+    playerLinks: clip.playerLinks ?? [],
+  };
+}
+
+function normalizeFilmRoomVideo(video: FilmRoomVideo): FilmRoomVideo {
+  const legacyMatchDate = (video as FilmRoomVideo & { gameDate?: string }).gameDate;
+
+  return {
+    ...video,
+    matchDate: video.matchDate ?? legacyMatchDate,
+    clips: (video.clips ?? []).map(normalizeVideoClip),
+  };
 }
 
 export function loadPositionMasters(): PositionMaster[] {

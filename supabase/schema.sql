@@ -180,6 +180,69 @@ create table if not exists public.materials (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.film_videos (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null default '',
+  youtube_url text not null,
+  audience text not null check (audience in ('all', 'guardians', 'coaches')),
+  source_label text not null default '',
+  match_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table if exists public.film_videos
+add column if not exists match_date date;
+
+create table if not exists public.film_clips (
+  id uuid primary key default gen_random_uuid(),
+  video_id uuid not null references public.film_videos(id) on delete cascade,
+  title text not null,
+  start_seconds integer not null check (start_seconds >= 0),
+  end_seconds integer not null check (end_seconds > start_seconds),
+  down integer,
+  to_go_yards text,
+  penalty_type text,
+  formation text not null default '',
+  play_type text not null default '',
+  comment text not null default '',
+  player_links jsonb not null default '[]'::jsonb,
+  sort_order integer not null default 1,
+  created_at timestamptz not null default now()
+);
+
+alter table if exists public.film_clips
+add column if not exists player_links jsonb not null default '[]'::jsonb;
+
+alter table if exists public.film_clips
+add column if not exists down integer;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public' and table_name = 'film_clips' and column_name = 'down'
+      and data_type <> 'integer'
+  ) then
+    execute '
+      alter table public.film_clips
+      alter column down type integer
+      using nullif(regexp_replace(coalesce(down::text, ''''), ''[^0-9]'', '''', ''g''), '''')::integer
+    ';
+  end if;
+end $$;
+
+alter table if exists public.film_clips
+add column if not exists to_go_yards text;
+
+alter table if exists public.film_clips
+add column if not exists penalty_type text;
+
+alter table if exists public.film_clips
+drop column if exists player_label;
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -213,11 +276,17 @@ end;
 $$;
 
 drop trigger if exists materials_set_updated_at on public.materials;
+drop trigger if exists film_videos_set_updated_at on public.film_videos;
 drop trigger if exists practice_entries_set_updated_at on public.practice_entries;
 drop trigger if exists on_auth_user_created_team_member on auth.users;
 
 create trigger materials_set_updated_at
 before update on public.materials
+for each row
+execute function public.set_updated_at();
+
+create trigger film_videos_set_updated_at
+before update on public.film_videos
 for each row
 execute function public.set_updated_at();
 

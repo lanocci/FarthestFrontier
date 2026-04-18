@@ -3,6 +3,7 @@ export type TeamRole = Role;
 export type MembershipStatus = "pending" | "approved" | "rejected";
 export type MaterialType = "slide" | "sheet" | "doc";
 export type MaterialAudience = "all" | "guardians" | "coaches";
+export type VideoAudience = MaterialAudience;
 export type PositionSide = "offense" | "defense";
 export type ReflectionRating = 1 | 2 | 3 | 4 | 5;
 
@@ -70,6 +71,37 @@ export type Material = {
   audience: MaterialAudience;
   updatedAt: string;
   url: string;
+};
+
+export type VideoClipPlayerLink = {
+  playerId: string;
+  positionId?: string;
+};
+
+export type VideoClip = {
+  id: string;
+  title: string;
+  startSeconds: number;
+  endSeconds: number;
+  down?: number;
+  toGoYards?: string;
+  penaltyType?: string;
+  formation: string;
+  playType: string;
+  comment: string;
+  playerLinks: VideoClipPlayerLink[];
+};
+
+export type FilmRoomVideo = {
+  id: string;
+  title: string;
+  description: string;
+  sourceLabel: string;
+  matchDate?: string;
+  audience: VideoAudience;
+  updatedAt: string;
+  youtubeUrl: string;
+  clips: VideoClip[];
 };
 
 export type Season = {
