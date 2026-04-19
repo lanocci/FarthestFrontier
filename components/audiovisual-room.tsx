@@ -3,7 +3,7 @@
 import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
-import { deleteFilmClip, insertFilmClip, insertFilmRoomVideo, updateFilmClip } from "@/lib/data-store";
+import { deleteAllFilmClips, deleteFilmClip, insertFilmClip, insertFilmRoomVideo, updateFilmClip } from "@/lib/data-store";
 import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
@@ -821,6 +821,46 @@ export function AudiovisualRoom({
     }
   }
 
+  async function handleDeleteAllClips(videoId: string) {
+    if (!canManageTeam || syncing) {
+      return;
+    }
+
+    const targetVideo = filmRoomVideos.find((video) => video.id === videoId);
+    if (!targetVideo || !targetVideo.clips.length) {
+      return;
+    }
+
+    if (!window.confirm(`「${targetVideo.title}」のプレー注釈${targetVideo.clips.length}件をすべて削除しますか？この操作は取り消せません。`)) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+
+      if (usingRemoteData && supabase) {
+        await deleteAllFilmClips(supabase, videoId);
+      }
+
+      setFilmRoomVideos((current) =>
+        current.map((video) =>
+          video.id === videoId
+            ? { ...video, clips: [], updatedAt: new Date().toISOString().slice(0, 10) }
+            : video,
+        ),
+      );
+
+      resetClipForm(videoId);
+      setSelectedClipId(null);
+      setShowClipComposer(false);
+      setTeamMessage(`「${targetVideo.title}」のプレー注釈をすべて削除しました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "プレーの一括削除に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -1405,6 +1445,16 @@ export function AudiovisualRoom({
                           {selectedVideo ? `${selectedVideo.title} のプレーを一覧で確認できます。` : "動画を選ぶとプレー一覧が表示されます。"}
                         </p>
                       </div>
+                      {canManageTeam && selectedVideo && selectedVideo.clips.length ? (
+                        <button
+                          className="button secondary button-compact"
+                          type="button"
+                          onClick={() => handleDeleteAllClips(selectedVideo.id)}
+                          disabled={syncing || Boolean(editingClipId)}
+                        >
+                          全プレーを削除
+                        </button>
+                      ) : null}
                     </div>
 
                     <div className="toolbar film-toolbar">

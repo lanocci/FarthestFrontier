@@ -872,6 +872,17 @@ export async function deleteFilmClip(
   }
 }
 
+export async function deleteAllFilmClips(
+  supabase: SupabaseClient,
+  videoId: string,
+): Promise<void> {
+  const { error } = await supabase.from("film_clips").delete().eq("video_id", videoId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function upsertPositionMasters(
   supabase: SupabaseClient,
   positions: PositionMaster[],
