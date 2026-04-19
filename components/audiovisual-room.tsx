@@ -168,6 +168,7 @@ export function AudiovisualRoom({
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const [showVideoComposer, setShowVideoComposer] = useState(false);
   const [showClipComposer, setShowClipComposer] = useState(false);
+  const [overlayExpanded, setOverlayExpanded] = useState(false);
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
 
   function formatClipPlayers(playerLinks: VideoClipPlayerLink[]): string[] {
@@ -1164,13 +1165,42 @@ export function AudiovisualRoom({
 
                 {selectedVideo && selectedVideoYoutubeId ? (
                   <>
-                    <div className="film-landscape-split">
-                      <div className="film-landscape-main">
-                        <div className="film-player-frame">
-                          <div id={playerHostId} />
+                    <div className="film-player-frame">
+                      <div id={playerHostId} />
+                      {detailClip && !editingClipId ? (
+                        <div
+                          className={`film-overlay ${overlayExpanded ? "is-expanded" : ""}`}
+                          onClick={() => setOverlayExpanded((v) => !v)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOverlayExpanded((v) => !v); }}
+                        >
+                          <div className="film-overlay-header">
+                            <strong>{detailClip.title}</strong>
+                            <span>{formatSecondsAsTime(detailClip.startSeconds)} - {formatSecondsAsTime(detailClip.endSeconds)}</span>
+                          </div>
+                          {overlayExpanded ? (
+                            <div className="film-overlay-body">
+                              {formatSituationText(detailClip) ? (
+                                <span className="film-overlay-situation">{formatSituationText(detailClip)}</span>
+                              ) : null}
+                              {detailClip.formation || detailClip.playType ? (
+                                <div className="chip-row">
+                                  {detailClip.formation ? <span className="chip">{detailClip.formation}</span> : null}
+                                  {detailClip.playType ? <span className="chip">{detailClip.playType}</span> : null}
+                                </div>
+                              ) : null}
+                              <p className="film-overlay-comment">{detailClip.comment || "コメントなし"}</p>
+                              {canManageTeam && detailClip.coachComment ? (
+                                <p className="film-overlay-comment film-overlay-coach">🗒 {detailClip.coachComment}</p>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
+                      ) : null}
+                    </div>
 
-                        {canManageTeam && selectedVideo ? (
+                    {canManageTeam && selectedVideo ? (
                           <div className="film-inline-editor-wrap">
                             <div className="film-inline-actions">
                               <button
@@ -1230,10 +1260,9 @@ export function AudiovisualRoom({
                         <div className="film-current-strip">
                           <span className="chip">再生位置 {formatSecondsAsTime(currentTime)}</span>
                         </div>
-                      </div>
 
                     {detailClip ? (
-                      <div className="film-active-card film-landscape-detail">
+                      <div className="film-active-card">
                         {canManageTeam && selectedVideo && editingClipId === detailClip.id ? (
                           <>
                             <div className="film-editing-banner">
@@ -1364,11 +1393,10 @@ export function AudiovisualRoom({
                         )}
                       </div>
                     ) : (
-                      <p className="empty-state film-landscape-detail">
+                      <p className="empty-state">
                         この動画にはまだプレー注釈がありません。管理者ならこのタイミングから追加できます。
                       </p>
                     )}
-                    </div>
 
                     <div className="section-row">
                       <div>

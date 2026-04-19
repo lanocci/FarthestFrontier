@@ -788,6 +788,7 @@ select:disabled {
 }
 
 .film-player-frame {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 22px;
@@ -825,19 +826,80 @@ select:disabled {
   background: rgba(247, 255, 250, 0.9);
 }
 
-.film-landscape-split {
-  display: grid;
-  gap: 16px;
+.film-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.1);
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+  border-radius: 21px 21px 0 0;
+  z-index: 2;
 }
 
-.film-landscape-main {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
+.film-overlay.is-expanded {
+  background: rgba(0, 0, 0, 0.45);
+  padding-top: 8px;
+  max-height: 30%;
+  overflow-y: auto;
+  border-radius: 21px 21px 0 0;
 }
 
-.film-landscape-detail {
-  min-width: 0;
+.film-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.film-overlay-header strong {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.film-overlay-header span {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.film-overlay-body {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+}
+
+.film-overlay-body .chip-row {
+  gap: 4px;
+}
+
+.film-overlay-body .chip {
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.film-overlay-situation {
+  font-size: 0.76rem;
+  opacity: 0.85;
+}
+
+.film-overlay-comment {
+  margin: 0;
+  line-height: 1.45;
+  opacity: 0.95;
+}
+
+.film-overlay-coach {
+  opacity: 0.75;
+  font-size: 0.78rem;
 }
 
 .film-active-card strong {
@@ -1800,16 +1862,3 @@ select:disabled {
 
 }
 
-@media (max-width: 980px) and (orientation: landscape) {
-  .film-landscape-split {
-    grid-template-columns: 1fr minmax(200px, 0.6fr);
-    align-items: start;
-  }
-
-  .film-landscape-detail {
-    position: sticky;
-    top: 8px;
-    max-height: calc(100vh - 16px);
-    overflow-y: auto;
-  }
-}
