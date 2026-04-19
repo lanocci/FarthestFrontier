@@ -14,9 +14,9 @@ import {
     loadPositionMasters,
     loadSeasonGoals,
     loadSeasons,
-    saveGoalLogs,
     saveFilmRoomVideos,
     saveFormationMasters,
+    saveGoalLogs,
     saveGoalTemplates,
     saveMaterials,
     savePenaltyTypeMasters,
@@ -111,6 +111,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const [teamMessage, setTeamMessage] = useState<string | null>(null);
   const [localReady, setLocalReady] = useState(false);
+
+  // Auto-clear teamMessage after a few seconds
+  useEffect(() => {
+    if (!teamMessage) return;
+    const timer = window.setTimeout(() => setTeamMessage(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [teamMessage]);
 
   const supabase = useMemo(() => getSupabaseClient(), []);
   const router = useRouter();
