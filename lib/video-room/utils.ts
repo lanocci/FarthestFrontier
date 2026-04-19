@@ -1,5 +1,5 @@
-import type { FilmRoomVideo, VideoClip, VideoClipPlayerLink } from "@/lib/types";
 import type { ParsedImportRow } from "@/components/video-room/types";
+import type { FilmRoomVideo, VideoClip, VideoClipPlayerLink } from "@/lib/types";
 
 export function parseTimestamp(value: string): number | null {
   const trimmed = value.trim();
@@ -105,6 +105,52 @@ export function getVideoSearchText(video: FilmRoomVideo): string {
     .toLowerCase();
 }
 
+/** Strip surrounding double-quotes and unescape inner doubled quotes (RFC 4180). */
+function unquoteCsvCell(cell: string): string {
+  const t = cell.trim();
+  if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) {
+    return t.slice(1, -1).replace(/""/g, '"');
+  }
+  return t;
+}
+
+/** Split a single CSV line respecting quoted fields. */
+function splitCsvLine(line: string, separator: string): string[] {
+  // For TSV, quoting is rare — use simple split
+  if (separator === "\t") {
+    return line.split(separator).map(unquoteCsvCell);
+  }
+
+  const cells: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++; // skip escaped quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === separator) {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
 export function parseDelimitedText(rawText: string): ParsedImportRow[] {
   const trimmed = rawText.replace(/\r\n/g, "\n").trim();
 
@@ -114,10 +160,10 @@ export function parseDelimitedText(rawText: string): ParsedImportRow[] {
 
   const lines = trimmed.split("\n").filter(Boolean);
   const separator = lines[0].includes("\t") ? "\t" : ",";
-  const headers = lines[0].split(separator).map((header) => header.trim());
+  const headers = splitCsvLine(lines[0], separator);
 
   return lines.slice(1).map((line) => {
-    const cells = line.split(separator).map((cell) => cell.trim());
+    const cells = splitCsvLine(line, separator);
     return headers.reduce<ParsedImportRow>((row, header, index) => {
       row[header] = cells[index] ?? "";
       return row;

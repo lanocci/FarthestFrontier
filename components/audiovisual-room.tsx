@@ -1,12 +1,12 @@
 "use client";
 
+import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
-import { Section } from "@/components/section";
 import { deleteFilmClip, insertFilmClip, insertFilmRoomVideo, updateFilmClip } from "@/lib/data-store";
 import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
-import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
+import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -164,6 +164,7 @@ export function AudiovisualRoom({
   const [videoForm, setVideoForm] = useState<VideoForm>(initialVideoForm);
   const [clipForm, setClipForm] = useState<ClipForm>(initialClipForm);
   const [importForm, setImportForm] = useState<ImportForm>(initialImportForm);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const [showVideoComposer, setShowVideoComposer] = useState(false);
   const [showClipComposer, setShowClipComposer] = useState(false);
@@ -848,11 +849,28 @@ export function AudiovisualRoom({
     const parsedRows = parseDelimitedText(importForm.rawText);
     if (!parsedRows.length) {
       setTeamMessage("ヘッダー行を含む CSV / TSV を貼り付けてください。");
+      setImportMessage("ヘッダー行を含む CSV / TSV を貼り付けてください。");
       return;
     }
 
     try {
-      const clipsToImport = parsedRows.map((row, index) => {
+      const warnings: string[] = [];
+      const clipsToImport: Array<{
+        title: string;
+        startSeconds: number;
+        endSeconds: number;
+        down: number | undefined;
+        toGoYards: string;
+        penaltyType: string;
+        formation: string;
+        playType: string;
+        comment: string;
+        coachComment: string;
+        playerLinks: VideoClipPlayerLink[];
+      }> = [];
+
+      for (let index = 0; index < parsedRows.length; index++) {
+        const row = parsedRows[index];
         const rowNumber = index + 2;
         const title = getImportCell(row, ["プレー名", "タイトル", "title", "play", "clip"]);
         const startText = getImportCell(row, ["開始時刻", "開始", "start", "starttime", "start_time"]);
@@ -861,16 +879,27 @@ export function AudiovisualRoom({
         const endSeconds = parseTimestamp(endText);
 
         if (!title) {
-          throw new Error(`${rowNumber}行目: プレー名が空です。`);
+          warnings.push(`${rowNumber}行目: プレー名が空のためスキップしました。`);
+          continue;
         }
         if (startSeconds === null || endSeconds === null) {
-          throw new Error(`${rowNumber}行目: 開始時刻または終了時刻が正しくありません。`);
+          warnings.push(`${rowNumber}行目: 開始時刻または終了時刻が正しくないためスキップしました。`);
+          continue;
         }
         if (endSeconds <= startSeconds) {
-          throw new Error(`${rowNumber}行目: 終了時刻は開始時刻より後にしてください。`);
+          warnings.push(`${rowNumber}行目: 終了時刻が開始時刻以前のためスキップしました。`);
+          continue;
         }
 
-        return {
+        let playerLinks: VideoClipPlayerLink[] = [];
+        try {
+          playerLinks = parsePlayerLinksFromImport(row, rowNumber);
+        } catch (playerError) {
+          warnings.push(playerError instanceof Error ? playerError.message : `${rowNumber}行目: 選手の解析に失敗しました。`);
+          continue;
+        }
+
+        clipsToImport.push({
           title,
           startSeconds,
           endSeconds,
@@ -881,9 +910,18 @@ export function AudiovisualRoom({
           playType: getImportCell(row, ["プレー種類", "種類", "playtype", "play_type", "type"]),
           comment: getImportCell(row, ["コメント", "comment", "memo", "メモ"]),
           coachComment: getImportCell(row, ["コーチコメント", "コーチ間コメント", "coachcomment", "coach_comment"]),
-          playerLinks: parsePlayerLinksFromImport(row, rowNumber),
-        };
-      });
+          playerLinks,
+        });
+      }
+
+      if (!clipsToImport.length) {
+        const msg = warnings.length
+          ? `取り込めるプレーがありませんでした。\n${warnings.join("\n")}`
+          : "取り込めるプレーがありませんでした。";
+        setTeamMessage(msg);
+        setImportMessage(msg);
+        return;
+      }
 
       setSyncing(true);
       const currentVideo = filmRoomVideos.find((video) => video.id === targetVideoId);
@@ -921,9 +959,15 @@ export function AudiovisualRoom({
         videoId: targetVideoId,
         rawText: "",
       });
-      setTeamMessage(`${savedClips.length}件のプレー注釈をインポートしました。`);
+      const successMsg = warnings.length
+        ? `${savedClips.length}件のプレー注釈をインポートしました。\n${warnings.join("\n")}`
+        : `${savedClips.length}件のプレー注釈をインポートしました。`;
+      setTeamMessage(successMsg);
+      setImportMessage(successMsg);
     } catch (error) {
-      setTeamMessage(error instanceof Error ? error.message : "プレー注釈のインポートに失敗しました。");
+      const msg = error instanceof Error ? error.message : "プレー注釈のインポートに失敗しました。";
+      setTeamMessage(msg);
+      setImportMessage(msg);
     } finally {
       setSyncing(false);
     }
@@ -1483,6 +1527,9 @@ export function AudiovisualRoom({
                     >
                       プレーデータを取り込む
                     </button>
+                    {importMessage ? (
+                      <p className="subtle admin-form-full" style={{ whiteSpace: "pre-line" }}>{importMessage}</p>
+                    ) : null}
                   </div>
                 </div>
               </div>
