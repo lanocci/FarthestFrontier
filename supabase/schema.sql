@@ -51,6 +51,24 @@ create table if not exists public.position_masters (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.formation_masters (
+  id text primary key,
+  label text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.penalty_type_masters (
+  id text primary key,
+  label text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.play_type_masters (
+  id text primary key,
+  label text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.players (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -207,6 +225,7 @@ create table if not exists public.film_clips (
   formation text not null default '',
   play_type text not null default '',
   comment text not null default '',
+  coach_comment text,
   player_links jsonb not null default '[]'::jsonb,
   sort_order integer not null default 1,
   created_at timestamptz not null default now()
@@ -239,6 +258,9 @@ add column if not exists to_go_yards text;
 
 alter table if exists public.film_clips
 add column if not exists penalty_type text;
+
+alter table if exists public.film_clips
+add column if not exists coach_comment text;
 
 alter table if exists public.film_clips
 drop column if exists player_label;
@@ -403,8 +425,11 @@ $$;
 
 alter table public.team_members enable row level security;
 alter table public.position_masters enable row level security;
+alter table public.formation_masters enable row level security;
+alter table public.penalty_type_masters enable row level security;
 alter table public.players enable row level security;
 alter table public.goal_templates enable row level security;
+alter table public.play_type_masters enable row level security;
 alter table public.goal_logs enable row level security;
 alter table public.practice_entries enable row level security;
 alter table public.materials enable row level security;
@@ -466,6 +491,36 @@ to authenticated
 using (public.is_coach())
 with check (public.is_coach());
 
+drop policy if exists "formation_masters_select_team_members" on public.formation_masters;
+create policy "formation_masters_select_team_members"
+on public.formation_masters
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "formation_masters_manage_coaches" on public.formation_masters;
+create policy "formation_masters_manage_coaches"
+on public.formation_masters
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "penalty_type_masters_select_team_members" on public.penalty_type_masters;
+create policy "penalty_type_masters_select_team_members"
+on public.penalty_type_masters
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "penalty_type_masters_manage_coaches" on public.penalty_type_masters;
+create policy "penalty_type_masters_manage_coaches"
+on public.penalty_type_masters
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
 drop policy if exists "players_select_team_members" on public.players;
 create policy "players_select_team_members"
 on public.players
@@ -491,6 +546,21 @@ using (public.is_team_member());
 drop policy if exists "goal_templates_manage_coaches" on public.goal_templates;
 create policy "goal_templates_manage_coaches"
 on public.goal_templates
+for all
+to authenticated
+using (public.is_coach())
+with check (public.is_coach());
+
+drop policy if exists "play_type_masters_select_team_members" on public.play_type_masters;
+create policy "play_type_masters_select_team_members"
+on public.play_type_masters
+for select
+to authenticated
+using (public.is_team_member());
+
+drop policy if exists "play_type_masters_manage_coaches" on public.play_type_masters;
+create policy "play_type_masters_manage_coaches"
+on public.play_type_masters
 for all
 to authenticated
 using (public.is_coach())

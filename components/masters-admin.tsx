@@ -4,16 +4,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 import { Section } from "@/components/section";
-import { deletePositionMasters, upsertGoalTemplates, upsertPositionMasters } from "@/lib/data-store";
-import { GoalTemplate, Player, PositionMaster, PositionSide } from "@/lib/types";
+import { deleteFormationMasters, deletePenaltyTypeMasters, deletePlayTypeMasters, deletePositionMasters, upsertFormationMasters, upsertGoalTemplates, upsertPenaltyTypeMasters, upsertPlayTypeMasters, upsertPositionMasters } from "@/lib/data-store";
+import { GoalTemplate, Player, PositionMaster, PositionSide, VideoTagMaster } from "@/lib/types";
 
 type MastersAdminProps = {
   canManageTeam: boolean;
   dataLoading: boolean;
+  formationMasters: VideoTagMaster[];
   goalTemplates: GoalTemplate[];
+  penaltyTypeMasters: VideoTagMaster[];
   players: Player[];
+  playTypeMasters: VideoTagMaster[];
   positionMasters: PositionMaster[];
+  setFormationMasters: Dispatch<SetStateAction<VideoTagMaster[]>>;
   setGoalTemplates: Dispatch<SetStateAction<GoalTemplate[]>>;
+  setPenaltyTypeMasters: Dispatch<SetStateAction<VideoTagMaster[]>>;
+  setPlayTypeMasters: Dispatch<SetStateAction<VideoTagMaster[]>>;
   setPositionMasters: Dispatch<SetStateAction<PositionMaster[]>>;
   setTeamMessage: Dispatch<SetStateAction<string | null>>;
   supabase: SupabaseClient | null;
@@ -26,10 +32,16 @@ type MastersAdminProps = {
 
 export function MastersAdmin({
   canManageTeam,
+  formationMasters,
   goalTemplates,
+  penaltyTypeMasters,
   players,
+  playTypeMasters,
   positionMasters,
+  setFormationMasters,
   setGoalTemplates,
+  setPenaltyTypeMasters,
+  setPlayTypeMasters,
   setPositionMasters,
   setTeamMessage,
   supabase,
@@ -40,15 +52,30 @@ export function MastersAdmin({
   onResetLocalMode,
 }: MastersAdminProps) {
   const [draftPositions, setDraftPositions] = useState<PositionMaster[]>(positionMasters);
+  const [draftFormations, setDraftFormations] = useState<VideoTagMaster[]>(formationMasters);
   const [draftTemplates, setDraftTemplates] = useState<GoalTemplate[]>(goalTemplates);
+  const [draftPenaltyTypes, setDraftPenaltyTypes] = useState<VideoTagMaster[]>(penaltyTypeMasters);
+  const [draftPlayTypes, setDraftPlayTypes] = useState<VideoTagMaster[]>(playTypeMasters);
 
   useEffect(() => {
     setDraftPositions(positionMasters);
   }, [positionMasters]);
 
   useEffect(() => {
+    setDraftFormations(formationMasters);
+  }, [formationMasters]);
+
+  useEffect(() => {
     setDraftTemplates(goalTemplates);
   }, [goalTemplates]);
+
+  useEffect(() => {
+    setDraftPenaltyTypes(penaltyTypeMasters);
+  }, [penaltyTypeMasters]);
+
+  useEffect(() => {
+    setDraftPlayTypes(playTypeMasters);
+  }, [playTypeMasters]);
 
   function updatePosition(index: number, key: keyof PositionMaster, value: string) {
     setDraftPositions((current) =>
@@ -62,6 +89,19 @@ export function MastersAdmin({
     setDraftTemplates((current) =>
       current.map((template, currentIndex) =>
         currentIndex === index ? { ...template, [key]: value } : template,
+      ),
+    );
+  }
+
+  function updateVideoTag(
+    index: number,
+    key: keyof VideoTagMaster,
+    value: string,
+    setter: Dispatch<SetStateAction<VideoTagMaster[]>>,
+  ) {
+    setter((current) =>
+      current.map((item, currentIndex) =>
+        currentIndex === index ? { ...item, [key]: value } : item,
       ),
     );
   }
@@ -89,8 +129,32 @@ export function MastersAdmin({
     ]);
   }
 
+  function addVideoTag(kind: "formation" | "penaltyType" | "playType") {
+    const setter =
+      kind === "formation" ? setDraftFormations :
+      kind === "penaltyType" ? setDraftPenaltyTypes :
+      setDraftPlayTypes;
+    const prefix =
+      kind === "formation" ? "formation" :
+      kind === "penaltyType" ? "penalty-type" :
+      "play-type";
+    const label =
+      kind === "formation" ? "新しい隊形" :
+      kind === "penaltyType" ? "新しい反則種類" :
+      "新しいプレー種類";
+
+    setter((current) => [
+      ...current,
+      { id: `${prefix}-${Date.now()}`, label },
+    ]);
+  }
+
   function removePosition(positionId: string) {
     setDraftPositions((current) => current.filter((position) => position.id !== positionId));
+  }
+
+  function removeVideoTag(id: string, setter: Dispatch<SetStateAction<VideoTagMaster[]>>) {
+    setter((current) => current.filter((item) => item.id !== id));
   }
 
   function renderPositionGroup(side: PositionSide, title: string) {
@@ -142,6 +206,58 @@ export function MastersAdmin({
     );
   }
 
+  function renderVideoTagGroup(
+    title: string,
+    items: VideoTagMaster[],
+    setter: Dispatch<SetStateAction<VideoTagMaster[]>>,
+    kind: "formation" | "penaltyType" | "playType",
+  ) {
+    return (
+      <div className="master-group">
+        <div className="section-row compact-row">
+          <div>
+            <h4 className="section-title">{title}</h4>
+            <p className="subtle">ビデオ注釈フォームの選択肢として使われます。</p>
+          </div>
+          <button className="button secondary" type="button" onClick={() => addVideoTag(kind)}>
+            追加
+          </button>
+        </div>
+
+        <div className="masters-list">
+          {items.length ? (
+            items.map((item) => (
+              <div className="master-row" key={item.id}>
+                <span className="master-label">{title}</span>
+                <input
+                  type="text"
+                  value={item.label}
+                  onChange={(event) =>
+                    updateVideoTag(
+                      items.findIndex((candidate) => candidate.id === item.id),
+                      "label",
+                      event.target.value,
+                      setter,
+                    )
+                  }
+                />
+                <button
+                  className="button ghost"
+                  type="button"
+                  onClick={() => removeVideoTag(item.id, setter)}
+                >
+                  削除
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="subtle">まだ登録がありません。</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   async function handleSaveMasters() {
     if (!canManageTeam || syncing) {
       return;
@@ -153,16 +269,34 @@ export function MastersAdmin({
       const deletedPositionIds = positionMasters
         .filter((position) => !draftPositions.some((draft) => draft.id === position.id))
         .map((position) => position.id);
+      const deletedFormationIds = formationMasters
+        .filter((master) => !draftFormations.some((draft) => draft.id === master.id))
+        .map((master) => master.id);
+      const deletedPenaltyTypeIds = penaltyTypeMasters
+        .filter((master) => !draftPenaltyTypes.some((draft) => draft.id === master.id))
+        .map((master) => master.id);
+      const deletedPlayTypeIds = playTypeMasters
+        .filter((master) => !draftPlayTypes.some((draft) => draft.id === master.id))
+        .map((master) => master.id);
 
       if (usingRemoteData && supabase) {
+        await deleteFormationMasters(supabase, deletedFormationIds);
+        await deletePenaltyTypeMasters(supabase, deletedPenaltyTypeIds);
+        await deletePlayTypeMasters(supabase, deletedPlayTypeIds);
         await deletePositionMasters(supabase, deletedPositionIds);
+        await upsertFormationMasters(supabase, draftFormations);
+        await upsertPenaltyTypeMasters(supabase, draftPenaltyTypes);
         await upsertPositionMasters(supabase, draftPositions);
+        await upsertPlayTypeMasters(supabase, draftPlayTypes);
         await upsertGoalTemplates(supabase, draftTemplates);
       }
 
+      setFormationMasters(draftFormations);
+      setPenaltyTypeMasters(draftPenaltyTypes);
       setPositionMasters(draftPositions);
+      setPlayTypeMasters(draftPlayTypes);
       setGoalTemplates(draftTemplates);
-      setTeamMessage("ポジションと目標テンプレートのマスターを更新しました。");
+      setTeamMessage("ポジション、ビデオ、目標テンプレートのマスターを更新しました。");
     } catch (error) {
       setTeamMessage(error instanceof Error ? error.message : "マスター更新に失敗しました。");
     } finally {
@@ -220,6 +354,23 @@ export function MastersAdmin({
                 <div className="divider" />
                 {renderPositionGroup("defense", "ディフェンス")}
                 <p className="footer-note">選手に割り当て済みのポジションは削除できません。</p>
+              </div>
+            </div>
+
+            <div className="panel inset-panel">
+              <div className="panel-body">
+                <div className="section-row">
+                  <h3 className="section-title">ビデオ注釈マスター</h3>
+                  <button className="button" type="button" onClick={handleSaveMasters} disabled={!canManageTeam || syncing}>
+                    マスターを保存
+                  </button>
+                </div>
+
+                {renderVideoTagGroup("隊形", draftFormations, setDraftFormations, "formation")}
+                <div className="divider" />
+                {renderVideoTagGroup("反則種類", draftPenaltyTypes, setDraftPenaltyTypes, "penaltyType")}
+                <div className="divider" />
+                {renderVideoTagGroup("プレー種類", draftPlayTypes, setDraftPlayTypes, "playType")}
               </div>
             </div>
 

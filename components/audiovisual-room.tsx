@@ -2,7 +2,7 @@
 
 import { Section } from "@/components/section";
 import { deleteFilmClip, insertFilmClip, insertFilmRoomVideo, updateFilmClip } from "@/lib/data-store";
-import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink } from "@/lib/types";
+import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
@@ -12,7 +12,10 @@ type AudiovisualRoomProps = {
   canManageTeam: boolean;
   dataLoading: boolean;
   filmRoomVideos: FilmRoomVideo[];
+  formationMasters: VideoTagMaster[];
+  penaltyTypeMasters: VideoTagMaster[];
   players: Player[];
+  playTypeMasters: VideoTagMaster[];
   positionMasters: PositionMaster[];
   setFilmRoomVideos: Dispatch<SetStateAction<FilmRoomVideo[]>>;
   setTeamMessage: Dispatch<SetStateAction<string | null>>;
@@ -45,6 +48,7 @@ type ClipForm = {
   playType: string;
   playerLinks: VideoClipPlayerLink[];
   comment: string;
+  coachComment: string;
 };
 
 type ImportForm = {
@@ -103,6 +107,7 @@ const initialClipForm: ClipForm = {
   playType: "",
   playerLinks: [{ playerId: "", positionId: "" }],
   comment: "",
+  coachComment: "",
 };
 
 const initialImportForm: ImportForm = {
@@ -331,7 +336,10 @@ export function AudiovisualRoom({
   canManageTeam,
   dataLoading,
   filmRoomVideos,
+  formationMasters,
+  penaltyTypeMasters,
   players,
+  playTypeMasters,
   positionMasters,
   setFilmRoomVideos,
   setTeamMessage,
@@ -343,8 +351,12 @@ export function AudiovisualRoom({
   onResetLocalMode,
 }: AudiovisualRoomProps) {
   const playerHostId = useId().replace(/:/g, "");
+  const formationListId = useId().replace(/:/g, "");
+  const penaltyTypeListId = useId().replace(/:/g, "");
+  const playTypeListId = useId().replace(/:/g, "");
   const playerRef = useRef<YouTubePlayer | null>(null);
   const clipCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const pendingSharedClipIdRef = useRef<string | null>(null);
   const selectedYoutubeIdRef = useRef<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string>(filmRoomVideos[0]?.id ?? "");
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
@@ -504,6 +516,38 @@ export function AudiovisualRoom({
   }, [filmRoomVideos, selectedVideoId]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const currentParams = new URLSearchParams(window.location.search);
+    const requestedClipId = currentParams.get("clip");
+    const requestedVideoId = currentParams.get("video");
+
+    if (requestedClipId) {
+      const targetVideo = filmRoomVideos.find((video) => video.clips.some((clip) => clip.id === requestedClipId));
+      const targetClip = targetVideo?.clips.find((clip) => clip.id === requestedClipId);
+
+      if (targetVideo && targetClip) {
+        if (selectedVideoId !== targetVideo.id) {
+          setSelectedVideoId(targetVideo.id);
+        }
+        if (selectedClipId !== targetClip.id) {
+          setSelectedClipId(targetClip.id);
+        }
+        pendingSharedClipIdRef.current = targetClip.id;
+      }
+
+      return;
+    }
+
+    if (requestedVideoId && filmRoomVideos.some((video) => video.id === requestedVideoId) && selectedVideoId !== requestedVideoId) {
+      setSelectedVideoId(requestedVideoId);
+      setSelectedClipId(null);
+    }
+  }, [filmRoomVideos, selectedClipId, selectedVideoId]);
+
+  useEffect(() => {
     setVideoPage(1);
   }, [videoAudienceFilter, videoQuery, videoSort]);
 
@@ -519,6 +563,33 @@ export function AudiovisualRoom({
     () => sortClips(selectedVideo?.clips ?? []),
     [selectedVideo],
   );
+  const availableFormations = useMemo(() => {
+    const labels = new Set(formationMasters.map((master) => master.label).filter(Boolean));
+    selectedVideoClips.forEach((clip) => {
+      if (clip.formation) {
+        labels.add(clip.formation);
+      }
+    });
+    return Array.from(labels).sort((left, right) => left.localeCompare(right, "ja"));
+  }, [formationMasters, selectedVideoClips]);
+  const availablePlayTypes = useMemo(() => {
+    const labels = new Set(playTypeMasters.map((master) => master.label).filter(Boolean));
+    selectedVideoClips.forEach((clip) => {
+      if (clip.playType) {
+        labels.add(clip.playType);
+      }
+    });
+    return Array.from(labels).sort((left, right) => left.localeCompare(right, "ja"));
+  }, [playTypeMasters, selectedVideoClips]);
+  const availablePenaltyTypes = useMemo(() => {
+    const labels = new Set(penaltyTypeMasters.map((master) => master.label).filter(Boolean));
+    selectedVideoClips.forEach((clip) => {
+      if (clip.penaltyType) {
+        labels.add(clip.penaltyType);
+      }
+    });
+    return Array.from(labels).sort((left, right) => left.localeCompare(right, "ja"));
+  }, [penaltyTypeMasters, selectedVideoClips]);
 
   const formations = useMemo(
     () => Array.from(new Set(selectedVideoClips.map((clip) => clip.formation))).filter(Boolean),
@@ -552,7 +623,29 @@ export function AudiovisualRoom({
     selectedVideoClips.find((clip) => currentTime >= clip.startSeconds && currentTime <= clip.endSeconds) ??
     selectedVideoClips.find((clip) => clip.id === selectedClipId) ??
     null;
-  const detailClip = activeClip ?? visibleClips[0] ?? null;
+  const detailClip =
+    selectedVideoClips.find((clip) => clip.id === editingClipId) ??
+    activeClip ??
+    visibleClips[0] ??
+    null;
+
+  function buildClipUrl(videoId: string, clipId?: string | null): string {
+    const params = new URLSearchParams();
+    params.set("video", videoId);
+    if (clipId) {
+      params.set("clip", clipId);
+    }
+    const path = typeof window !== "undefined" ? window.location.pathname : "/videos";
+    return `${path}?${params.toString()}`;
+  }
+
+  function syncSelectionUrl(videoId: string, clipId?: string | null) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.history.replaceState({}, "", buildClipUrl(videoId, clipId));
+  }
 
   useEffect(() => {
     setCurrentTime(0);
@@ -640,6 +733,23 @@ export function AudiovisualRoom({
   }, [activeClip?.id, formationFilter, playTypeFilter, query, selectedClipId, selectedVideo?.id]);
 
   useEffect(() => {
+    const pendingClipId = pendingSharedClipIdRef.current;
+    if (!pendingClipId) {
+      return;
+    }
+
+    const clip = selectedVideoClips.find((candidate) => candidate.id === pendingClipId);
+    if (!clip || !playerRef.current) {
+      return;
+    }
+
+    playerRef.current.seekTo(clip.startSeconds, true);
+    setCurrentTime(clip.startSeconds);
+    setSelectedClipId(clip.id);
+    pendingSharedClipIdRef.current = null;
+  }, [selectedVideoClips]);
+
+  useEffect(() => {
     return () => {
       playerRef.current?.destroy();
       playerRef.current = null;
@@ -697,6 +807,25 @@ export function AudiovisualRoom({
     playerRef.current.playVideo();
     setCurrentTime(clip.startSeconds);
     setSelectedClipId(clip.id);
+    if (selectedVideo) {
+      syncSelectionUrl(selectedVideo.id, clip.id);
+    }
+  }
+
+  async function handleCopyClipLink(clip: VideoClip) {
+    if (!selectedVideo || typeof window === "undefined") {
+      return;
+    }
+
+    const nextUrl = new URL(buildClipUrl(selectedVideo.id, clip.id), window.location.origin).toString();
+
+    try {
+      await navigator.clipboard.writeText(nextUrl);
+      syncSelectionUrl(selectedVideo.id, clip.id);
+      setTeamMessage(`プレー「${clip.title}」へのリンクをコピーしました。`);
+    } catch {
+      setTeamMessage("リンクのコピーに失敗しました。");
+    }
   }
 
   function loadClipIntoForm(clip: VideoClip, videoId: string) {
@@ -712,6 +841,7 @@ export function AudiovisualRoom({
       playType: clip.playType,
       playerLinks: clip.playerLinks.length ? clip.playerLinks.map((link) => ({ ...link, positionId: link.positionId ?? "" })) : [{ playerId: "", positionId: "" }],
       comment: clip.comment,
+      coachComment: clip.coachComment ?? "",
     });
     setEditingClipId(clip.id);
   }
@@ -807,31 +937,55 @@ export function AudiovisualRoom({
           <span className="field-label">反則の種類</span>
           <input
             type="text"
-            placeholder="例: オフサイド"
+            list={penaltyTypeListId}
+            placeholder="候補から選ぶか自由入力"
             value={clipForm.penaltyType}
             onChange={(event) => updateClipForm("penaltyType", event.target.value)}
             disabled={syncing || !filmRoomVideos.length}
           />
+          <datalist id={penaltyTypeListId}>
+            {availablePenaltyTypes.map((penaltyType) => (
+              <option key={penaltyType} value={penaltyType}>
+                {penaltyType}
+              </option>
+            ))}
+          </datalist>
         </label>
         <label className="field-stack">
           <span className="field-label">隊形</span>
           <input
             type="text"
-            placeholder="例: Trips Right"
+            list={formationListId}
+            placeholder="候補から選ぶか自由入力"
             value={clipForm.formation}
             onChange={(event) => updateClipForm("formation", event.target.value)}
             disabled={syncing || !filmRoomVideos.length}
           />
+          <datalist id={formationListId}>
+            {availableFormations.map((formation) => (
+              <option key={formation} value={formation}>
+                {formation}
+              </option>
+            ))}
+          </datalist>
         </label>
         <label className="field-stack">
           <span className="field-label">プレー種類</span>
           <input
             type="text"
-            placeholder="例: ショートパス"
+            list={playTypeListId}
+            placeholder="候補から選ぶか自由入力"
             value={clipForm.playType}
             onChange={(event) => updateClipForm("playType", event.target.value)}
             disabled={syncing || !filmRoomVideos.length}
           />
+          <datalist id={playTypeListId}>
+            {availablePlayTypes.map((playType) => (
+              <option key={playType} value={playType}>
+                {playType}
+              </option>
+            ))}
+          </datalist>
         </label>
         <div className="field-stack admin-form-full">
           <span className="field-label">出場選手</span>
@@ -892,6 +1046,18 @@ export function AudiovisualRoom({
             disabled={syncing || !filmRoomVideos.length}
           />
         </label>
+        {canManageTeam ? (
+          <label className="field-stack admin-form-full">
+            <span className="field-label">コーチ間コメント</span>
+            <textarea
+              className="form-textarea"
+              placeholder="コーチ間だけで共有したい観点や次回へのメモ"
+              value={clipForm.coachComment}
+              onChange={(event) => updateClipForm("coachComment", event.target.value)}
+              disabled={syncing || !filmRoomVideos.length}
+            />
+          </label>
+        ) : null}
         <div className="card-actions admin-form-full">
           <button className="button" type="button" onClick={handleSaveClip} disabled={syncing || !filmRoomVideos.length}>
             {editingClipId ? "変更を保存" : "プレーを追加"}
@@ -973,6 +1139,7 @@ export function AudiovisualRoom({
       penaltyType: clipForm.penaltyType.trim() || undefined,
       playerLinks: sanitizePlayerLinks(clipForm.playerLinks),
       comment: clipForm.comment.trim(),
+      coachComment: canManageTeam ? clipForm.coachComment.trim() || undefined : undefined,
     };
 
     if (!nextClipBase.title || startSeconds === null || endSeconds === null) {
@@ -1133,6 +1300,7 @@ export function AudiovisualRoom({
           formation: getImportCell(row, ["隊形", "formation"]),
           playType: getImportCell(row, ["プレー種類", "種類", "playtype", "play_type", "type"]),
           comment: getImportCell(row, ["コメント", "comment", "memo", "メモ"]),
+          coachComment: getImportCell(row, ["コーチコメント", "コーチ間コメント", "coachcomment", "coach_comment"]),
           playerLinks: parsePlayerLinksFromImport(row, rowNumber),
         };
       });
@@ -1250,7 +1418,11 @@ export function AudiovisualRoom({
                         key={video.id}
                         className={`film-video-card ${video.id === selectedVideoId ? "is-selected" : ""}`}
                         type="button"
-                        onClick={() => setSelectedVideoId(video.id)}
+                        onClick={() => {
+                          setSelectedVideoId(video.id);
+                          setSelectedClipId(null);
+                          syncSelectionUrl(video.id);
+                        }}
                       >
                         <strong>{video.title}</strong>
                         <span>{video.description}</span>
@@ -1386,10 +1558,9 @@ export function AudiovisualRoom({
                       <div id={playerHostId} />
                     </div>
 
-                    <div className="film-current-strip">
-                      <span className="chip">再生位置 {formatSecondsAsTime(currentTime)}</span>
-                      {canManageTeam && selectedVideo ? (
-                        <div className="film-current-strip-action">
+                    {canManageTeam && selectedVideo ? (
+                      <div className="film-inline-editor-wrap">
+                        <div className="film-inline-actions">
                           <button
                             className="button"
                             type="button"
@@ -1398,87 +1569,142 @@ export function AudiovisualRoom({
                           >
                             このタイミングに注釈を追加
                           </button>
-                          {editingClipId ? (
-                            <span className="subtle">編集中の注釈を保存またはキャンセルすると追加できます。</span>
-                          ) : null}
+                          {editingClipId ? <span className="subtle">編集中の注釈を保存またはキャンセルすると追加できます。</span> : null}
                         </div>
-                      ) : null}
-                    </div>
-
-                    {detailClip ? (
-                      <div className="film-active-card">
-                        <div className="section-row">
-                          <div className="film-title-stack">
-                            <strong>{detailClip.title}</strong>
-                            {formatSituationText(detailClip) ? (
-                              <span className="film-situation-text">{formatSituationText(detailClip)}</span>
-                            ) : null}
-                            <p>
-                              {formatSecondsAsTime(detailClip.startSeconds)} - {formatSecondsAsTime(detailClip.endSeconds)}
-                            </p>
-                          </div>
-                          {canManageTeam && selectedVideo ? (
-                            <div className="film-inline-actions">
+                        {showClipComposer && !editingClipId ? (
+                          <>
+                            <div className="film-editing-banner">
+                              <strong>再生中の動画に新しい注釈を追加しています</strong>
                               <button
                                 className="button secondary button-compact"
                                 type="button"
                                 onClick={() => {
+                                  resetClipForm(selectedVideo.id);
                                   setShowClipComposer(false);
-                                  loadClipIntoForm(detailClip, selectedVideo.id);
                                 }}
                                 disabled={syncing}
                               >
-                                このプレーを編集
+                                閉じる
                               </button>
+                            </div>
+                            {renderClipEditor(selectedVideo.id, true)}
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <div className="film-current-strip">
+                      <span className="chip">再生位置 {formatSecondsAsTime(currentTime)}</span>
+                    </div>
+
+                    {detailClip ? (
+                      <div className="film-active-card">
+                        {canManageTeam && selectedVideo && editingClipId === detailClip.id ? (
+                          <>
+                            <div className="film-editing-banner">
+                              <strong>このプレーをカード内で編集しています</strong>
                               <button
                                 className="button secondary button-compact"
                                 type="button"
-                                onClick={() => handleDeleteClip(detailClip, selectedVideo.id)}
+                                onClick={() => resetClipForm(selectedVideo.id)}
                                 disabled={syncing}
                               >
-                                このプレーを削除
+                                閉じる
                               </button>
                             </div>
-                          ) : null}
-                        </div>
-                        <div className="film-meta-groups">
-                          {detailClip.formation || detailClip.playType ? (
-                            <div className="film-meta-group">
-                              <span className="film-meta-label">プレー情報</span>
-                              <div className="chip-row">
-                                {detailClip.formation ? <span className="chip">{detailClip.formation}</span> : null}
-                                {detailClip.playType ? <span className="chip">{detailClip.playType}</span> : null}
-                              </div>
-                            </div>
-                          ) : null}
-                          {detailClip.playerLinks.length ? (
-                            <div className="film-meta-group">
-                              <span className="film-meta-label">参加選手</span>
-                              <div className="chip-row">
-                                {formatClipPlayers(detailClip.playerLinks).map((label) => (
-                                  <span key={label} className="chip">{label}</span>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-                          {detailClip.penaltyType ? (
-                            <div className="film-meta-group">
-                              <span className="film-meta-label">反則</span>
-                              <div className="chip-row">
-                                <span className="chip warn">{detailClip.penaltyType}</span>
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                        <p className="film-comment">{detailClip.comment || "コメントは未登録です。"}</p>
-                        {canManageTeam && selectedVideo && editingClipId === detailClip.id ? (
-                          <div className="film-inline-editor-wrap">
-                            <div className="film-editing-banner">
-                              <strong>このプレーをここで編集しています</strong>
-                            </div>
                             {renderClipEditor(selectedVideo.id, true)}
-                          </div>
-                        ) : null}
+                          </>
+                        ) : (
+                          <>
+                            <div className="section-row">
+                              <div className="film-title-stack">
+                                <strong>{detailClip.title}</strong>
+                                {formatSituationText(detailClip) ? (
+                                  <span className="film-situation-text">{formatSituationText(detailClip)}</span>
+                                ) : null}
+                                <p>
+                                  {formatSecondsAsTime(detailClip.startSeconds)} - {formatSecondsAsTime(detailClip.endSeconds)}
+                                </p>
+                              </div>
+                              {canManageTeam && selectedVideo ? (
+                                <div className="film-inline-actions">
+                                  <button
+                                    className="button secondary button-compact"
+                                    type="button"
+                                    onClick={() => handleCopyClipLink(detailClip)}
+                                  >
+                                    リンクをコピー
+                                  </button>
+                                  <button
+                                    className="button secondary button-compact"
+                                    type="button"
+                                    onClick={() => {
+                                      setShowClipComposer(false);
+                                      loadClipIntoForm(detailClip, selectedVideo.id);
+                                    }}
+                                    disabled={syncing}
+                                  >
+                                    このプレーを編集
+                                  </button>
+                                  <button
+                                    className="button secondary button-compact"
+                                    type="button"
+                                    onClick={() => handleDeleteClip(detailClip, selectedVideo.id)}
+                                    disabled={syncing}
+                                  >
+                                    このプレーを削除
+                                  </button>
+                                </div>
+                              ) : selectedVideo ? (
+                                <div className="film-inline-actions">
+                                  <button
+                                    className="button secondary button-compact"
+                                    type="button"
+                                    onClick={() => handleCopyClipLink(detailClip)}
+                                  >
+                                    リンクをコピー
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="film-meta-groups">
+                              {detailClip.formation || detailClip.playType ? (
+                                <div className="film-meta-group">
+                                  <span className="film-meta-label">プレー情報</span>
+                                  <div className="chip-row">
+                                    {detailClip.formation ? <span className="chip">{detailClip.formation}</span> : null}
+                                    {detailClip.playType ? <span className="chip">{detailClip.playType}</span> : null}
+                                  </div>
+                                </div>
+                              ) : null}
+                              {detailClip.playerLinks.length ? (
+                                <div className="film-meta-group">
+                                  <span className="film-meta-label">参加選手</span>
+                                  <div className="chip-row">
+                                    {formatClipPlayers(detailClip.playerLinks).map((label) => (
+                                      <span key={label} className="chip">{label}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+                              {detailClip.penaltyType ? (
+                                <div className="film-meta-group">
+                                  <span className="film-meta-label">反則</span>
+                                  <div className="chip-row">
+                                    <span className="chip warn">{detailClip.penaltyType}</span>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                            <p className="film-comment">{detailClip.comment || "コメントは未登録です。"}</p>
+                            {canManageTeam && detailClip.coachComment ? (
+                              <div className="film-meta-group">
+                                <span className="film-meta-label">コーチ間コメント</span>
+                                <p className="film-comment">{detailClip.coachComment}</p>
+                              </div>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                     ) : (
                       <p className="empty-state">
@@ -1558,25 +1784,6 @@ export function AudiovisualRoom({
                       )}
                     </div>
 
-                    {canManageTeam && selectedVideo && showClipComposer && !editingClipId ? (
-                      <div className="film-inline-editor-wrap">
-                        <div className="film-editing-banner">
-                          <strong>再生中の動画に新しい注釈を追加しています</strong>
-                          <button
-                            className="button secondary button-compact"
-                            type="button"
-                            onClick={() => {
-                              resetClipForm(selectedVideo.id);
-                              setShowClipComposer(false);
-                            }}
-                            disabled={syncing}
-                          >
-                            閉じる
-                          </button>
-                        </div>
-                        {renderClipEditor(selectedVideo.id, true)}
-                      </div>
-                    ) : null}
                   </>
                 ) : (
                   <p className="empty-state">

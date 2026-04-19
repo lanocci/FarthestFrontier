@@ -1,4 +1,4 @@
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal } from "@/lib/types";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal, VideoTagMaster } from "@/lib/types";
 
 export const positionMasters: PositionMaster[] = [
   { id: "op-center", label: "センター", side: "offense" },
@@ -11,6 +11,27 @@ export const positionMasters: PositionMaster[] = [
   { id: "dp-cornerback", label: "CB", side: "defense" },
   { id: "dp-safety", label: "セーフティ", side: "defense" },
   { id: "dp-flag-keeper", label: "フラッグキーパー", side: "defense" },
+];
+
+export const formationMasters: VideoTagMaster[] = [
+  { id: "formation-trips-right", label: "Trips Right" },
+  { id: "formation-balanced", label: "Balanced" },
+  { id: "formation-zone", label: "Zone" },
+  { id: "formation-motion-left", label: "Motion Left" },
+];
+
+export const playTypeMasters: VideoTagMaster[] = [
+  { id: "play-short-pass", label: "ショートパス" },
+  { id: "play-run", label: "ラン" },
+  { id: "play-defense", label: "守備" },
+  { id: "play-walkthrough", label: "プレー合わせ" },
+];
+
+export const penaltyTypeMasters: VideoTagMaster[] = [
+  { id: "penalty-none", label: "なし" },
+  { id: "penalty-offside", label: "オフサイド" },
+  { id: "penalty-false-start", label: "フォルススタート" },
+  { id: "penalty-illegal-formation", label: "イリーガルフォーメーション" },
 ];
 
 export const players: Player[] = [
@@ -224,6 +245,7 @@ export const filmRoomVideos: FilmRoomVideo[] = [
           { playerId: "p2", positionId: "op-receiver" },
         ],
         comment: "スナップ後の一歩目が早く、レシーバーの角度もそろっています。",
+        coachComment: "相手CBが内側に寄る傾向があるので、次回は外リリースも試したいです。",
       },
       {
         id: "fc2",
@@ -271,6 +293,7 @@ export const filmRoomVideos: FilmRoomVideo[] = [
         playType: "プレー合わせ",
         playerLinks: [{ playerId: "p5", positionId: "op-quarterback" }],
         comment: "動き出すタイミングをそろえるための確認用です。",
+        coachComment: "合図をもう一つ減らして、コールを短くしても良さそうです。",
       },
     ],
   },

@@ -1,15 +1,18 @@
 import { getDashboardPracticeDate } from "@/lib/date";
 import {
   filmRoomVideos as mockFilmRoomVideos,
+  formationMasters as mockFormationMasters,
   goalLogs as mockGoalLogs,
   goalTemplates as mockGoalTemplates,
   materials as mockMaterials,
+  penaltyTypeMasters as mockPenaltyTypeMasters,
+  playTypeMasters as mockPlayTypeMasters,
   players as mockPlayers,
   positionMasters as mockPositionMasters,
   seasonGoals as mockSeasonGoals,
   seasons as mockSeasons
 } from "@/lib/mock-data";
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, Season, SeasonGoal, TeamMember, TeamRole, VideoClip, VideoClipPlayerLink } from "@/lib/types";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlayerPracticeEntry, PositionMaster, Season, SeasonGoal, TeamMember, TeamRole, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type PlayerRow = {
@@ -95,6 +98,7 @@ type FilmClipRow = {
   formation: string;
   play_type: string;
   comment: string;
+  coach_comment: string | null;
   player_links: VideoClipPlayerLink[] | null;
   sort_order: number;
 };
@@ -103,6 +107,11 @@ type PositionMasterRow = {
   id: string;
   label: string;
   side: PositionMaster["side"];
+};
+
+type VideoTagMasterRow = {
+  id: string;
+  label: string;
 };
 
 type SeasonRow = {
@@ -129,9 +138,12 @@ type SeasonGoalRow = {
 
 export type TeamSnapshot = {
   filmRoomVideos: FilmRoomVideo[];
+  formationMasters: VideoTagMaster[];
   goalLogs: GoalLog[];
   goalTemplates: GoalTemplate[];
   materials: Material[];
+  penaltyTypeMasters: VideoTagMaster[];
+  playTypeMasters: VideoTagMaster[];
   players: Player[];
   positionMasters: PositionMaster[];
   seasons: Season[];
@@ -229,6 +241,7 @@ function toVideoClip(row: FilmClipRow): VideoClip {
     formation: row.formation,
     playType: row.play_type,
     comment: row.comment,
+    coachComment: row.coach_comment ?? undefined,
     playerLinks: row.player_links ?? [],
   };
 }
@@ -252,6 +265,13 @@ function toPositionMaster(row: PositionMasterRow): PositionMaster {
     id: row.id,
     label: row.label,
     side: row.side,
+  };
+}
+
+function toVideoTagMaster(row: VideoTagMasterRow): VideoTagMaster {
+  return {
+    id: row.id,
+    label: row.label,
   };
 }
 
@@ -285,10 +305,13 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
   const [
     { data: playerRows, error: playerError },
     { data: templateRows, error: templateError },
+    { data: formationMasterRows, error: formationMasterError },
     { data: logRows, error: logError },
     { data: materialRows, error: materialError },
     { data: filmVideoRows, error: filmVideoError },
     { data: filmClipRows, error: filmClipError },
+    { data: penaltyTypeMasterRows, error: penaltyTypeMasterError },
+    { data: playTypeMasterRows, error: playTypeMasterError },
     { data: positionRows, error: positionError },
     { data: practiceRows, error: practiceError },
     { data: seasonRows, error: seasonError },
@@ -304,6 +327,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
       .from("goal_templates")
       .select("id, side, title, prompt, emoji, color, template_text, input_placeholder")
       .order("created_at", { ascending: true }),
+    supabase.from("formation_masters").select("id, label").order("label", { ascending: true }),
     supabase
       .from("goal_logs")
       .select("id, player_id, goal_text, goal_template_id, log_date, note, submitted_by_role")
@@ -318,8 +342,10 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
       .order("match_date", { ascending: false, nullsFirst: false }),
     supabase
     .from("film_clips")
-      .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, player_links, sort_order")
+      .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, sort_order")
       .order("sort_order", { ascending: true }),
+    supabase.from("penalty_type_masters").select("id, label").order("label", { ascending: true }),
+    supabase.from("play_type_masters").select("id, label").order("label", { ascending: true }),
     supabase.from("position_masters").select("id, label, side").order("label", { ascending: true }),
     supabase
       .from("practice_entries")
@@ -338,10 +364,13 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
   const firstError =
     playerError ??
     templateError ??
+    formationMasterError ??
     logError ??
     materialError ??
     filmVideoError ??
     filmClipError ??
+    penaltyTypeMasterError ??
+    playTypeMasterError ??
     positionError ??
     practiceError ??
     seasonError ??
@@ -369,6 +398,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
 
   return {
     filmRoomVideos: (filmVideoRows ?? []).map((row) => toFilmRoomVideo(row, clipsByVideoId.get(row.id) ?? [])),
+    formationMasters: (formationMasterRows ?? []).map(toVideoTagMaster),
     players: (playerRows ?? []).map((row) => {
       const practiceEntries = practiceEntriesByPlayer.get(row.id) ?? [];
       const fallbackEntry =
@@ -400,6 +430,8 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     goalTemplates: (templateRows ?? []).map(toGoalTemplate),
     goalLogs: goalEntries,
     materials: (materialRows ?? []).map(toMaterial),
+    penaltyTypeMasters: (penaltyTypeMasterRows ?? []).map(toVideoTagMaster),
+    playTypeMasters: (playTypeMasterRows ?? []).map(toVideoTagMaster),
     positionMasters: (positionRows ?? []).map(toPositionMaster),
     seasons: (seasonRows ?? []).map(toSeason),
     seasonGoals: (seasonGoalRows ?? []).map(toSeasonGoal),
@@ -779,10 +811,11 @@ export async function insertFilmClip(
       formation: clip.formation,
       play_type: clip.playType,
       comment: clip.comment,
+      coach_comment: clip.coachComment ?? null,
       player_links: clip.playerLinks,
       sort_order: clip.sortOrder,
     })
-    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, player_links, sort_order")
+    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, sort_order")
     .single();
 
   if (error) {
@@ -811,10 +844,11 @@ export async function updateFilmClip(
       formation: clip.formation,
       play_type: clip.playType,
       comment: clip.comment,
+      coach_comment: clip.coachComment ?? null,
       player_links: clip.playerLinks,
     })
     .eq("id", clip.id)
-    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, player_links, sort_order")
+    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, sort_order")
     .single();
 
   if (error) {
@@ -892,13 +926,109 @@ export async function upsertGoalTemplates(
   }
 }
 
+export async function upsertFormationMasters(
+  supabase: SupabaseClient,
+  masters: VideoTagMaster[],
+): Promise<void> {
+  const { error } = await supabase.from("formation_masters").upsert(
+    masters.map((master) => ({
+      id: master.id,
+      label: master.label,
+    })),
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function deleteFormationMasters(
+  supabase: SupabaseClient,
+  masterIds: string[],
+): Promise<void> {
+  if (!masterIds.length) {
+    return;
+  }
+
+  const { error } = await supabase.from("formation_masters").delete().in("id", masterIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function upsertPlayTypeMasters(
+  supabase: SupabaseClient,
+  masters: VideoTagMaster[],
+): Promise<void> {
+  const { error } = await supabase.from("play_type_masters").upsert(
+    masters.map((master) => ({
+      id: master.id,
+      label: master.label,
+    })),
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function deletePlayTypeMasters(
+  supabase: SupabaseClient,
+  masterIds: string[],
+): Promise<void> {
+  if (!masterIds.length) {
+    return;
+  }
+
+  const { error } = await supabase.from("play_type_masters").delete().in("id", masterIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function upsertPenaltyTypeMasters(
+  supabase: SupabaseClient,
+  masters: VideoTagMaster[],
+): Promise<void> {
+  const { error } = await supabase.from("penalty_type_masters").upsert(
+    masters.map((master) => ({
+      id: master.id,
+      label: master.label,
+    })),
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function deletePenaltyTypeMasters(
+  supabase: SupabaseClient,
+  masterIds: string[],
+): Promise<void> {
+  if (!masterIds.length) {
+    return;
+  }
+
+  const { error } = await supabase.from("penalty_type_masters").delete().in("id", masterIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export function getFallbackTeamSnapshot(): TeamSnapshot {
   return {
     filmRoomVideos: mockFilmRoomVideos,
+    formationMasters: mockFormationMasters,
     players: mockPlayers,
     goalTemplates: mockGoalTemplates,
     goalLogs: mockGoalLogs,
     materials: mockMaterials,
+    penaltyTypeMasters: mockPenaltyTypeMasters,
+    playTypeMasters: mockPlayTypeMasters,
     positionMasters: mockPositionMasters,
     seasons: mockSeasons,
     seasonGoals: mockSeasonGoals,

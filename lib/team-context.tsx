@@ -4,24 +4,30 @@ import { ensurePendingTeamMember, fetchCurrentTeamMember, fetchTeamSnapshot, get
 import {
     clearStorage,
     loadFilmRoomVideos,
+    loadFormationMasters,
     loadGoalLogs,
     loadGoalTemplates,
     loadMaterials,
+    loadPenaltyTypeMasters,
+    loadPlayTypeMasters,
     loadPlayers,
     loadPositionMasters,
     loadSeasonGoals,
     loadSeasons,
     saveGoalLogs,
     saveFilmRoomVideos,
+    saveFormationMasters,
     saveGoalTemplates,
     saveMaterials,
+    savePenaltyTypeMasters,
+    savePlayTypeMasters,
     savePlayers,
     savePositionMasters,
     saveSeasonGoals,
     saveSeasons,
 } from "@/lib/storage";
 import { getSupabaseClient } from "@/lib/supabase";
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, Season, SeasonGoal, TeamRole } from "@/lib/types";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, Season, SeasonGoal, TeamRole, VideoTagMaster } from "@/lib/types";
 import { filterAudiencesForRole, filterMaterialsForRole } from "@/lib/utils";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
@@ -36,8 +42,14 @@ interface TeamContextValue {
   setMaterials: React.Dispatch<React.SetStateAction<Material[]>>;
   filmRoomVideos: FilmRoomVideo[];
   setFilmRoomVideos: React.Dispatch<React.SetStateAction<FilmRoomVideo[]>>;
+  formationMasters: VideoTagMaster[];
+  setFormationMasters: React.Dispatch<React.SetStateAction<VideoTagMaster[]>>;
   goalTemplates: GoalTemplate[];
   setGoalTemplates: React.Dispatch<React.SetStateAction<GoalTemplate[]>>;
+  penaltyTypeMasters: VideoTagMaster[];
+  setPenaltyTypeMasters: React.Dispatch<React.SetStateAction<VideoTagMaster[]>>;
+  playTypeMasters: VideoTagMaster[];
+  setPlayTypeMasters: React.Dispatch<React.SetStateAction<VideoTagMaster[]>>;
   positionMasters: PositionMaster[];
   setPositionMasters: React.Dispatch<React.SetStateAction<PositionMaster[]>>;
   seasons: Season[];
@@ -81,7 +93,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [goalLogs, setGoalLogs] = useState<GoalLog[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [filmRoomVideos, setFilmRoomVideos] = useState<FilmRoomVideo[]>([]);
+  const [formationMasters, setFormationMasters] = useState<VideoTagMaster[]>([]);
   const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([]);
+  const [penaltyTypeMasters, setPenaltyTypeMasters] = useState<VideoTagMaster[]>([]);
+  const [playTypeMasters, setPlayTypeMasters] = useState<VideoTagMaster[]>([]);
   const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonGoals, setSeasonGoals] = useState<SeasonGoal[]>([]);
@@ -112,7 +127,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setGoalLogs(loadGoalLogs());
     setMaterials(loadMaterials());
     setFilmRoomVideos(loadFilmRoomVideos());
+    setFormationMasters(loadFormationMasters());
     setGoalTemplates(loadGoalTemplates());
+    setPenaltyTypeMasters(loadPenaltyTypeMasters());
+    setPlayTypeMasters(loadPlayTypeMasters());
     setPositionMasters(loadPositionMasters());
     setSeasons(loadSeasons());
     setSeasonGoals(loadSeasonGoals());
@@ -147,10 +165,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (localReady && !usingRemoteData) {
+      saveFormationMasters(formationMasters);
       saveGoalTemplates(goalTemplates);
+      savePenaltyTypeMasters(penaltyTypeMasters);
+      savePlayTypeMasters(playTypeMasters);
       savePositionMasters(positionMasters);
     }
-  }, [goalTemplates, localReady, positionMasters, usingRemoteData]);
+  }, [formationMasters, goalTemplates, localReady, penaltyTypeMasters, playTypeMasters, positionMasters, usingRemoteData]);
 
   useEffect(() => {
     if (localReady && !usingRemoteData) {
@@ -235,7 +256,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         setGoalLogs(snapshot.goalLogs);
         setMaterials(filterMaterialsForRole(snapshot.materials, member?.role ?? null));
         setFilmRoomVideos(filterAudiencesForRole(snapshot.filmRoomVideos, member?.role ?? null));
+        setFormationMasters(snapshot.formationMasters);
         setGoalTemplates(snapshot.goalTemplates);
+        setPenaltyTypeMasters(snapshot.penaltyTypeMasters);
+        setPlayTypeMasters(snapshot.playTypeMasters);
         setPositionMasters(snapshot.positionMasters);
         setSeasons(snapshot.seasons);
         setSeasonGoals(snapshot.seasonGoals);
@@ -262,7 +286,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setGoalLogs(fallback.goalLogs);
     setMaterials(fallback.materials);
     setFilmRoomVideos(fallback.filmRoomVideos);
+    setFormationMasters(fallback.formationMasters);
     setGoalTemplates(fallback.goalTemplates);
+    setPenaltyTypeMasters(fallback.penaltyTypeMasters);
+    setPlayTypeMasters(fallback.playTypeMasters);
     setPositionMasters(fallback.positionMasters);
     setSeasons(fallback.seasons);
     setSeasonGoals(fallback.seasonGoals);
@@ -284,7 +311,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     goalLogs, setGoalLogs,
     materials, setMaterials,
     filmRoomVideos, setFilmRoomVideos,
+    formationMasters, setFormationMasters,
     goalTemplates, setGoalTemplates,
+    penaltyTypeMasters, setPenaltyTypeMasters,
+    playTypeMasters, setPlayTypeMasters,
     positionMasters, setPositionMasters,
     seasons, setSeasons,
     seasonGoals, setSeasonGoals,

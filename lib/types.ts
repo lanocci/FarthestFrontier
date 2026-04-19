@@ -13,6 +13,11 @@ export type PositionMaster = {
   side: PositionSide;
 };
 
+export type VideoTagMaster = {
+  id: string;
+  label: string;
+};
+
 export type PlayerPracticeEntry = {
   practiceDate: string;
   offenseGoal?: string;
@@ -89,6 +94,7 @@ export type VideoClip = {
   formation: string;
   playType: string;
   comment: string;
+  coachComment?: string;
   playerLinks: VideoClipPlayerLink[];
 };
 

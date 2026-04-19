@@ -1,6 +1,6 @@
 import { getDashboardPracticeDate } from "@/lib/date";
-import { filmRoomVideos, goalLogs, goalTemplates, materials, players, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal, VideoClip } from "@/lib/types";
+import { filmRoomVideos, formationMasters, goalLogs, goalTemplates, materials, penaltyTypeMasters, playTypeMasters, players, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal, VideoClip, VideoTagMaster } from "@/lib/types";
 import { findGoalTemplate } from "@/lib/utils";
 
 const KEYS = {
@@ -10,6 +10,9 @@ const KEYS = {
   filmRoomVideos: "ff-team-film-room-videos",
   positionMasters: "ff-team-position-masters",
   goalTemplates: "ff-team-goal-templates",
+  formationMasters: "ff-team-formation-masters",
+  penaltyTypeMasters: "ff-team-penalty-type-masters",
+  playTypeMasters: "ff-team-play-type-masters",
   seasons: "ff-team-seasons",
   seasonGoals: "ff-team-season-goals",
 } as const;
@@ -173,6 +176,7 @@ function normalizeVideoClip(clip: VideoClip & { playerLabel?: string }): VideoCl
     down: clip.down ?? parsedDown,
     toGoYards: clip.toGoYards ?? undefined,
     penaltyType: clip.penaltyType ?? undefined,
+    coachComment: clip.coachComment ?? undefined,
     playerLinks: clip.playerLinks ?? [],
   };
 }
@@ -201,6 +205,30 @@ export function loadGoalTemplates(): GoalTemplate[] {
 
 export function saveGoalTemplates(nextTemplates: GoalTemplate[]) {
   writeJson(KEYS.goalTemplates, nextTemplates);
+}
+
+export function loadFormationMasters(): VideoTagMaster[] {
+  return readJson(KEYS.formationMasters, formationMasters);
+}
+
+export function saveFormationMasters(nextMasters: VideoTagMaster[]) {
+  writeJson(KEYS.formationMasters, nextMasters);
+}
+
+export function loadPlayTypeMasters(): VideoTagMaster[] {
+  return readJson(KEYS.playTypeMasters, playTypeMasters);
+}
+
+export function savePlayTypeMasters(nextMasters: VideoTagMaster[]) {
+  writeJson(KEYS.playTypeMasters, nextMasters);
+}
+
+export function loadPenaltyTypeMasters(): VideoTagMaster[] {
+  return readJson(KEYS.penaltyTypeMasters, penaltyTypeMasters);
+}
+
+export function savePenaltyTypeMasters(nextMasters: VideoTagMaster[]) {
+  writeJson(KEYS.penaltyTypeMasters, nextMasters);
 }
 
 export function loadSeasons(): Season[] {
