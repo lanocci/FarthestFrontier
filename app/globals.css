@@ -825,6 +825,21 @@ select:disabled {
   background: rgba(247, 255, 250, 0.9);
 }
 
+.film-landscape-split {
+  display: grid;
+  gap: 16px;
+}
+
+.film-landscape-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.film-landscape-detail {
+  min-width: 0;
+}
+
 .film-active-card strong {
   display: block;
   font-size: 1rem;
@@ -1783,4 +1798,18 @@ select:disabled {
     font-size: 0.74rem;
   }
 
+}
+
+@media (max-width: 980px) and (orientation: landscape) {
+  .film-landscape-split {
+    grid-template-columns: 1fr minmax(200px, 0.6fr);
+    align-items: start;
+  }
+
+  .film-landscape-detail {
+    position: sticky;
+    top: 8px;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+  }
 }
