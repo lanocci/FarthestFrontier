@@ -848,7 +848,6 @@ export function AudiovisualRoom({
 
     const parsedRows = parseDelimitedText(importForm.rawText);
     if (!parsedRows.length) {
-      setTeamMessage("ヘッダー行を含む CSV / TSV を貼り付けてください。");
       setImportMessage("ヘッダー行を含む CSV / TSV を貼り付けてください。");
       return;
     }
@@ -879,8 +878,7 @@ export function AudiovisualRoom({
         const endSeconds = parseTimestamp(endText);
 
         if (!title) {
-          warnings.push(`${rowNumber}行目: プレー名が空のためスキップしました。`);
-          continue;
+          warnings.push(`${rowNumber}行目: プレー名が空のため無題で取り込みます。`);
         }
         if (startSeconds === null || endSeconds === null) {
           warnings.push(`${rowNumber}行目: 開始時刻または終了時刻が正しくないためスキップしました。`);
@@ -918,7 +916,6 @@ export function AudiovisualRoom({
         const msg = warnings.length
           ? `取り込めるプレーがありませんでした。\n${warnings.join("\n")}`
           : "取り込めるプレーがありませんでした。";
-        setTeamMessage(msg);
         setImportMessage(msg);
         return;
       }
@@ -962,11 +959,9 @@ export function AudiovisualRoom({
       const successMsg = warnings.length
         ? `${savedClips.length}件のプレー注釈をインポートしました。\n${warnings.join("\n")}`
         : `${savedClips.length}件のプレー注釈をインポートしました。`;
-      setTeamMessage(successMsg);
       setImportMessage(successMsg);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "プレー注釈のインポートに失敗しました。";
-      setTeamMessage(msg);
       setImportMessage(msg);
     } finally {
       setSyncing(false);
@@ -978,7 +973,7 @@ export function AudiovisualRoom({
       <div className="stack">
         <Section
           title="ビデオ"
-          copy="限定公開YouTubeの試合動画やプレー合わせ動画を見返しながら、プレーの種類や隊形、コメントを確認できます。"
+          copy="YouTubeの試合動画やプレー合わせ動画を見返しながら、プレーの種類や隊形、コメントを確認できます。"
         >
           <div className="status-strip">
             {syncing ? <span className="chip">保存しています…</span> : null}
