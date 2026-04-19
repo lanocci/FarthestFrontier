@@ -5,17 +5,21 @@ import Link from "next/link";
 
 type GlobalHeaderProps = {
   view: "dashboard" | "players" | "masters" | "materials" | "audiovisual" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
+  teamRole?: "coach" | "guardian" | null;
   onSignOut?: () => void;
 };
 
 const navItems = [
-  { href: "/", label: "ホーム", icon: Home, view: "dashboard" },
-  { href: "/materials", label: "資料室", icon: BookOpen, view: "materials" },
-  { href: "/videos", label: "ビデオ", icon: Clapperboard, view: "audiovisual" },
-  { href: "/settings", label: "設定", icon: Settings, view: "settings" },
+  { href: "/", label: "ホーム", icon: Home, view: "dashboard", coachOnly: false },
+  { href: "/materials", label: "資料室", icon: BookOpen, view: "materials", coachOnly: false },
+  { href: "/videos", label: "ビデオ (β)", icon: Clapperboard, view: "audiovisual", coachOnly: true },
+  { href: "/settings", label: "設定", icon: Settings, view: "settings", coachOnly: false },
 ] as const;
 
-export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
+export function GlobalHeader({ view, teamRole, onSignOut }: GlobalHeaderProps) {
+  const isCoach = !teamRole || teamRole === "coach";
+  const visibleItems = navItems.filter((item) => !item.coachOnly || isCoach);
+
   return (
     <header className="global-header">
       <div>
@@ -24,7 +28,7 @@ export function GlobalHeader({ view, onSignOut }: GlobalHeaderProps) {
       </div>
 
       <nav className="header-nav" aria-label="グローバルナビゲーション">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <Link
             key={item.href}
             className={`tab-link ${view === item.view || ((view === "player-goal" || view === "player-reflection" || view === "player-season-goal") && item.view === "dashboard") || ((view === "players" || view === "masters" || view === "materials-manage") && item.view === "settings") ? "is-active" : ""}`}

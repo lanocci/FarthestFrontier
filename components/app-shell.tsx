@@ -65,7 +65,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
 
   return (
     <main className="page-shell">
-      <GlobalHeader view={view} onSignOut={authEnabled && session ? handleSignOut : undefined} />
+      <GlobalHeader view={view} teamRole={teamRole} onSignOut={authEnabled && session ? handleSignOut : undefined} />
 
       {view === "players" ? (
         <TeamAdmin
@@ -110,7 +110,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           materials={materials}
           teamMessage={teamMessage}
         />
-      ) : view === "audiovisual" ? (
+      ) : view === "audiovisual" && (!authEnabled || teamRole === "coach") ? (
         <AudiovisualRoom
           canManageTeam={canManageAdmin}
           dataLoading={dataLoading}
