@@ -1,8 +1,11 @@
 "use client";
 
+import { VideoClipEditor } from "@/components/video-room/clip-editor";
+import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
 import { Section } from "@/components/section";
 import { deleteFilmClip, insertFilmClip, insertFilmRoomVideo, updateFilmClip } from "@/lib/data-store";
 import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
+import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
@@ -26,37 +29,6 @@ type AudiovisualRoomProps = {
   usingRemoteData: boolean;
   onResetLocalMode: () => void;
 };
-
-type VideoForm = {
-  title: string;
-  description: string;
-  sourceLabel: string;
-  matchDate: string;
-  audience: VideoAudience;
-  youtubeUrl: string;
-};
-
-type ClipForm = {
-  videoId: string;
-  title: string;
-  startText: string;
-  endText: string;
-  down: string;
-  toGoYards: string;
-  penaltyType: string;
-  formation: string;
-  playType: string;
-  playerLinks: VideoClipPlayerLink[];
-  comment: string;
-  coachComment: string;
-};
-
-type ImportForm = {
-  videoId: string;
-  rawText: string;
-};
-
-type ParsedImportRow = Record<string, string>;
 
 type YouTubePlayer = {
   destroy: () => void;
@@ -151,185 +123,6 @@ function loadYouTubeApi(): Promise<YouTubeNamespace> {
   }
 
   return youtubeApiPromise;
-}
-
-function parseTimestamp(value: string): number | null {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  if (/^\d+$/.test(trimmed)) {
-    return Number.parseInt(trimmed, 10);
-  }
-
-  const parts = trimmed.split(":").map((part) => part.trim());
-
-  if (parts.some((part) => !/^\d+$/.test(part))) {
-    return null;
-  }
-
-  if (parts.length === 2) {
-    return Number.parseInt(parts[0], 10) * 60 + Number.parseInt(parts[1], 10);
-  }
-
-  if (parts.length === 3) {
-    return Number.parseInt(parts[0], 10) * 3600 + Number.parseInt(parts[1], 10) * 60 + Number.parseInt(parts[2], 10);
-  }
-
-  return null;
-}
-
-function sortClips(clips: VideoClip[]): VideoClip[] {
-  return [...clips].sort((left, right) => left.startSeconds - right.startSeconds);
-}
-
-function sanitizePlayerLinks(playerLinks: VideoClipPlayerLink[]): VideoClipPlayerLink[] {
-  return playerLinks
-    .filter((link) => link.playerId)
-    .map((link) => ({
-      playerId: link.playerId,
-      positionId: link.positionId || undefined,
-    }));
-}
-
-function formatMatchDate(matchDate?: string): string {
-  if (!matchDate) {
-    return "試合日未設定";
-  }
-
-  const parsed = new Date(`${matchDate}T00:00:00`);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return matchDate;
-  }
-
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(parsed);
-}
-
-function parseDown(value: string): number | undefined {
-  const normalized = value.trim();
-  if (!normalized) {
-    return undefined;
-  }
-
-  const parsed = Number.parseInt(normalized.replace(/\D/g, ""), 10);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function formatDownLabel(down?: number): string | null {
-  if (!down || down < 1) {
-    return null;
-  }
-
-  const mod10 = down % 10;
-  const mod100 = down % 100;
-  const suffix =
-    mod10 === 1 && mod100 !== 11 ? "st" :
-    mod10 === 2 && mod100 !== 12 ? "nd" :
-    mod10 === 3 && mod100 !== 13 ? "rd" :
-    "th";
-
-  return `${down}${suffix} ダウン`;
-}
-
-function formatSituationText(clip: VideoClip): string | null {
-  const parts = [formatDownLabel(clip.down), clip.toGoYards ? `To Go ${clip.toGoYards}` : null].filter(Boolean);
-  return parts.length ? parts.join(" / ") : null;
-}
-
-function getVideoSearchText(video: FilmRoomVideo): string {
-  return [
-    video.title,
-    video.description,
-    video.sourceLabel,
-    video.matchDate ?? "",
-    ...video.clips.map((clip) =>
-      [clip.title, formatDownLabel(clip.down) ?? "", clip.toGoYards ?? "", clip.penaltyType ?? "", clip.formation, clip.playType, clip.comment].join(" "),
-    ),
-  ]
-    .join(" ")
-    .toLowerCase();
-}
-
-function parseDelimitedText(rawText: string): ParsedImportRow[] {
-  const trimmed = rawText.replace(/\r\n/g, "\n").trim();
-
-  if (!trimmed) {
-    return [];
-  }
-
-  const lines = trimmed.split("\n").filter((line) => line.trim());
-  if (lines.length < 2) {
-    return [];
-  }
-
-  const delimiter = lines[0].includes("\t") ? "\t" : ",";
-  const rows = lines.map((line) => {
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let index = 0; index < line.length; index += 1) {
-      const char = line[index];
-
-      if (char === '"') {
-        const nextChar = line[index + 1];
-        if (inQuotes && nextChar === '"') {
-          current += '"';
-          index += 1;
-        } else {
-          inQuotes = !inQuotes;
-        }
-        continue;
-      }
-
-      if (char === delimiter && !inQuotes) {
-        values.push(current.trim());
-        current = "";
-        continue;
-      }
-
-      current += char;
-    }
-
-    values.push(current.trim());
-    return values;
-  });
-
-  const headers = rows[0].map((header) => header.trim());
-
-  return rows.slice(1).map((values) =>
-    headers.reduce<ParsedImportRow>((record, header, index) => {
-      record[header] = values[index]?.trim() ?? "";
-      return record;
-    }, {}),
-  );
-}
-
-function getImportCell(row: ParsedImportRow, candidates: string[]): string {
-  const lowered = new Map(Object.entries(row).map(([key, value]) => [key.trim().toLowerCase(), value]));
-
-  for (const candidate of candidates) {
-    const value = lowered.get(candidate.toLowerCase());
-    if (typeof value === "string") {
-      return value.trim();
-    }
-  }
-
-  return "";
-}
-
-function splitImportList(value: string): string[] {
-  return value
-    .split(/[;,、]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 export function AudiovisualRoom({
@@ -864,219 +657,6 @@ export function AudiovisualRoom({
     setShowClipComposer(true);
   }
 
-  function renderClipEditor(targetVideoId: string, inline = false) {
-    return (
-      <div className={inline ? "film-inline-editor" : "admin-form"}>
-        <label className="field-stack">
-          <span className="field-label">対象動画</span>
-          <select
-            value={clipForm.videoId}
-            onChange={(event) => updateClipForm("videoId", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length || inline}
-          >
-            {filmRoomVideos.map((video) => (
-              <option key={video.id} value={video.id}>
-                {video.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-stack">
-          <span className="field-label">プレータイトル</span>
-          <input
-            type="text"
-            placeholder="例: 左ショートパス"
-            value={clipForm.title}
-            onChange={(event) => updateClipForm("title", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-        </label>
-        <label className="field-stack">
-          <span className="field-label">開始時刻</span>
-          <input
-            type="text"
-            placeholder="例: 1:24"
-            value={clipForm.startText}
-            onChange={(event) => updateClipForm("startText", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-        </label>
-        <label className="field-stack">
-          <span className="field-label">終了時刻</span>
-          <input
-            type="text"
-            placeholder="例: 1:37"
-            value={clipForm.endText}
-            onChange={(event) => updateClipForm("endText", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-        </label>
-        <label className="field-stack">
-          <span className="field-label">ダウン</span>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            placeholder="例: 1"
-            value={clipForm.down}
-            onChange={(event) => updateClipForm("down", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-        </label>
-        <label className="field-stack">
-          <span className="field-label">To Go Yard</span>
-          <input
-            type="text"
-            placeholder="例: 8"
-            value={clipForm.toGoYards}
-            onChange={(event) => updateClipForm("toGoYards", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-        </label>
-        <label className="field-stack">
-          <span className="field-label">反則の種類</span>
-          <input
-            type="text"
-            list={penaltyTypeListId}
-            placeholder="候補から選ぶか自由入力"
-            value={clipForm.penaltyType}
-            onChange={(event) => updateClipForm("penaltyType", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-          <datalist id={penaltyTypeListId}>
-            {availablePenaltyTypes.map((penaltyType) => (
-              <option key={penaltyType} value={penaltyType}>
-                {penaltyType}
-              </option>
-            ))}
-          </datalist>
-        </label>
-        <label className="field-stack">
-          <span className="field-label">隊形</span>
-          <input
-            type="text"
-            list={formationListId}
-            placeholder="候補から選ぶか自由入力"
-            value={clipForm.formation}
-            onChange={(event) => updateClipForm("formation", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-          <datalist id={formationListId}>
-            {availableFormations.map((formation) => (
-              <option key={formation} value={formation}>
-                {formation}
-              </option>
-            ))}
-          </datalist>
-        </label>
-        <label className="field-stack">
-          <span className="field-label">プレー種類</span>
-          <input
-            type="text"
-            list={playTypeListId}
-            placeholder="候補から選ぶか自由入力"
-            value={clipForm.playType}
-            onChange={(event) => updateClipForm("playType", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-          <datalist id={playTypeListId}>
-            {availablePlayTypes.map((playType) => (
-              <option key={playType} value={playType}>
-                {playType}
-              </option>
-            ))}
-          </datalist>
-        </label>
-        <div className="field-stack admin-form-full">
-          <span className="field-label">出場選手</span>
-          <div className="film-player-link-list">
-            {clipForm.playerLinks.map((link, index) => (
-              <div key={`player-link-${index}`} className="film-player-link-row">
-                <select
-                  value={link.playerId}
-                  onChange={(event) => updateClipPlayerLink(index, "playerId", event.target.value)}
-                  disabled={syncing || !filmRoomVideos.length}
-                >
-                  <option value="">選手を選ぶ</option>
-                  {activePlayers.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.name} #{player.jerseyNumber}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={link.positionId ?? ""}
-                  onChange={(event) => updateClipPlayerLink(index, "positionId", event.target.value)}
-                  disabled={syncing || !filmRoomVideos.length}
-                >
-                  <option value="">ポジション未指定</option>
-                  {positionMasters.map((position) => (
-                    <option key={position.id} value={position.id}>
-                      {position.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="button secondary button-compact"
-                  type="button"
-                  onClick={() => removeClipPlayerLink(index)}
-                  disabled={syncing || !filmRoomVideos.length}
-                >
-                  削除
-                </button>
-              </div>
-            ))}
-          </div>
-          <button
-            className="button secondary button-compact"
-            type="button"
-            onClick={addClipPlayerLink}
-            disabled={syncing || !filmRoomVideos.length}
-          >
-            選手を追加
-          </button>
-        </div>
-        <label className="field-stack admin-form-full">
-          <span className="field-label">コメント</span>
-          <textarea
-            className="form-textarea"
-            placeholder="見てほしいポイントや修正点"
-            value={clipForm.comment}
-            onChange={(event) => updateClipForm("comment", event.target.value)}
-            disabled={syncing || !filmRoomVideos.length}
-          />
-        </label>
-        {canManageTeam ? (
-          <label className="field-stack admin-form-full">
-            <span className="field-label">コーチ間コメント</span>
-            <textarea
-              className="form-textarea"
-              placeholder="コーチ間だけで共有したい観点や次回へのメモ"
-              value={clipForm.coachComment}
-              onChange={(event) => updateClipForm("coachComment", event.target.value)}
-              disabled={syncing || !filmRoomVideos.length}
-            />
-          </label>
-        ) : null}
-        <div className="card-actions admin-form-full">
-          <button className="button" type="button" onClick={handleSaveClip} disabled={syncing || !filmRoomVideos.length}>
-            {editingClipId ? "変更を保存" : "プレーを追加"}
-          </button>
-          {editingClipId ? (
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() => resetClipForm(targetVideoId)}
-              disabled={syncing}
-            >
-              キャンセル
-            </button>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
   async function handleAddVideo() {
     const nextVideo = {
       title: videoForm.title.trim(),
@@ -1587,7 +1167,29 @@ export function AudiovisualRoom({
                                 閉じる
                               </button>
                             </div>
-                            {renderClipEditor(selectedVideo.id, true)}
+                            <VideoClipEditor
+                              activePlayers={activePlayers}
+                              availableFormations={availableFormations}
+                              availablePenaltyTypes={availablePenaltyTypes}
+                              availablePlayTypes={availablePlayTypes}
+                              canManageTeam={canManageTeam}
+                              clipForm={clipForm}
+                              editingClipId={editingClipId}
+                              filmRoomVideos={filmRoomVideos}
+                              formationListId={formationListId}
+                              inline
+                              onAddClipPlayerLink={addClipPlayerLink}
+                              onRemoveClipPlayerLink={removeClipPlayerLink}
+                              onReset={resetClipForm}
+                              onSave={handleSaveClip}
+                              onUpdateClipForm={updateClipForm}
+                              onUpdateClipPlayerLink={updateClipPlayerLink}
+                              penaltyTypeListId={penaltyTypeListId}
+                              playTypeListId={playTypeListId}
+                              positionMasters={positionMasters}
+                              syncing={syncing}
+                              targetVideoId={selectedVideo.id}
+                            />
                           </>
                         ) : null}
                       </div>
@@ -1612,7 +1214,29 @@ export function AudiovisualRoom({
                                 閉じる
                               </button>
                             </div>
-                            {renderClipEditor(selectedVideo.id, true)}
+                            <VideoClipEditor
+                              activePlayers={activePlayers}
+                              availableFormations={availableFormations}
+                              availablePenaltyTypes={availablePenaltyTypes}
+                              availablePlayTypes={availablePlayTypes}
+                              canManageTeam={canManageTeam}
+                              clipForm={clipForm}
+                              editingClipId={editingClipId}
+                              filmRoomVideos={filmRoomVideos}
+                              formationListId={formationListId}
+                              inline
+                              onAddClipPlayerLink={addClipPlayerLink}
+                              onRemoveClipPlayerLink={removeClipPlayerLink}
+                              onReset={resetClipForm}
+                              onSave={handleSaveClip}
+                              onUpdateClipForm={updateClipForm}
+                              onUpdateClipPlayerLink={updateClipPlayerLink}
+                              penaltyTypeListId={penaltyTypeListId}
+                              playTypeListId={playTypeListId}
+                              positionMasters={positionMasters}
+                              syncing={syncing}
+                              targetVideoId={selectedVideo.id}
+                            />
                           </>
                         ) : (
                           <>

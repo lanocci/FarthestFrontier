@@ -35,11 +35,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 環境変数が未設定でも、現時点ではローカル体験モードで画面表示と `localStorage` 保存ができます。
 
-## Supabase 反映の入口
+## Supabase 反映
 
-- SQL は [schema.sql](</Users/lanocci/dev/src/github.com/lanocci/ FarthestFrontier/supabase/schema.sql>) に置いてあります
-- まずは `players`, `goal_templates`, `goal_logs`, `materials` の4テーブルで運用開始できます
+- 今後の変更は `supabase/migrations/*.sql` に追加していく前提です
+- 差分確認は `npm run db:push:dry`、適用は `npm run db:push` を使います
+- `supabase/schema.snapshot.sql` は参照用スナップショットです
+- 既存本番から取り込んだ baseline は `supabase/migrations/20260419025848_remote_schema.sql` です
+- 退避した旧初期案は `supabase/migrations_archive/` に残しています
 - Google資料はDBにURLだけ持たせて、共有権限はGoogle Drive側でも制御する想定です
+
+```bash
+supabase link --project-ref <your-project-ref>
+npm run db:push:dry
+npm run db:push
+```
 
 ## 認証の動作
 
