@@ -98,15 +98,18 @@ export function VideoClipEditor({
       </label>
       <label className="field-stack">
         <span className="field-label">ダウン</span>
-        <input
-          type="number"
-          min="1"
-          step="1"
-          placeholder="例: 1"
+        <select
           value={clipForm.down}
           onChange={(event) => onUpdateClipForm("down", event.target.value)}
           disabled={syncing || !filmRoomVideos.length}
-        />
+        >
+          <option value="">未指定</option>
+          <option value="1">1st ダウン</option>
+          <option value="2">2nd ダウン</option>
+          <option value="3">3rd ダウン</option>
+          <option value="4">4th ダウン</option>
+          <option value="0">TFP</option>
+        </select>
       </label>
       <label className="field-stack">
         <span className="field-label">To Go Yard</span>

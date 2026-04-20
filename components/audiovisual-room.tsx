@@ -632,7 +632,7 @@ export function AudiovisualRoom({
       title: clip.title,
       startText: formatSecondsAsTime(clip.startSeconds),
       endText: formatSecondsAsTime(clip.endSeconds),
-      down: clip.down ? String(clip.down) : "",
+      down: clip.down !== undefined ? String(clip.down) : "",
       toGoYards: clip.toGoYards ?? "",
       penaltyType: clip.penaltyType ?? "",
       formation: clip.formation,

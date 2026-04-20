@@ -66,12 +66,20 @@ export function parseDown(value: string): number | undefined {
     return undefined;
   }
 
+  if (normalized.toLowerCase() === "tfp" || normalized.toLowerCase() === "try for point") {
+    return 0;
+  }
+
   const parsed = Number.parseInt(normalized.replace(/\D/g, ""), 10);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 export function formatDownLabel(down?: number): string | null {
-  if (!down || down < 1) {
+  if (down === 0) {
+    return "TFP";
+  }
+
+  if (down === undefined || down < 1) {
     return null;
   }
 
