@@ -168,7 +168,7 @@ export function AudiovisualRoom({
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const [showVideoComposer, setShowVideoComposer] = useState(false);
   const [showClipComposer, setShowClipComposer] = useState(false);
-  const [overlayExpanded, setOverlayExpanded] = useState(false);
+  const [dismissedOverlayClipId, setDismissedOverlayClipId] = useState<string | null>(null);
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
 
   function formatClipPlayers(playerLinks: VideoClipPlayerLink[]): string[] {
@@ -414,10 +414,15 @@ export function AudiovisualRoom({
     return matchesText && matchesFormation && matchesPlayType;
   });
 
-  const activeClip =
+  const playbackClip =
     selectedVideoClips.find((clip) => currentTime >= clip.startSeconds && currentTime <= clip.endSeconds) ??
+    null;
+  const activeClip =
+    playbackClip ??
     selectedVideoClips.find((clip) => clip.id === selectedClipId) ??
     null;
+  const overlayClip = editingClipId ? null : playbackClip;
+  const overlayClipId = overlayClip?.id ?? null;
   const detailClip =
     selectedVideoClips.find((clip) => clip.id === editingClipId) ??
     activeClip ??
@@ -447,6 +452,7 @@ export function AudiovisualRoom({
     setSelectedClipId(null);
     setEditingClipId(null);
     setShowClipComposer(false);
+    setDismissedOverlayClipId(null);
     setClipForm((current) => ({
       ...current,
       videoId: selectedVideo?.id ?? "",
@@ -499,6 +505,12 @@ export function AudiovisualRoom({
       cancelled = true;
     };
   }, [playerHostId, selectedVideoYoutubeId, setTeamMessage]);
+
+  useEffect(() => {
+    if (!overlayClipId) {
+      setDismissedOverlayClipId(null);
+    }
+  }, [overlayClipId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1206,36 +1218,63 @@ export function AudiovisualRoom({
                 {selectedVideo && selectedVideoYoutubeId ? (
                   <>
                     <div className="film-player-frame">
-                      <div id={playerHostId} />
-                      {detailClip && !editingClipId ? (
+                      <div id={playerHostId} className="film-player-host" />
+                      {overlayClip && dismissedOverlayClipId === overlayClip.id ? (
+                        <div className="film-overlay-restore">
+                          <button
+                            className="film-overlay-button"
+                            type="button"
+                            onClick={() => setDismissedOverlayClipId(null)}
+                          >
+                            注釈を再表示
+                          </button>
+                        </div>
+                      ) : null}
+                      {overlayClip && dismissedOverlayClipId !== overlayClip.id ? (
                         <div
-                          className={`film-overlay ${overlayExpanded ? "is-expanded" : ""}`}
-                          onClick={() => setOverlayExpanded((v) => !v)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOverlayExpanded((v) => !v); }}
+                          className="film-overlay is-expanded"
                         >
                           <div className="film-overlay-header">
-                            <strong>{detailClip.title}</strong>
-                            <span>{formatSecondsAsTime(detailClip.startSeconds)} - {formatSecondsAsTime(detailClip.endSeconds)}</span>
-                          </div>
-                          {overlayExpanded ? (
-                            <div className="film-overlay-body">
-                              {formatSituationText(detailClip) ? (
-                                <span className="film-overlay-situation">{formatSituationText(detailClip)}</span>
-                              ) : null}
-                              {detailClip.formation || detailClip.playType ? (
-                                <div className="chip-row">
-                                  {detailClip.formation ? <span className="chip">{detailClip.formation}</span> : null}
-                                  {detailClip.playType ? <span className="chip">{detailClip.playType}</span> : null}
-                                </div>
-                              ) : null}
-                              <p className="film-overlay-comment">{detailClip.comment || "コメントなし"}</p>
-                              {canManageTeam && detailClip.coachComment ? (
-                                <p className="film-overlay-comment film-overlay-coach">🗒 {detailClip.coachComment}</p>
-                              ) : null}
+                            <div className="film-overlay-heading">
+                              <strong>{overlayClip.title}</strong>
+                              <span>{formatSecondsAsTime(overlayClip.startSeconds)} - {formatSecondsAsTime(overlayClip.endSeconds)}</span>
                             </div>
-                          ) : null}
+                            <div className="film-overlay-actions">
+                              <button
+                                className="film-overlay-button"
+                                type="button"
+                                onClick={() => {
+                                  jumpToClip(overlayClip);
+                                }}
+                              >
+                                このプレーの最初から見る
+                              </button>
+                              <button
+                                className="film-overlay-button"
+                                type="button"
+                                onClick={() => {
+                                  setDismissedOverlayClipId(overlayClip.id);
+                                }}
+                              >
+                                注釈を非表示
+                              </button>
+                            </div>
+                          </div>
+                          <div className="film-overlay-body">
+                            {formatSituationText(overlayClip) ? (
+                              <span className="film-overlay-situation">{formatSituationText(overlayClip)}</span>
+                            ) : null}
+                            {overlayClip.formation || overlayClip.playType ? (
+                              <div className="chip-row">
+                                {overlayClip.formation ? <span className="chip">{overlayClip.formation}</span> : null}
+                                {overlayClip.playType ? <span className="chip">{overlayClip.playType}</span> : null}
+                              </div>
+                            ) : null}
+                            <p className="film-overlay-comment">{overlayClip.comment || "コメントなし"}</p>
+                            {canManageTeam && overlayClip.coachComment ? (
+                              <p className="film-overlay-comment film-overlay-coach">🗒 {overlayClip.coachComment}</p>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                     </div>
