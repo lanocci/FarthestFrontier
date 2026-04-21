@@ -177,6 +177,7 @@ export function AudiovisualRoom({
   const [showClipComposer, setShowClipComposer] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
+  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
 
   function getScreenOrientationController(): ScreenOrientationController | null {
@@ -185,6 +186,18 @@ export function AudiovisualRoom({
     }
 
     return (screen.orientation as ScreenOrientationController | undefined) ?? null;
+  }
+
+  function shouldUsePseudoFullscreen() {
+    if (typeof navigator === "undefined") {
+      return false;
+    }
+
+    const userAgent = navigator.userAgent;
+    const isIPhone = /iPhone/i.test(userAgent);
+    const isSafari = /Safari/i.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(userAgent);
+
+    return isIPhone && isSafari;
   }
 
   async function tryLockLandscapeOrientation() {
@@ -507,6 +520,7 @@ export function AudiovisualRoom({
     setShowClipComposer(false);
     setDetailPanelOpen(false);
     setIsPlaybackFullscreen(false);
+    setIsPseudoFullscreen(false);
     setClipForm((current) => ({
       ...current,
       videoId: selectedVideo?.id ?? "",
@@ -624,6 +638,9 @@ export function AudiovisualRoom({
     const handleFullscreenChange = () => {
       const isCurrentShellFullscreen = document.fullscreenElement === playbackShellRef.current;
       setIsPlaybackFullscreen(isCurrentShellFullscreen);
+      if (isCurrentShellFullscreen) {
+        setIsPseudoFullscreen(false);
+      }
       if (!isCurrentShellFullscreen) {
         unlockOrientation();
       }
@@ -636,35 +653,85 @@ export function AudiovisualRoom({
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") {
+      return;
+    }
+
+    if (!isPseudoFullscreen) {
+      return;
+    }
+
+    const scrollY = window.scrollY;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+    const previousBodyInset = document.body.style.inset;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    window.scrollTo({ top: 0, behavior: "auto" });
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.inset = "0";
+    document.body.style.width = "100%";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      document.body.style.inset = previousBodyInset;
+      window.scrollTo({ top: scrollY, behavior: "auto" });
+    };
+  }, [isPseudoFullscreen]);
+
   async function enterPlaybackFullscreen() {
     const shell = playbackShellRef.current;
     if (!shell || typeof document === "undefined") {
+      setIsPseudoFullscreen(true);
       setIsPlaybackFullscreen(true);
       return;
     }
 
+    if (shouldUsePseudoFullscreen()) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      setIsPseudoFullscreen(true);
+      setIsPlaybackFullscreen(true);
+      await tryLockLandscapeOrientation();
+      return;
+    }
+
     if (document.fullscreenElement === shell) {
+      setIsPseudoFullscreen(false);
       setIsPlaybackFullscreen(true);
       await tryLockLandscapeOrientation();
       return;
     }
 
     if (typeof shell.requestFullscreen !== "function") {
+      setIsPseudoFullscreen(true);
       setIsPlaybackFullscreen(true);
       return;
     }
 
     try {
       await shell.requestFullscreen();
+      setIsPseudoFullscreen(false);
       setIsPlaybackFullscreen(true);
       await tryLockLandscapeOrientation();
     } catch {
+      setIsPseudoFullscreen(true);
       setIsPlaybackFullscreen(true);
     }
   }
 
   async function exitPlaybackFullscreen() {
     tryUnlockOrientation();
+    setIsPseudoFullscreen(false);
 
     if (typeof document === "undefined") {
       setIsPlaybackFullscreen(false);
@@ -726,7 +793,10 @@ export function AudiovisualRoom({
   }
 
   const playbackExperience = selectedVideo && selectedVideoYoutubeId ? (
-    <div ref={playbackShellRef} className={`film-focus-shell ${isPlaybackFullscreen ? "is-fullscreen" : ""}`}>
+    <div
+      ref={playbackShellRef}
+      className={`film-focus-shell ${isPlaybackFullscreen ? "is-fullscreen" : ""} ${isPseudoFullscreen ? "is-pseudo-fullscreen" : ""}`}
+    >
       {isPlaybackFullscreen ? (
         <div className="film-focus-topbar">
           <button
