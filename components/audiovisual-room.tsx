@@ -10,7 +10,7 @@ import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, g
 import { Eye, EyeOff, FastForward, Minimize, RotateCcw, Rewind } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 type AudiovisualRoomProps = {
   canManageTeam: boolean;
@@ -513,6 +513,31 @@ export function AudiovisualRoom({
     window.history.replaceState({}, "", buildClipUrl(videoId, clipId));
   }
 
+  const applyPendingSharedClipSelection = useCallback(() => {
+    const pendingClipId = pendingSharedClipIdRef.current;
+    if (!pendingClipId || !playerRef.current) {
+      return;
+    }
+
+    const clip = selectedVideoClips.find((candidate) => candidate.id === pendingClipId);
+    if (!clip) {
+      return;
+    }
+
+    playerRef.current.seekTo(clip.startSeconds, true);
+    setCurrentTime(clip.startSeconds);
+    setSelectedClipId(clip.id);
+    setDetailPanelOpen(true);
+    pendingSharedClipIdRef.current = null;
+
+    const targetNode = clipCardRefs.current[pendingClipId];
+    targetNode?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [selectedVideoClips]);
+
   useEffect(() => {
     setCurrentTime(0);
     setSelectedClipId(null);
@@ -553,6 +578,7 @@ export function AudiovisualRoom({
             events: {
               onReady: () => {
                 setCurrentTime(0);
+                applyPendingSharedClipSelection();
               },
             },
           });
@@ -572,7 +598,7 @@ export function AudiovisualRoom({
     return () => {
       cancelled = true;
     };
-  }, [playerHostId, selectedVideoYoutubeId, setTeamMessage]);
+  }, [applyPendingSharedClipSelection, playerHostId, selectedVideoYoutubeId, setTeamMessage]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -586,29 +612,8 @@ export function AudiovisualRoom({
   }, []);
 
   useEffect(() => {
-    const pendingClipId = pendingSharedClipIdRef.current;
-    if (!pendingClipId) {
-      return;
-    }
-
-    const clip = selectedVideoClips.find((candidate) => candidate.id === pendingClipId);
-    if (!clip || !playerRef.current) {
-      return;
-    }
-
-    playerRef.current.seekTo(clip.startSeconds, true);
-    setCurrentTime(clip.startSeconds);
-    setSelectedClipId(clip.id);
-    setDetailPanelOpen(true);
-    pendingSharedClipIdRef.current = null;
-
-    const targetNode = clipCardRefs.current[pendingClipId];
-    targetNode?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
-    });
-  }, [selectedVideoClips]);
+    applyPendingSharedClipSelection();
+  }, [applyPendingSharedClipSelection]);
 
   useEffect(() => {
     return () => {
