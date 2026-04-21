@@ -7,6 +7,7 @@ import { deleteAllFilmClips, deleteFilmClip, insertFilmClip, insertFilmRoomVideo
 import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
+import { Eye, EyeOff, FastForward, Minimize, RotateCcw, Rewind } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -428,6 +429,19 @@ export function AudiovisualRoom({
     selectedVideoClips.find((clip) => clip.id === editingClipId) ??
     summaryClip ??
     null;
+  const playbackInsertionIndex = selectedVideoClips.findIndex((clip) => currentTime < clip.startSeconds);
+  const previousSummaryClip =
+    playbackClip
+      ? selectedVideoClips[selectedVideoClips.findIndex((clip) => clip.id === playbackClip.id) - 1] ?? null
+      : playbackInsertionIndex === -1
+        ? selectedVideoClips[selectedVideoClips.length - 1] ?? null
+        : selectedVideoClips[playbackInsertionIndex - 1] ?? null;
+  const nextSummaryClip =
+    playbackClip
+      ? selectedVideoClips[selectedVideoClips.findIndex((clip) => clip.id === playbackClip.id) + 1] ?? null
+      : playbackInsertionIndex === -1
+        ? null
+        : selectedVideoClips[playbackInsertionIndex] ?? null;
 
   function buildClipUrl(videoId: string, clipId?: string | null): string {
     const params = new URLSearchParams();
@@ -656,13 +670,16 @@ export function AudiovisualRoom({
       {isPlaybackFullscreen ? (
         <div className="film-focus-topbar">
           <button
-            className="button secondary button-compact"
+            className="film-fullscreen-close"
             type="button"
+            aria-label="全画面を閉じる"
+            title="全画面を閉じる"
             onClick={() => {
               void exitPlaybackFullscreen();
             }}
           >
-            全画面を閉じる
+            <Minimize aria-hidden="true" />
+            <span className="sr-only">全画面を閉じる</span>
           </button>
         </div>
       ) : null}
@@ -687,19 +704,59 @@ export function AudiovisualRoom({
               </div>
               <div className="film-summary-actions">
                 <button
-                  className="button secondary button-compact"
+                  className="film-summary-icon-button"
                   type="button"
-                  onClick={() => jumpToClip(summaryClip)}
+                  aria-label="前のプレーに戻る"
+                  title="前のプレーに戻る"
+                  onClick={() => {
+                    if (previousSummaryClip) {
+                      jumpToClip(previousSummaryClip);
+                    }
+                  }}
+                  disabled={!previousSummaryClip}
                 >
-                  このプレーの最初から見る
+                  <Rewind aria-hidden="true" />
+                  <span className="sr-only">前のプレーに戻る</span>
                 </button>
+                {summaryClip ? (
+                  <button
+                    className="film-summary-icon-button"
+                    type="button"
+                    aria-label="このプレーの最初から見る"
+                    title="このプレーの最初から見る"
+                    onClick={() => jumpToClip(summaryClip)}
+                  >
+                    <RotateCcw aria-hidden="true" />
+                    <span className="sr-only">このプレーの最初から見る</span>
+                  </button>
+                ) : null}
                 <button
-                  className="button secondary button-compact"
+                  className="film-summary-icon-button"
                   type="button"
-                  onClick={() => setDetailPanelOpen((current) => !current)}
+                  aria-label="次のプレーを見る"
+                  title="次のプレーを見る"
+                  onClick={() => {
+                    if (nextSummaryClip) {
+                      jumpToClip(nextSummaryClip);
+                    }
+                  }}
+                  disabled={!nextSummaryClip}
                 >
-                  {detailPanelOpen ? "詳細を閉じる" : "詳細を見る"}
+                  <FastForward aria-hidden="true" />
+                  <span className="sr-only">次のプレーを見る</span>
                 </button>
+                {summaryClip ? (
+                  <button
+                    className="film-summary-icon-button"
+                    type="button"
+                    aria-label={detailPanelOpen ? "詳細を閉じる" : "詳細を見る"}
+                    title={detailPanelOpen ? "詳細を閉じる" : "詳細を見る"}
+                    onClick={() => setDetailPanelOpen((current) => !current)}
+                  >
+                    {detailPanelOpen ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                    <span className="sr-only">{detailPanelOpen ? "詳細を閉じる" : "詳細を見る"}</span>
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : (
@@ -707,6 +764,38 @@ export function AudiovisualRoom({
               <div className="film-summary-copy">
                 <strong>この位置には注釈がありません</strong>
                 <span>注釈のあるプレー位置へ移動すると、ここに要約と詳細が表示されます。</span>
+              </div>
+              <div className="film-summary-actions">
+                <button
+                  className="film-summary-icon-button"
+                  type="button"
+                  aria-label="前のプレーに戻る"
+                  title="前のプレーに戻る"
+                  onClick={() => {
+                    if (previousSummaryClip) {
+                      jumpToClip(previousSummaryClip);
+                    }
+                  }}
+                  disabled={!previousSummaryClip}
+                >
+                  <Rewind aria-hidden="true" />
+                  <span className="sr-only">前のプレーに戻る</span>
+                </button>
+                <button
+                  className="film-summary-icon-button"
+                  type="button"
+                  aria-label="次のプレーを見る"
+                  title="次のプレーを見る"
+                  onClick={() => {
+                    if (nextSummaryClip) {
+                      jumpToClip(nextSummaryClip);
+                    }
+                  }}
+                  disabled={!nextSummaryClip}
+                >
+                  <FastForward aria-hidden="true" />
+                  <span className="sr-only">次のプレーを見る</span>
+                </button>
               </div>
             </div>
           )}
