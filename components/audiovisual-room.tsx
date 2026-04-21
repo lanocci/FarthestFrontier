@@ -663,6 +663,8 @@ export function AudiovisualRoom({
     }
 
     const scrollY = window.scrollY;
+    document.documentElement.classList.add("video-pseudo-fullscreen");
+    document.body.classList.add("video-pseudo-fullscreen");
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyPosition = document.body.style.position;
     const previousBodyTop = document.body.style.top;
@@ -679,6 +681,8 @@ export function AudiovisualRoom({
     document.body.style.width = "100%";
 
     return () => {
+      document.documentElement.classList.remove("video-pseudo-fullscreen");
+      document.body.classList.remove("video-pseudo-fullscreen");
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.position = previousBodyPosition;

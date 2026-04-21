@@ -32,6 +32,44 @@ body {
   font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
 }
 
+html.video-pseudo-fullscreen,
+body.video-pseudo-fullscreen {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.video-pseudo-fullscreen {
+  background: #070d18;
+}
+
+body.video-pseudo-fullscreen .global-header,
+body.video-pseudo-fullscreen .film-room-layout > .panel:first-child {
+  display: none;
+}
+
+body.video-pseudo-fullscreen .page-shell,
+body.video-pseudo-fullscreen .film-room-layout,
+body.video-pseudo-fullscreen .film-room-layout > .panel:last-child,
+body.video-pseudo-fullscreen .film-room-layout > .panel:last-child > .panel-body,
+body.video-pseudo-fullscreen .film-player-panel {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+body.video-pseudo-fullscreen .film-room-layout > .panel:last-child {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
 a {
   color: inherit;
   text-decoration: none;
