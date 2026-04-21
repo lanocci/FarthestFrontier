@@ -59,6 +59,11 @@ declare global {
   }
 }
 
+type ScreenOrientationController = {
+  lock?: (orientation: "landscape") => Promise<void>;
+  unlock?: () => void;
+};
+
 const initialVideoForm: VideoForm = {
   title: "",
   description: "",
@@ -173,6 +178,40 @@ export function AudiovisualRoom({
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
+
+  function getScreenOrientationController(): ScreenOrientationController | null {
+    if (typeof window === "undefined" || typeof screen === "undefined") {
+      return null;
+    }
+
+    return (screen.orientation as ScreenOrientationController | undefined) ?? null;
+  }
+
+  async function tryLockLandscapeOrientation() {
+    const orientation = getScreenOrientationController();
+    if (!orientation?.lock) {
+      return;
+    }
+
+    try {
+      await orientation.lock("landscape");
+    } catch {
+      // Some browsers allow fullscreen but reject orientation lock. Keep fullscreen anyway.
+    }
+  }
+
+  function tryUnlockOrientation() {
+    const orientation = getScreenOrientationController();
+    if (!orientation?.unlock) {
+      return;
+    }
+
+    try {
+      orientation.unlock();
+    } catch {
+      // Ignore unlock failures and leave browser defaults intact.
+    }
+  }
 
   function formatClipPlayers(playerLinks: VideoClipPlayerLink[]): string[] {
     return playerLinks
@@ -569,8 +608,25 @@ export function AudiovisualRoom({
       return;
     }
 
+    const unlockOrientation = () => {
+      const orientation = getScreenOrientationController();
+      if (!orientation?.unlock) {
+        return;
+      }
+
+      try {
+        orientation.unlock();
+      } catch {
+        // Ignore unlock failures and leave browser defaults intact.
+      }
+    };
+
     const handleFullscreenChange = () => {
-      setIsPlaybackFullscreen(document.fullscreenElement === playbackShellRef.current);
+      const isCurrentShellFullscreen = document.fullscreenElement === playbackShellRef.current;
+      setIsPlaybackFullscreen(isCurrentShellFullscreen);
+      if (!isCurrentShellFullscreen) {
+        unlockOrientation();
+      }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -589,6 +645,7 @@ export function AudiovisualRoom({
 
     if (document.fullscreenElement === shell) {
       setIsPlaybackFullscreen(true);
+      await tryLockLandscapeOrientation();
       return;
     }
 
@@ -600,12 +657,15 @@ export function AudiovisualRoom({
     try {
       await shell.requestFullscreen();
       setIsPlaybackFullscreen(true);
+      await tryLockLandscapeOrientation();
     } catch {
       setIsPlaybackFullscreen(true);
     }
   }
 
   async function exitPlaybackFullscreen() {
+    tryUnlockOrientation();
+
     if (typeof document === "undefined") {
       setIsPlaybackFullscreen(false);
       return;
