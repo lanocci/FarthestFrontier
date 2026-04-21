@@ -776,6 +776,14 @@ select:disabled {
   gap: 16px;
 }
 
+.film-player-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .film-admin-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -805,6 +813,123 @@ select:disabled {
 .film-playback-layout {
   display: grid;
   gap: 12px;
+}
+
+.film-focus-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.film-focus-topbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.film-focus-shell.is-fullscreen,
+.film-focus-shell:fullscreen,
+.film-focus-shell:-webkit-full-screen {
+  --film-fullscreen-side-width: clamp(180px, 22vw, 240px);
+  --film-fullscreen-gap: 6px;
+  --film-fullscreen-pad: max(6px, env(safe-area-inset-top));
+  --film-fullscreen-pad-x: max(6px, env(safe-area-inset-right));
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  min-width: 100vw;
+  min-width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: none;
+  z-index: 60;
+  display: grid;
+  align-content: stretch;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  background: #070d18;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.film-focus-shell.is-fullscreen .film-focus-topbar,
+.film-focus-shell:fullscreen .film-focus-topbar,
+.film-focus-shell:-webkit-full-screen .film-focus-topbar {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 61;
+}
+
+.film-focus-shell.is-fullscreen .film-playback-layout,
+.film-focus-shell:fullscreen .film-playback-layout,
+.film-focus-shell:-webkit-full-screen .film-playback-layout {
+  grid-template-columns: minmax(0, 1fr) var(--film-fullscreen-side-width);
+  align-items: center;
+  gap: var(--film-fullscreen-gap);
+  min-height: 100dvh;
+  padding:
+    var(--film-fullscreen-pad)
+    var(--film-fullscreen-pad-x)
+    max(6px, env(safe-area-inset-bottom))
+    max(6px, env(safe-area-inset-left));
+  box-sizing: border-box;
+}
+
+.film-focus-shell.is-fullscreen .film-playback-main,
+.film-focus-shell:fullscreen .film-playback-main,
+.film-focus-shell:-webkit-full-screen .film-playback-main {
+  display: flex;
+  align-items: center;
+}
+
+.film-focus-shell.is-fullscreen .film-player-frame,
+.film-focus-shell:fullscreen .film-player-frame,
+.film-focus-shell:-webkit-full-screen .film-player-frame {
+  width: min(
+    100%,
+    calc((100dvh - (var(--film-fullscreen-pad) * 2)) * 16 / 9),
+    calc(100dvw - (var(--film-fullscreen-pad-x) * 2) - var(--film-fullscreen-side-width) - var(--film-fullscreen-gap))
+  );
+  max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
+  margin: 0 auto;
+  border: 0;
+  border-radius: 0;
+}
+
+.film-focus-shell.is-fullscreen .film-playback-side,
+.film-focus-shell:fullscreen .film-playback-side,
+.film-focus-shell:-webkit-full-screen .film-playback-side {
+  max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
+  overflow-y: auto;
+}
+
+.film-focus-shell.is-fullscreen .film-summary-bar,
+.film-focus-shell.is-fullscreen .film-active-card,
+.film-focus-shell:fullscreen .film-summary-bar,
+.film-focus-shell:fullscreen .film-active-card,
+.film-focus-shell:-webkit-full-screen .film-summary-bar,
+.film-focus-shell:-webkit-full-screen .film-active-card {
+  border-radius: 10px;
+}
+
+.film-focus-shell.is-fullscreen .film-summary-bar,
+.film-focus-shell:fullscreen .film-summary-bar,
+.film-focus-shell:-webkit-full-screen .film-summary-bar {
+  padding: 6px 8px;
+}
+
+.film-focus-shell.is-fullscreen .film-inline-editor-wrap,
+.film-focus-shell:fullscreen .film-inline-editor-wrap,
+.film-focus-shell:-webkit-full-screen .film-inline-editor-wrap {
+  margin: 0;
+  padding: 0 6px 6px;
 }
 
 .film-playback-main,
@@ -910,6 +1035,47 @@ select:disabled {
 }
 
 @media (orientation: landscape) and (max-width: 980px) and (max-height: 640px) {
+  .film-focus-shell.is-fullscreen,
+  .film-focus-shell:fullscreen,
+  .film-focus-shell:-webkit-full-screen {
+    --film-fullscreen-side-width: clamp(150px, 20vw, 190px);
+    --film-fullscreen-gap: 4px;
+    --film-fullscreen-pad: max(4px, env(safe-area-inset-top));
+    --film-fullscreen-pad-x: max(4px, env(safe-area-inset-right));
+    padding: 0;
+    gap: 0;
+  }
+
+  .film-focus-shell.is-fullscreen .film-playback-layout,
+  .film-focus-shell:fullscreen .film-playback-layout,
+  .film-focus-shell:-webkit-full-screen .film-playback-layout {
+    grid-template-columns: minmax(0, 1fr) var(--film-fullscreen-side-width);
+    min-height: 100dvh;
+    gap: var(--film-fullscreen-gap);
+    padding:
+      var(--film-fullscreen-pad)
+      var(--film-fullscreen-pad-x)
+      max(4px, env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
+  }
+
+  .film-focus-shell.is-fullscreen .film-player-frame,
+  .film-focus-shell:fullscreen .film-player-frame,
+  .film-focus-shell:-webkit-full-screen .film-player-frame {
+    width: min(
+      100%,
+      calc((100dvh - (var(--film-fullscreen-pad) * 2)) * 16 / 9),
+      calc(100dvw - (var(--film-fullscreen-pad-x) * 2) - var(--film-fullscreen-side-width) - var(--film-fullscreen-gap))
+    );
+    max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
+  }
+
+  .film-focus-shell.is-fullscreen .film-playback-side,
+  .film-focus-shell:fullscreen .film-playback-side,
+  .film-focus-shell:-webkit-full-screen .film-playback-side {
+    max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
+  }
+
   .film-playback-layout {
     grid-template-columns: minmax(0, 1.95fr) minmax(180px, 0.58fr);
     align-items: start;
@@ -1037,6 +1203,11 @@ select:disabled {
 
   .film-title-stack {
     gap: 2px;
+  }
+
+  .film-player-header-controls {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
