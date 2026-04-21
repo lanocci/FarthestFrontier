@@ -973,6 +973,8 @@ select:disabled {
   gap: 0;
   min-height: 100vh;
   min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   padding: 0;
 }
 
@@ -984,6 +986,7 @@ select:disabled {
 }
 
 .film-focus-shell.is-pseudo-fullscreen .film-playback-main {
+  min-height: 0;
   align-items: stretch;
 }
 
@@ -1020,9 +1023,12 @@ select:disabled {
 }
 
 .film-focus-shell.is-pseudo-fullscreen .film-playback-side {
+  min-height: 0;
   max-height: 100vh;
   max-height: 100dvh;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 48px 0 0;
 }
 
@@ -1088,9 +1094,7 @@ select:disabled {
 }
 
 .film-summary-bar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid rgba(23, 50, 77, 0.12);
@@ -1128,8 +1132,8 @@ select:disabled {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  flex-shrink: 0;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .film-summary-icon-button {
@@ -1173,10 +1177,6 @@ select:disabled {
 }
 
 @media (max-width: 720px) {
-  .film-summary-bar {
-    flex-direction: column;
-  }
-
   .film-summary-actions {
     width: 100%;
     justify-content: flex-start;
