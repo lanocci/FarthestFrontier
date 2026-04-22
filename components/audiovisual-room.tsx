@@ -209,6 +209,9 @@ export function AudiovisualRoom({
   const [clipWhiteboardUrls, setClipWhiteboardUrls] = useState<Record<string, string>>({});
   const [whiteboardMode, setWhiteboardMode] = useState<ClipWhiteboardBaseMode>("blank");
   const [whiteboardTitle, setWhiteboardTitle] = useState("");
+  const [uploadedWhiteboardFile, setUploadedWhiteboardFile] = useState<File | null>(null);
+  const [uploadedWhiteboardPreviewUrl, setUploadedWhiteboardPreviewUrl] = useState<string | null>(null);
+  const [uploadedWhiteboardInputKey, setUploadedWhiteboardInputKey] = useState(0);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
@@ -723,7 +726,23 @@ export function AudiovisualRoom({
     const nextMode = activePlaybookAsset && currentPlaybookUrl ? "playbook" : "blank";
     setWhiteboardMode(nextMode);
     setWhiteboardTitle("");
+    setUploadedWhiteboardFile(null);
+    setUploadedWhiteboardInputKey((current) => current + 1);
   }, [activeClip?.id, activePlaybookAsset, currentPlaybookUrl]);
+
+  useEffect(() => {
+    if (!uploadedWhiteboardFile) {
+      setUploadedWhiteboardPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(uploadedWhiteboardFile);
+    setUploadedWhiteboardPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [uploadedWhiteboardFile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1278,6 +1297,13 @@ export function AudiovisualRoom({
                     >
                       白紙に書く
                     </button>
+                    <button
+                      className={`button secondary button-compact ${whiteboardMode === "image" ? "is-selected" : ""}`}
+                      type="button"
+                      onClick={() => setWhiteboardMode("image")}
+                    >
+                      画像に書く
+                    </button>
                   </div>
 
                   <label className="field-stack">
@@ -1291,11 +1317,30 @@ export function AudiovisualRoom({
                     />
                   </label>
 
+                  {whiteboardMode === "image" ? (
+                    <label className="field-stack">
+                      <span className="field-label">背景画像</span>
+                      <input
+                        key={uploadedWhiteboardInputKey}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={(event) => setUploadedWhiteboardFile(event.target.files?.[0] ?? null)}
+                        disabled={syncing}
+                      />
+                    </label>
+                  ) : null}
+
                   <PlaybookWhiteboard
-                    key={`${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}`}
+                    key={`${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}-${uploadedWhiteboardPreviewUrl ?? "none"}`}
                     ref={whiteboardRef}
-                    boardId={`${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}`}
-                    baseImageUrl={whiteboardMode === "playbook" ? currentPlaybookUrl || null : null}
+                    boardId={`${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}:${uploadedWhiteboardFile?.name ?? "none"}`}
+                    baseImageUrl={
+                      whiteboardMode === "playbook"
+                        ? currentPlaybookUrl || null
+                        : whiteboardMode === "image"
+                          ? uploadedWhiteboardPreviewUrl
+                          : null
+                    }
                     title={whiteboardTargetClip.title}
                   />
 
@@ -1304,7 +1349,11 @@ export function AudiovisualRoom({
                       className="button"
                       type="button"
                       onClick={() => void handleSaveClipWhiteboard()}
-                      disabled={syncing || (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl))}
+                      disabled={
+                        syncing ||
+                        (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl)) ||
+                        (whiteboardMode === "image" && !uploadedWhiteboardPreviewUrl)
+                      }
                     >
                       <Save aria-hidden="true" />
                       このボードを保存
@@ -1321,7 +1370,11 @@ export function AudiovisualRoom({
                         <div>
                           <strong>{whiteboard.title}</strong>
                           <div className="subtle">
-                            {whiteboard.baseMode === "playbook" ? "プレーブック背景" : "白紙"}
+                            {whiteboard.baseMode === "playbook"
+                              ? "プレーブック背景"
+                              : whiteboard.baseMode === "image"
+                                ? "アップロード画像"
+                                : "白紙"}
                           </div>
                         </div>
                         {canManageTeam ? (
@@ -1518,6 +1571,11 @@ export function AudiovisualRoom({
       return;
     }
 
+    if (whiteboardMode === "image" && !uploadedWhiteboardPreviewUrl) {
+      setTeamMessage("背景に使う画像を選択してください。");
+      return;
+    }
+
     const exported = await whiteboardRef.current.exportToPng();
     if (!exported) {
       setTeamMessage("ホワイトボード画像の書き出しに失敗しました。");
@@ -1568,6 +1626,8 @@ export function AudiovisualRoom({
 
       whiteboardRef.current.clear();
       setWhiteboardTitle("");
+      setUploadedWhiteboardFile(null);
+      setUploadedWhiteboardInputKey((current) => current + 1);
       setTeamMessage(`解説ボード「${nextTitle}」を保存しました。`);
     } catch (error) {
       setTeamMessage(error instanceof Error ? error.message : "解説ボードの保存に失敗しました。");

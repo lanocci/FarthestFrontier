@@ -2,7 +2,7 @@ create table if not exists public.clip_whiteboards (
   id uuid primary key default gen_random_uuid(),
   clip_id uuid not null references public.film_clips(id) on delete cascade,
   title text not null,
-  base_mode text not null check (base_mode in ('blank', 'playbook')),
+  base_mode text not null check (base_mode in ('blank', 'playbook', 'image')),
   base_playbook_asset_id uuid references public.playbook_assets(id) on delete set null,
   image_path text not null,
   sort_order integer not null default 1,

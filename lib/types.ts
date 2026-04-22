@@ -83,7 +83,7 @@ export type VideoClipPlayerLink = {
   positionId?: string;
 };
 
-export type ClipWhiteboardBaseMode = "blank" | "playbook";
+export type ClipWhiteboardBaseMode = "blank" | "playbook" | "image";
 
 export type ClipWhiteboard = {
   id: string;

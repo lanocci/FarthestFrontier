@@ -68,6 +68,31 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
+function drawContainedImage(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  canvasWidth: number,
+  canvasHeight: number,
+) {
+  const imageAspect = image.naturalWidth / image.naturalHeight;
+  const canvasAspect = canvasWidth / canvasHeight;
+
+  let drawWidth = canvasWidth;
+  let drawHeight = canvasHeight;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (imageAspect > canvasAspect) {
+    drawHeight = canvasWidth / imageAspect;
+    offsetY = (canvasHeight - drawHeight) / 2;
+  } else {
+    drawWidth = canvasHeight * imageAspect;
+    offsetX = (canvasWidth - drawWidth) / 2;
+  }
+
+  context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+}
+
 export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookWhiteboardProps>(function PlaybookWhiteboard(
   { boardId, baseImageUrl, title },
   ref,
@@ -114,8 +139,11 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     },
     async exportToPng() {
       const bounds = surfaceRef.current?.getBoundingClientRect();
-      const width = Math.max(1200, Math.round(bounds?.width ?? 1280));
-      const height = Math.max(675, Math.round(bounds?.height ?? 720));
+      const baseWidth = Math.max(1, Math.round(bounds?.width ?? 1280));
+      const baseHeight = Math.max(1, Math.round(bounds?.height ?? 720));
+      const aspectRatio = baseWidth / baseHeight;
+      const width = Math.max(1200, baseWidth);
+      const height = Math.max(1, Math.round(width / aspectRatio));
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -130,7 +158,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
 
       if (baseImageUrl) {
         const image = await loadImage(baseImageUrl);
-        context.drawImage(image, 0, 0, width, height);
+        drawContainedImage(context, image, width, height);
       }
 
       for (const stroke of strokes) {
