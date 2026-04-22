@@ -1412,6 +1412,146 @@ select:disabled {
   gap: 6px;
 }
 
+.film-playbook-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.94);
+}
+
+.film-playbook-card-standalone {
+  margin-top: 12px;
+}
+
+.film-playbook-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.film-playbook-head strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.film-playbook-image,
+.film-playbook-library-image {
+  width: 100%;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.film-playbook-library {
+  margin-top: 16px;
+}
+
+.film-playbook-library-card {
+  display: grid;
+  gap: 12px;
+}
+
+.film-whiteboard-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.film-whiteboard-gallery {
+  display: grid;
+  gap: 12px;
+}
+
+.film-whiteboard-card {
+  display: grid;
+  gap: 12px;
+}
+
+.film-playbook-library-placeholder {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 180px;
+  border: 1px dashed rgba(23, 50, 77, 0.18);
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.playbook-board {
+  display: grid;
+  gap: 10px;
+}
+
+.playbook-board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.playbook-board-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.playbook-swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid rgba(23, 50, 77, 0.18);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.playbook-swatch.is-selected,
+.playbook-board .button.is-selected {
+  box-shadow: 0 0 0 3px rgba(232, 96, 45, 0.18);
+  border-color: rgba(232, 96, 45, 0.5);
+}
+
+.playbook-board-surface {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.playbook-board-surface.is-erasing {
+  cursor: cell;
+}
+
+.playbook-board-blank {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 245, 238, 0.98)),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 31px,
+      rgba(23, 50, 77, 0.06) 31px,
+      rgba(23, 50, 77, 0.06) 32px
+    );
+}
+
+.playbook-board-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .film-meta-label {
   color: var(--muted);
   font-size: 0.74rem;

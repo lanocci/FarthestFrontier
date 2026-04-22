@@ -83,6 +83,18 @@ export type VideoClipPlayerLink = {
   positionId?: string;
 };
 
+export type ClipWhiteboardBaseMode = "blank" | "playbook";
+
+export type ClipWhiteboard = {
+  id: string;
+  title: string;
+  baseMode: ClipWhiteboardBaseMode;
+  basePlaybookAssetId?: string;
+  imagePath: string;
+  updatedAt: string;
+  imageUrl?: string;
+};
+
 export type VideoClip = {
   id: string;
   title: string;
@@ -96,6 +108,21 @@ export type VideoClip = {
   comment: string;
   coachComment?: string;
   playerLinks: VideoClipPlayerLink[];
+  whiteboards: ClipWhiteboard[];
+};
+
+export type PlaybookSide = "offense" | "defense";
+
+export type PlaybookAsset = {
+  id: string;
+  title: string;
+  side: PlaybookSide;
+  formation: string;
+  playType: string;
+  imagePath: string;
+  audience: MaterialAudience;
+  updatedAt: string;
+  imageUrl?: string;
 };
 
 export type FilmRoomVideo = {

@@ -28,6 +28,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
     goalTemplates, setGoalTemplates,
     penaltyTypeMasters, setPenaltyTypeMasters,
     playTypeMasters, setPlayTypeMasters,
+    playbookAssets, setPlaybookAssets,
     positionMasters, setPositionMasters,
     seasons, setSeasons,
     seasonGoals, setSeasonGoals,
@@ -118,9 +119,11 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           formationMasters={formationMasters}
           penaltyTypeMasters={penaltyTypeMasters}
           players={players}
+          playbookAssets={playbookAssets}
           playTypeMasters={playTypeMasters}
           positionMasters={positionMasters}
           setFilmRoomVideos={setFilmRoomVideos}
+          setPlaybookAssets={setPlaybookAssets}
           setTeamMessage={setTeamMessage}
           supabase={supabase}
           syncing={syncing}

@@ -2,12 +2,13 @@
 
 import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
+import { PlaybookWhiteboard, type PlaybookWhiteboardHandle } from "@/components/video-room/playbook-whiteboard";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
-import { deleteAllFilmClips, deleteFilmClip, insertFilmClip, insertFilmRoomVideo, updateFilmClip } from "@/lib/data-store";
-import { FilmRoomVideo, Player, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
+import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
+import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
-import { Eye, EyeOff, FastForward, Minimize, RotateCcw, Rewind } from "lucide-react";
+import { Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -19,9 +20,11 @@ type AudiovisualRoomProps = {
   formationMasters: VideoTagMaster[];
   penaltyTypeMasters: VideoTagMaster[];
   players: Player[];
+  playbookAssets: PlaybookAsset[];
   playTypeMasters: VideoTagMaster[];
   positionMasters: PositionMaster[];
   setFilmRoomVideos: Dispatch<SetStateAction<FilmRoomVideo[]>>;
+  setPlaybookAssets: Dispatch<SetStateAction<PlaybookAsset[]>>;
   setTeamMessage: Dispatch<SetStateAction<string | null>>;
   supabase: SupabaseClient | null;
   syncing: boolean;
@@ -29,6 +32,14 @@ type AudiovisualRoomProps = {
   teamMessage: string | null;
   usingRemoteData: boolean;
   onResetLocalMode: () => void;
+};
+
+type PlaybookForm = {
+  title: string;
+  side: PlaybookSide;
+  formation: string;
+  playType: string;
+  audience: MaterialAudience;
 };
 
 type YouTubePlayer = {
@@ -93,6 +104,17 @@ const initialImportForm: ImportForm = {
   rawText: "",
 };
 
+const initialPlaybookForm: PlaybookForm = {
+  title: "",
+  side: "offense",
+  formation: "",
+  playType: "",
+  audience: "coaches",
+};
+
+const PLAYBOOK_BUCKET = "playbooks";
+const CLIP_WHITEBOARD_BUCKET = "clip-whiteboards";
+
 let youtubeApiPromise: Promise<YouTubeNamespace> | null = null;
 
 function loadYouTubeApi(): Promise<YouTubeNamespace> {
@@ -138,9 +160,11 @@ export function AudiovisualRoom({
   formationMasters,
   penaltyTypeMasters,
   players,
+  playbookAssets,
   playTypeMasters,
   positionMasters,
   setFilmRoomVideos,
+  setPlaybookAssets,
   setTeamMessage,
   supabase,
   syncing,
@@ -153,7 +177,10 @@ export function AudiovisualRoom({
   const formationListId = useId().replace(/:/g, "");
   const penaltyTypeListId = useId().replace(/:/g, "");
   const playTypeListId = useId().replace(/:/g, "");
+  const playbookFormationListId = useId().replace(/:/g, "");
+  const playbookPlayTypeListId = useId().replace(/:/g, "");
   const playerRef = useRef<YouTubePlayer | null>(null);
+  const whiteboardRef = useRef<PlaybookWhiteboardHandle | null>(null);
   const playbackShellRef = useRef<HTMLDivElement | null>(null);
   const clipCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingSharedClipIdRef = useRef<string | null>(null);
@@ -175,6 +202,13 @@ export function AudiovisualRoom({
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const [showVideoComposer, setShowVideoComposer] = useState(false);
   const [showClipComposer, setShowClipComposer] = useState(false);
+  const [playbookForm, setPlaybookForm] = useState<PlaybookForm>(initialPlaybookForm);
+  const [playbookFile, setPlaybookFile] = useState<File | null>(null);
+  const [playbookInputKey, setPlaybookInputKey] = useState(0);
+  const [playbookUrls, setPlaybookUrls] = useState<Record<string, string>>({});
+  const [clipWhiteboardUrls, setClipWhiteboardUrls] = useState<Record<string, string>>({});
+  const [whiteboardMode, setWhiteboardMode] = useState<ClipWhiteboardBaseMode>("blank");
+  const [whiteboardTitle, setWhiteboardTitle] = useState("");
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
@@ -494,6 +528,30 @@ export function AudiovisualRoom({
       : playbackInsertionIndex === -1
         ? null
         : selectedVideoClips[playbackInsertionIndex] ?? null;
+  const activePlaybookAsset = useMemo(() => {
+    const targetClip = playbackClip ?? activeClip;
+    if (!targetClip) {
+      return null;
+    }
+
+    const normalizedFormation = targetClip.formation.trim().toLowerCase();
+    const normalizedPlayType = targetClip.playType.trim().toLowerCase();
+
+    if (!normalizedFormation || !normalizedPlayType) {
+      return null;
+    }
+
+    return (
+      playbookAssets.find((asset) =>
+        asset.side === "offense" &&
+        asset.formation.trim().toLowerCase() === normalizedFormation &&
+        asset.playType.trim().toLowerCase() === normalizedPlayType,
+      ) ?? null
+    );
+  }, [activeClip, playbackClip, playbookAssets]);
+  const whiteboardTargetClip = activeClip ?? detailClip;
+  const currentPlaybookUrl = activePlaybookAsset ? playbookUrls[activePlaybookAsset.id] : "";
+  const activeClipWhiteboards = whiteboardTargetClip?.whiteboards ?? [];
 
   function buildClipUrl(videoId: string, clipId?: string | null): string {
     const params = new URLSearchParams();
@@ -614,6 +672,106 @@ export function AudiovisualRoom({
   useEffect(() => {
     applyPendingSharedClipSelection();
   }, [applyPendingSharedClipSelection]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!playbookAssets.length) {
+      setPlaybookUrls({});
+      return;
+    }
+
+    if (!usingRemoteData || !supabase) {
+      setPlaybookUrls(
+        Object.fromEntries(
+          playbookAssets
+            .filter((asset) => asset.imageUrl)
+            .map((asset) => [asset.id, asset.imageUrl as string]),
+        ),
+      );
+      return;
+    }
+
+    Promise.all(
+      playbookAssets.map(async (asset) => {
+        const { data, error } = await supabase.storage.from(PLAYBOOK_BUCKET).createSignedUrl(asset.imagePath, 60 * 60);
+        if (error || !data?.signedUrl) {
+          return [asset.id, ""] as const;
+        }
+        return [asset.id, data.signedUrl] as const;
+      }),
+    )
+      .then((entries) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPlaybookUrls(Object.fromEntries(entries.filter((entry) => entry[1])));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlaybookUrls({});
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [playbookAssets, supabase, usingRemoteData]);
+
+  useEffect(() => {
+    const nextMode = activePlaybookAsset && currentPlaybookUrl ? "playbook" : "blank";
+    setWhiteboardMode(nextMode);
+    setWhiteboardTitle("");
+  }, [activeClip?.id, activePlaybookAsset, currentPlaybookUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const allWhiteboards = filmRoomVideos.flatMap((video) => video.clips.flatMap((clip) => clip.whiteboards));
+
+    if (!allWhiteboards.length) {
+      setClipWhiteboardUrls({});
+      return;
+    }
+
+    if (!usingRemoteData || !supabase) {
+      setClipWhiteboardUrls(
+        Object.fromEntries(
+          allWhiteboards
+            .filter((whiteboard) => whiteboard.imageUrl)
+            .map((whiteboard) => [whiteboard.id, whiteboard.imageUrl as string]),
+        ),
+      );
+      return;
+    }
+
+    Promise.all(
+      allWhiteboards.map(async (whiteboard) => {
+        const { data, error } = await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).createSignedUrl(whiteboard.imagePath, 60 * 60);
+        if (error || !data?.signedUrl) {
+          return [whiteboard.id, ""] as const;
+        }
+        return [whiteboard.id, data.signedUrl] as const;
+      }),
+    )
+      .then((entries) => {
+        if (cancelled) {
+          return;
+        }
+
+        setClipWhiteboardUrls(Object.fromEntries(entries.filter((entry) => entry[1])));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setClipWhiteboardUrls({});
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filmRoomVideos, supabase, usingRemoteData]);
 
   useEffect(() => {
     return () => {
@@ -769,6 +927,10 @@ export function AudiovisualRoom({
 
   function updateImportForm<Key extends keyof ImportForm>(key: Key, value: ImportForm[Key]) {
     setImportForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updatePlaybookForm<Key extends keyof PlaybookForm>(key: Key, value: PlaybookForm[Key]) {
+    setPlaybookForm((current) => ({ ...current, [key]: value }));
   }
 
   function updateClipPlayerLink(index: number, key: keyof VideoClipPlayerLink, value: string) {
@@ -938,6 +1100,141 @@ export function AudiovisualRoom({
               </div>
             </div>
           )}
+
+          {activePlaybookAsset ? (
+            <div className="film-playbook-card film-playbook-card-standalone">
+              <div className="film-playbook-head">
+                <div>
+                  <span className="film-meta-label">自動表示プレーブック</span>
+                  <strong>{activePlaybookAsset.title}</strong>
+                </div>
+                <div className="chip-row">
+                  <span className="chip">{activePlaybookAsset.formation}</span>
+                  <span className="chip">{activePlaybookAsset.playType}</span>
+                </div>
+              </div>
+              {playbookUrls[activePlaybookAsset.id] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  className="film-playbook-image"
+                  src={playbookUrls[activePlaybookAsset.id]}
+                  alt={`${activePlaybookAsset.title} のプレーブック`}
+                />
+              ) : (
+                <p className="empty-state">プレーブック画像を読み込んでいます。</p>
+              )}
+            </div>
+          ) : null}
+
+          {whiteboardTargetClip ? (
+            <div className="film-playbook-card film-playbook-card-standalone">
+              <div className="film-playbook-head">
+                <div>
+                  <span className="film-meta-label">解説ボード</span>
+                  <strong>{whiteboardTargetClip.title} 用のメモ</strong>
+                </div>
+                <div className="chip-row">
+                  <span className="chip">{activeClipWhiteboards.length}枚保存済み</span>
+                </div>
+              </div>
+
+              {canManageTeam ? (
+                <>
+                  <div className="film-whiteboard-mode-row">
+                    <button
+                      className={`button secondary button-compact ${whiteboardMode === "playbook" ? "is-selected" : ""}`}
+                      type="button"
+                      onClick={() => setWhiteboardMode("playbook")}
+                      disabled={!activePlaybookAsset || !currentPlaybookUrl}
+                    >
+                      プレーブックに書く
+                    </button>
+                    <button
+                      className={`button secondary button-compact ${whiteboardMode === "blank" ? "is-selected" : ""}`}
+                      type="button"
+                      onClick={() => setWhiteboardMode("blank")}
+                    >
+                      白紙に書く
+                    </button>
+                  </div>
+
+                  <label className="field-stack">
+                    <span className="field-label">保存タイトル</span>
+                    <input
+                      type="text"
+                      placeholder="未入力ならプレー名から自動作成"
+                      value={whiteboardTitle}
+                      onChange={(event) => setWhiteboardTitle(event.target.value)}
+                      disabled={syncing}
+                    />
+                  </label>
+
+                  <PlaybookWhiteboard
+                    key={`${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}`}
+                    ref={whiteboardRef}
+                    boardId={`${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}`}
+                    baseImageUrl={whiteboardMode === "playbook" ? currentPlaybookUrl || null : null}
+                    title={whiteboardTargetClip.title}
+                  />
+
+                  <div className="film-inline-actions">
+                    <button
+                      className="button"
+                      type="button"
+                      onClick={() => void handleSaveClipWhiteboard()}
+                      disabled={syncing || (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl))}
+                    >
+                      <Save aria-hidden="true" />
+                      このボードを保存
+                    </button>
+                  </div>
+                </>
+              ) : null}
+
+              <div className="film-whiteboard-gallery">
+                {activeClipWhiteboards.length ? (
+                  activeClipWhiteboards.map((whiteboard) => (
+                    <article className="doc-card film-whiteboard-card" key={whiteboard.id}>
+                      <div className="doc-row">
+                        <div>
+                          <strong>{whiteboard.title}</strong>
+                          <div className="subtle">
+                            {whiteboard.baseMode === "playbook" ? "プレーブック背景" : "白紙"}
+                          </div>
+                        </div>
+                        {canManageTeam ? (
+                          <button
+                            className="button ghost"
+                            type="button"
+                            onClick={() => void handleDeleteClipWhiteboard(whiteboardTargetClip.id, whiteboard.id, whiteboard.imagePath, whiteboard.title)}
+                            disabled={syncing}
+                          >
+                            <Trash2 aria-hidden="true" />
+                            削除
+                          </button>
+                        ) : null}
+                      </div>
+                      {clipWhiteboardUrls[whiteboard.id] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          className="film-playbook-library-image"
+                          src={clipWhiteboardUrls[whiteboard.id]}
+                          alt={`${whiteboard.title} の解説ボード`}
+                        />
+                      ) : (
+                        <div className="film-playbook-library-placeholder">
+                          <ImageIcon aria-hidden="true" />
+                          <span>画像を読み込み中</span>
+                        </div>
+                      )}
+                    </article>
+                  ))
+                ) : (
+                  <p className="empty-state">まだ保存済みの解説ボードはありません。</p>
+                )}
+              </div>
+            </div>
+          ) : null}
 
           {detailClip && (detailPanelOpen || (canManageTeam && selectedVideo && editingClipId === detailClip.id)) ? (
             <div className="film-active-card film-detail-sheet">
@@ -1192,6 +1489,219 @@ export function AudiovisualRoom({
     setShowClipComposer(true);
   }
 
+  function resetPlaybookForm() {
+    setPlaybookForm(initialPlaybookForm);
+    setPlaybookFile(null);
+    setPlaybookInputKey((current) => current + 1);
+  }
+
+  function updateClipWhiteboards(clipId: string, updater: (current: VideoClip["whiteboards"]) => VideoClip["whiteboards"]) {
+    setFilmRoomVideos((current) =>
+      current.map((video) => ({
+        ...video,
+        clips: video.clips.map((clip) =>
+          clip.id === clipId
+            ? { ...clip, whiteboards: updater(clip.whiteboards) }
+            : clip,
+        ),
+      })),
+    );
+  }
+
+  async function handleSaveClipWhiteboard() {
+    if (!whiteboardTargetClip || !whiteboardRef.current || syncing) {
+      return;
+    }
+
+    if (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl)) {
+      setTeamMessage("プレーブック背景がないため、白紙モードで保存してください。");
+      return;
+    }
+
+    const exported = await whiteboardRef.current.exportToPng();
+    if (!exported) {
+      setTeamMessage("ホワイトボード画像の書き出しに失敗しました。");
+      return;
+    }
+
+    const nextTitle =
+      whiteboardTitle.trim() ||
+      `${whiteboardTargetClip.title} ${whiteboardTargetClip.whiteboards.length + 1}`;
+
+    try {
+      setSyncing(true);
+
+      if (usingRemoteData && supabase) {
+        const storagePath = `${whiteboardTargetClip.id}/${Date.now()}-${crypto.randomUUID()}.png`;
+        const { error: uploadError } = await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).upload(storagePath, exported.blob, {
+          contentType: "image/png",
+          upsert: false,
+        });
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        const saved = await insertClipWhiteboard(supabase, {
+          clipId: whiteboardTargetClip.id,
+          title: nextTitle,
+          baseMode: whiteboardMode,
+          basePlaybookAssetId: whiteboardMode === "playbook" ? activePlaybookAsset?.id : undefined,
+          imagePath: storagePath,
+          sortOrder: whiteboardTargetClip.whiteboards.length + 1,
+        });
+
+        updateClipWhiteboards(saved.clipId, (current) => [...current, saved.whiteboard]);
+      } else {
+        const saved = {
+          id: `cw-${Date.now()}`,
+          title: nextTitle,
+          baseMode: whiteboardMode,
+          basePlaybookAssetId: whiteboardMode === "playbook" ? activePlaybookAsset?.id : undefined,
+          imagePath: "",
+          imageUrl: exported.dataUrl,
+          updatedAt: new Date().toISOString().slice(0, 10),
+        };
+
+        updateClipWhiteboards(whiteboardTargetClip.id, (current) => [...current, saved]);
+      }
+
+      whiteboardRef.current.clear();
+      setWhiteboardTitle("");
+      setTeamMessage(`解説ボード「${nextTitle}」を保存しました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "解説ボードの保存に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleDeleteClipWhiteboard(clipId: string, whiteboardId: string, imagePath: string, title: string) {
+    if (syncing) {
+      return;
+    }
+
+    if (!window.confirm(`「${title}」を削除しますか？`)) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+
+      if (usingRemoteData && supabase) {
+        if (imagePath) {
+          await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).remove([imagePath]);
+        }
+        await deleteClipWhiteboard(supabase, whiteboardId);
+      }
+
+      updateClipWhiteboards(clipId, (current) => current.filter((whiteboard) => whiteboard.id !== whiteboardId));
+      setTeamMessage(`解説ボード「${title}」を削除しました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "解説ボードの削除に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleSavePlaybookAsset() {
+    const nextAsset = {
+      title: playbookForm.title.trim() || `${playbookForm.formation.trim()} / ${playbookForm.playType.trim()}`,
+      side: playbookForm.side,
+      formation: playbookForm.formation.trim(),
+      playType: playbookForm.playType.trim(),
+      audience: playbookForm.audience,
+    };
+
+    if (!canManageTeam || syncing) {
+      return;
+    }
+
+    if (!usingRemoteData || !supabase) {
+      setTeamMessage("プレーブック画像の登録は Supabase 接続時に利用できます。");
+      return;
+    }
+
+    if (!nextAsset.formation || !nextAsset.playType || !playbookFile) {
+      setTeamMessage("隊形・プレー種類・画像ファイルを入れてください。");
+      return;
+    }
+
+    const extension = playbookFile.name.includes(".")
+      ? playbookFile.name.split(".").pop()?.toLowerCase() ?? "png"
+      : "png";
+    const safeExtension = extension.replace(/[^a-z0-9]/g, "") || "png";
+    const storagePath = `${nextAsset.side}/${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
+    const existingAsset =
+      playbookAssets.find((asset) =>
+        asset.side === nextAsset.side &&
+        asset.formation.trim().toLowerCase() === nextAsset.formation.toLowerCase() &&
+        asset.playType.trim().toLowerCase() === nextAsset.playType.toLowerCase(),
+      ) ?? null;
+
+    try {
+      setSyncing(true);
+
+      const { error: uploadError } = await supabase.storage.from(PLAYBOOK_BUCKET).upload(storagePath, playbookFile, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const savedAsset = await upsertPlaybookAsset(supabase, {
+        id: existingAsset?.id,
+        ...nextAsset,
+        imagePath: storagePath,
+      });
+
+      if (existingAsset?.imagePath && existingAsset.imagePath !== storagePath) {
+        await supabase.storage.from(PLAYBOOK_BUCKET).remove([existingAsset.imagePath]);
+      }
+
+      setPlaybookAssets((current) => {
+        const remaining = current.filter((asset) => asset.id !== savedAsset.id);
+        return [...remaining, savedAsset].sort((left, right) =>
+          `${left.formation} ${left.playType}`.localeCompare(`${right.formation} ${right.playType}`, "ja"),
+        );
+      });
+      resetPlaybookForm();
+      setTeamMessage(`プレーブック「${savedAsset.title}」を保存しました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "プレーブック画像の保存に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleDeletePlaybookAsset(asset: PlaybookAsset) {
+    if (!canManageTeam || syncing) {
+      return;
+    }
+
+    if (!window.confirm(`「${asset.title}」を削除しますか？`)) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+
+      if (usingRemoteData && supabase) {
+        await supabase.storage.from(PLAYBOOK_BUCKET).remove([asset.imagePath]);
+        await deletePlaybookAsset(supabase, asset.id);
+      }
+
+      setPlaybookAssets((current) => current.filter((currentAsset) => currentAsset.id !== asset.id));
+      setTeamMessage(`プレーブック「${asset.title}」を削除しました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "プレーブック画像の削除に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function handleAddVideo() {
     const nextVideo = {
       title: videoForm.title.trim(),
@@ -1267,16 +1777,18 @@ export function AudiovisualRoom({
       return;
     }
 
+    const currentVideo = filmRoomVideos.find((video) => video.id === targetVideoId);
     const nextClip = {
       ...nextClipBase,
       startSeconds,
       endSeconds,
+      whiteboards: editingClipId
+        ? currentVideo?.clips.find((clip) => clip.id === editingClipId)?.whiteboards ?? []
+        : [],
     };
 
     try {
       setSyncing(true);
-
-      const currentVideo = filmRoomVideos.find((video) => video.id === targetVideoId);
       const saved =
         editingClipId
           ? usingRemoteData && supabase
@@ -1440,6 +1952,7 @@ export function AudiovisualRoom({
         comment: string;
         coachComment: string;
         playerLinks: VideoClipPlayerLink[];
+        whiteboards: VideoClip["whiteboards"];
       }> = [];
 
       for (let index = 0; index < parsedRows.length; index++) {
@@ -1483,6 +1996,7 @@ export function AudiovisualRoom({
           comment: getImportCell(row, ["コメント", "comment", "memo", "メモ"]),
           coachComment: getImportCell(row, ["コーチコメント", "コーチ間コメント", "coachcomment", "coach_comment"]),
           playerLinks,
+          whiteboards: [],
         });
       }
 
@@ -1552,6 +2066,7 @@ export function AudiovisualRoom({
           <div className="status-strip">
             {syncing ? <span className="chip">保存しています…</span> : null}
             {dataLoading ? <span className="chip">読込中…</span> : null}
+            {!canManageTeam ? <span className="chip">閲覧のみ</span> : null}
             {teamMessage ? <span className="subtle">{teamMessage}</span> : null}
             {!usingRemoteData ? (
               <button className="button ghost" type="button" onClick={onResetLocalMode} disabled={syncing}>
@@ -1920,6 +2435,148 @@ export function AudiovisualRoom({
                     {importMessage ? (
                       <p className="subtle admin-form-full" style={{ whiteSpace: "pre-line" }}>{importMessage}</p>
                     ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel inset-panel">
+                <div className="panel-body">
+                  <div className="section-row">
+                    <div>
+                      <h3 className="section-title">プレーブック画像</h3>
+                      <p className="section-copy">
+                        隊形とプレー種類の組み合わせに画像を紐づけると、対応するプレーの再生中に自動で表示されます。
+                      </p>
+                    </div>
+                    <div className="chip-row">
+                      <span className="chip">{playbookAssets.length}件</span>
+                      {!usingRemoteData ? <span className="chip warn">Supabase 接続時に保存</span> : null}
+                    </div>
+                  </div>
+
+                  <div className="admin-form">
+                    <label className="field-stack">
+                      <span className="field-label">サイド</span>
+                      <select
+                        value={playbookForm.side}
+                        onChange={(event) => updatePlaybookForm("side", event.target.value as PlaybookSide)}
+                        disabled={syncing}
+                      >
+                        <option value="offense">オフェンス</option>
+                        <option value="defense">ディフェンス</option>
+                      </select>
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">隊形</span>
+                      <input
+                        list={playbookFormationListId}
+                        type="text"
+                        value={playbookForm.formation}
+                        onChange={(event) => updatePlaybookForm("formation", event.target.value)}
+                        disabled={syncing}
+                        placeholder="候補から選ぶか自由入力"
+                      />
+                      <datalist id={playbookFormationListId}>
+                        {availableFormations.map((formation) => (
+                          <option key={formation} value={formation}>
+                            {formation}
+                          </option>
+                        ))}
+                      </datalist>
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">プレー種類</span>
+                      <input
+                        list={playbookPlayTypeListId}
+                        type="text"
+                        value={playbookForm.playType}
+                        onChange={(event) => updatePlaybookForm("playType", event.target.value)}
+                        disabled={syncing}
+                        placeholder="候補から選ぶか自由入力"
+                      />
+                      <datalist id={playbookPlayTypeListId}>
+                        {availablePlayTypes.map((playType) => (
+                          <option key={playType} value={playType}>
+                            {playType}
+                          </option>
+                        ))}
+                      </datalist>
+                    </label>
+                    <label className="field-stack">
+                      <span className="field-label">タイトル</span>
+                      <input
+                        type="text"
+                        value={playbookForm.title}
+                        onChange={(event) => updatePlaybookForm("title", event.target.value)}
+                        disabled={syncing}
+                        placeholder="未入力なら隊形 / 種類で自動作成"
+                      />
+                    </label>
+                    <label className="field-stack admin-form-full">
+                      <span className="field-label">画像ファイル</span>
+                      <input
+                        key={playbookInputKey}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={(event) => setPlaybookFile(event.target.files?.[0] ?? null)}
+                        disabled={syncing || !usingRemoteData}
+                      />
+                    </label>
+                    <div className="card-actions admin-form-full">
+                      <button
+                        className="button"
+                        type="button"
+                        onClick={handleSavePlaybookAsset}
+                        disabled={syncing || !usingRemoteData}
+                      >
+                        <Upload aria-hidden="true" />
+                        画像を登録
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid-cards film-playbook-library">
+                    {playbookAssets.length ? (
+                      playbookAssets.map((asset) => (
+                        <article className="doc-card film-playbook-library-card" key={asset.id}>
+                          <div className="doc-row">
+                            <div>
+                              <strong>{asset.title}</strong>
+                              <div className="subtle">{asset.formation} / {asset.playType}</div>
+                            </div>
+                            <button
+                              className="button ghost"
+                              type="button"
+                              onClick={() => handleDeletePlaybookAsset(asset)}
+                              disabled={syncing}
+                            >
+                              <Trash2 aria-hidden="true" />
+                              削除
+                            </button>
+                          </div>
+                          <div className="chip-row">
+                            <span className="chip">{asset.side === "offense" ? "オフェンス" : "ディフェンス"}</span>
+                            <span className="chip">{formatAudienceLabel(asset.audience)}</span>
+                            <span className="chip">更新: {asset.updatedAt}</span>
+                          </div>
+                          {playbookUrls[asset.id] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              className="film-playbook-library-image"
+                              src={playbookUrls[asset.id]}
+                              alt={`${asset.title} のプレーブック`}
+                            />
+                          ) : (
+                            <div className="film-playbook-library-placeholder">
+                              <ImageIcon aria-hidden="true" />
+                              <span>プレビューを読み込み中</span>
+                            </div>
+                          )}
+                        </article>
+                      ))
+                    ) : (
+                      <p className="empty-state">まだプレーブック画像がありません。</p>
+                    )}
                   </div>
                 </div>
               </div>

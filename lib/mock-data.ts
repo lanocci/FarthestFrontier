@@ -1,4 +1,4 @@
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal, VideoTagMaster } from "@/lib/types";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PlaybookAsset, PositionMaster, Season, SeasonGoal, VideoTagMaster } from "@/lib/types";
 
 export const positionMasters: PositionMaster[] = [
   { id: "op-center", label: "センター", side: "offense" },
@@ -244,6 +244,7 @@ export const filmRoomVideos: FilmRoomVideo[] = [
           { playerId: "p1", positionId: "op-runner" },
           { playerId: "p2", positionId: "op-receiver" },
         ],
+        whiteboards: [],
         comment: "スナップ後の一歩目が早く、レシーバーの角度もそろっています。",
         coachComment: "相手CBが内側に寄る傾向があるので、次回は外リリースも試したいです。",
       },
@@ -257,6 +258,7 @@ export const filmRoomVideos: FilmRoomVideo[] = [
         formation: "Balanced",
         playType: "ラン",
         playerLinks: [{ playerId: "p4", positionId: "op-center" }],
+        whiteboards: [],
         comment: "センターの声かけからスタートまでが安定しているプレーです。",
       },
       {
@@ -270,6 +272,7 @@ export const filmRoomVideos: FilmRoomVideo[] = [
         formation: "Zone",
         playType: "守備",
         playerLinks: [{ playerId: "p3", positionId: "dp-linebacker" }],
+        whiteboards: [],
         comment: "中のコースを消しながら、最後にしっかり寄せてフラッグを取れています。",
       },
     ],
@@ -292,12 +295,15 @@ export const filmRoomVideos: FilmRoomVideo[] = [
         formation: "Motion Left",
         playType: "プレー合わせ",
         playerLinks: [{ playerId: "p5", positionId: "op-quarterback" }],
+        whiteboards: [],
         comment: "動き出すタイミングをそろえるための確認用です。",
         coachComment: "合図をもう一つ減らして、コールを短くしても良さそうです。",
       },
     ],
   },
 ];
+
+export const playbookAssets: PlaybookAsset[] = [];
 
 export const seasons: Season[] = [
   {

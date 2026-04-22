@@ -1,6 +1,6 @@
 import { getDashboardPracticeDate } from "@/lib/date";
-import { filmRoomVideos, formationMasters, goalLogs, goalTemplates, materials, penaltyTypeMasters, playTypeMasters, players, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PositionMaster, Season, SeasonGoal, VideoClip, VideoTagMaster } from "@/lib/types";
+import { filmRoomVideos, formationMasters, goalLogs, goalTemplates, materials, penaltyTypeMasters, playTypeMasters, players, playbookAssets, positionMasters, seasonGoals, seasons } from "@/lib/mock-data";
+import { ClipWhiteboard, FilmRoomVideo, GoalLog, GoalTemplate, Material, Player, PlaybookAsset, PositionMaster, Season, SeasonGoal, VideoClip, VideoTagMaster } from "@/lib/types";
 import { findGoalTemplate } from "@/lib/utils";
 
 const KEYS = {
@@ -13,6 +13,7 @@ const KEYS = {
   formationMasters: "ff-team-formation-masters",
   penaltyTypeMasters: "ff-team-penalty-type-masters",
   playTypeMasters: "ff-team-play-type-masters",
+  playbookAssets: "ff-team-playbook-assets",
   seasons: "ff-team-seasons",
   seasonGoals: "ff-team-season-goals",
 } as const;
@@ -178,6 +179,15 @@ function normalizeVideoClip(clip: VideoClip & { playerLabel?: string }): VideoCl
     penaltyType: clip.penaltyType ?? undefined,
     coachComment: clip.coachComment ?? undefined,
     playerLinks: clip.playerLinks ?? [],
+    whiteboards: (clip.whiteboards ?? []).map(normalizeClipWhiteboard),
+  };
+}
+
+function normalizeClipWhiteboard(whiteboard: ClipWhiteboard): ClipWhiteboard {
+  return {
+    ...whiteboard,
+    baseMode: whiteboard.baseMode ?? "blank",
+    basePlaybookAssetId: whiteboard.basePlaybookAssetId ?? undefined,
   };
 }
 
@@ -221,6 +231,14 @@ export function loadPlayTypeMasters(): VideoTagMaster[] {
 
 export function savePlayTypeMasters(nextMasters: VideoTagMaster[]) {
   writeJson(KEYS.playTypeMasters, nextMasters);
+}
+
+export function loadPlaybookAssets(): PlaybookAsset[] {
+  return readJson(KEYS.playbookAssets, playbookAssets);
+}
+
+export function savePlaybookAssets(nextAssets: PlaybookAsset[]) {
+  writeJson(KEYS.playbookAssets, nextAssets);
 }
 
 export function loadPenaltyTypeMasters(): VideoTagMaster[] {

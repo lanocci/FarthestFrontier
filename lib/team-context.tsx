@@ -9,6 +9,7 @@ import {
     loadGoalTemplates,
     loadMaterials,
     loadPenaltyTypeMasters,
+    loadPlaybookAssets,
     loadPlayTypeMasters,
     loadPlayers,
     loadPositionMasters,
@@ -20,6 +21,7 @@ import {
     saveGoalTemplates,
     saveMaterials,
     savePenaltyTypeMasters,
+    savePlaybookAssets,
     savePlayTypeMasters,
     savePlayers,
     savePositionMasters,
@@ -27,7 +29,7 @@ import {
     saveSeasons,
 } from "@/lib/storage";
 import { getSupabaseClient } from "@/lib/supabase";
-import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PositionMaster, Season, SeasonGoal, TeamRole, VideoTagMaster } from "@/lib/types";
+import { FilmRoomVideo, GoalLog, GoalTemplate, Material, MembershipStatus, Player, PlaybookAsset, PositionMaster, Season, SeasonGoal, TeamRole, VideoTagMaster } from "@/lib/types";
 import { filterAudiencesForRole, filterMaterialsForRole } from "@/lib/utils";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
@@ -50,6 +52,8 @@ interface TeamContextValue {
   setPenaltyTypeMasters: React.Dispatch<React.SetStateAction<VideoTagMaster[]>>;
   playTypeMasters: VideoTagMaster[];
   setPlayTypeMasters: React.Dispatch<React.SetStateAction<VideoTagMaster[]>>;
+  playbookAssets: PlaybookAsset[];
+  setPlaybookAssets: React.Dispatch<React.SetStateAction<PlaybookAsset[]>>;
   positionMasters: PositionMaster[];
   setPositionMasters: React.Dispatch<React.SetStateAction<PositionMaster[]>>;
   seasons: Season[];
@@ -97,6 +101,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([]);
   const [penaltyTypeMasters, setPenaltyTypeMasters] = useState<VideoTagMaster[]>([]);
   const [playTypeMasters, setPlayTypeMasters] = useState<VideoTagMaster[]>([]);
+  const [playbookAssets, setPlaybookAssets] = useState<PlaybookAsset[]>([]);
   const [positionMasters, setPositionMasters] = useState<PositionMaster[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonGoals, setSeasonGoals] = useState<SeasonGoal[]>([]);
@@ -138,6 +143,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setGoalTemplates(loadGoalTemplates());
     setPenaltyTypeMasters(loadPenaltyTypeMasters());
     setPlayTypeMasters(loadPlayTypeMasters());
+    setPlaybookAssets(loadPlaybookAssets());
     setPositionMasters(loadPositionMasters());
     setSeasons(loadSeasons());
     setSeasonGoals(loadSeasonGoals());
@@ -172,13 +178,14 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (localReady && !usingRemoteData) {
+      savePlaybookAssets(playbookAssets);
       saveFormationMasters(formationMasters);
       saveGoalTemplates(goalTemplates);
       savePenaltyTypeMasters(penaltyTypeMasters);
       savePlayTypeMasters(playTypeMasters);
       savePositionMasters(positionMasters);
     }
-  }, [formationMasters, goalTemplates, localReady, penaltyTypeMasters, playTypeMasters, positionMasters, usingRemoteData]);
+  }, [formationMasters, goalTemplates, localReady, penaltyTypeMasters, playTypeMasters, playbookAssets, positionMasters, usingRemoteData]);
 
   useEffect(() => {
     if (localReady && !usingRemoteData) {
@@ -267,6 +274,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         setGoalTemplates(snapshot.goalTemplates);
         setPenaltyTypeMasters(snapshot.penaltyTypeMasters);
         setPlayTypeMasters(snapshot.playTypeMasters);
+        setPlaybookAssets(snapshot.playbookAssets);
         setPositionMasters(snapshot.positionMasters);
         setSeasons(snapshot.seasons);
         setSeasonGoals(snapshot.seasonGoals);
@@ -297,6 +305,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setGoalTemplates(fallback.goalTemplates);
     setPenaltyTypeMasters(fallback.penaltyTypeMasters);
     setPlayTypeMasters(fallback.playTypeMasters);
+    setPlaybookAssets(fallback.playbookAssets);
     setPositionMasters(fallback.positionMasters);
     setSeasons(fallback.seasons);
     setSeasonGoals(fallback.seasonGoals);
@@ -322,6 +331,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     goalTemplates, setGoalTemplates,
     penaltyTypeMasters, setPenaltyTypeMasters,
     playTypeMasters, setPlayTypeMasters,
+    playbookAssets, setPlaybookAssets,
     positionMasters, setPositionMasters,
     seasons, setSeasons,
     seasonGoals, setSeasonGoals,
