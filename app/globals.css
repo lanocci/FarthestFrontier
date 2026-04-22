@@ -1227,7 +1227,7 @@ select:disabled {
   }
 
   .film-playback-layout {
-    grid-template-columns: minmax(0, 1.95fr) minmax(180px, 0.58fr);
+    grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.8fr);
     align-items: start;
     gap: 8px;
   }
@@ -1329,6 +1329,59 @@ select:disabled {
     line-height: 1.35;
   }
 
+  .film-playbook-card {
+    gap: 8px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .film-playbook-head {
+    gap: 6px;
+  }
+
+  .film-playbook-head strong,
+  .film-whiteboard-card strong {
+    font-size: 0.76rem;
+    line-height: 1.2;
+  }
+
+  .film-playbook-card .chip,
+  .film-whiteboard-card .chip,
+  .film-whiteboard-card .button,
+  .film-whiteboard-card .subtle {
+    font-size: 0.66rem;
+  }
+
+  .film-whiteboard-mode-row,
+  .playbook-board-toolbar,
+  .playbook-board-tools {
+    gap: 4px;
+  }
+
+  .playbook-board-tools {
+    width: 100%;
+  }
+
+  .playbook-board-tools .button {
+    min-width: 0;
+    padding: 5px 6px;
+    font-size: 0.64rem;
+  }
+
+  .playbook-swatch {
+    width: 22px;
+    height: 22px;
+  }
+
+  .playbook-board-blank {
+    aspect-ratio: 4 / 3;
+  }
+
+  .film-playbook-library-image,
+  .film-playbook-image {
+    border-radius: 10px;
+  }
+
   .film-inline-actions {
     width: 100%;
     align-items: flex-start;
@@ -1415,6 +1468,7 @@ select:disabled {
 .film-playbook-card {
   display: grid;
   gap: 10px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid rgba(23, 50, 77, 0.12);
   border-radius: 18px;
@@ -1486,6 +1540,7 @@ select:disabled {
 .playbook-board {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .playbook-board-toolbar {
