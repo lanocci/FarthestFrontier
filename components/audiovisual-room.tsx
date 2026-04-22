@@ -1101,6 +1101,128 @@ export function AudiovisualRoom({
             </div>
           )}
 
+          {detailClip && (detailPanelOpen || (canManageTeam && selectedVideo && editingClipId === detailClip.id)) ? (
+            <div className="film-active-card film-detail-sheet">
+              {canManageTeam && selectedVideo && editingClipId === detailClip.id ? (
+                <>
+                  <div className="film-editing-banner">
+                    <strong>このプレーをカード内で編集しています</strong>
+                    <button
+                      className="button secondary button-compact"
+                      type="button"
+                      onClick={() => resetClipForm(selectedVideo.id)}
+                      disabled={syncing}
+                    >
+                      閉じる
+                    </button>
+                  </div>
+                  <VideoClipEditor
+                    activePlayers={activePlayers}
+                    availableFormations={availableFormations}
+                    availablePenaltyTypes={availablePenaltyTypes}
+                    availablePlayTypes={availablePlayTypes}
+                    canManageTeam={canManageTeam}
+                    clipForm={clipForm}
+                    editingClipId={editingClipId}
+                    filmRoomVideos={filmRoomVideos}
+                    formationListId={formationListId}
+                    inline
+                    onAddClipPlayerLink={addClipPlayerLink}
+                    onRemoveClipPlayerLink={removeClipPlayerLink}
+                    onReset={resetClipForm}
+                    onSave={handleSaveClip}
+                    onUpdateClipForm={updateClipForm}
+                    onUpdateClipPlayerLink={updateClipPlayerLink}
+                    penaltyTypeListId={penaltyTypeListId}
+                    playTypeListId={playTypeListId}
+                    positionMasters={positionMasters}
+                    syncing={syncing}
+                    targetVideoId={selectedVideo.id}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="film-meta-groups">
+                    {detailClip.formation || detailClip.playType ? (
+                      <div className="film-meta-group">
+                        <span className="film-meta-label">プレー情報</span>
+                        <div className="chip-row">
+                          {detailClip.formation ? <span className="chip">{detailClip.formation}</span> : null}
+                          {detailClip.playType ? <span className="chip">{detailClip.playType}</span> : null}
+                        </div>
+                      </div>
+                    ) : null}
+                    {detailClip.playerLinks.length ? (
+                      <div className="film-meta-group">
+                        <span className="film-meta-label">参加選手</span>
+                        <div className="chip-row">
+                          {formatClipPlayers(detailClip.playerLinks).map((label) => (
+                            <span key={label} className="chip">{label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {detailClip.penaltyType ? (
+                      <div className="film-meta-group">
+                        <span className="film-meta-label">反則</span>
+                        <div className="chip-row">
+                          <span className="chip warn">{detailClip.penaltyType}</span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                  <p className="film-comment">{detailClip.comment || "コメントは未登録です。"}</p>
+                  {canManageTeam && detailClip.coachComment ? (
+                    <div className="film-meta-group">
+                      <span className="film-meta-label">コーチ間コメント</span>
+                      <p className="film-comment">{detailClip.coachComment}</p>
+                    </div>
+                  ) : null}
+                  {canManageTeam && selectedVideo ? (
+                    <div className="film-inline-actions film-detail-actions">
+                      <button
+                        className="button secondary button-compact"
+                        type="button"
+                        onClick={() => handleCopyClipLink(detailClip)}
+                      >
+                        リンクをコピー
+                      </button>
+                      <button
+                        className="button secondary button-compact"
+                        type="button"
+                        onClick={() => {
+                          setShowClipComposer(false);
+                          loadClipIntoForm(detailClip, selectedVideo.id);
+                        }}
+                        disabled={syncing}
+                      >
+                        このプレーを編集
+                      </button>
+                      <button
+                        className="button secondary button-compact"
+                        type="button"
+                        onClick={() => handleDeleteClip(detailClip, selectedVideo.id)}
+                        disabled={syncing}
+                      >
+                        このプレーを削除
+                      </button>
+                    </div>
+                  ) : selectedVideo ? (
+                    <div className="film-inline-actions film-detail-actions">
+                      <button
+                        className="button secondary button-compact"
+                        type="button"
+                        onClick={() => handleCopyClipLink(detailClip)}
+                      >
+                        リンクをコピー
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : null}
+
           {activePlaybookAsset ? (
             <div className="film-playbook-card film-playbook-card-standalone">
               <div className="film-playbook-head">
@@ -1233,128 +1355,6 @@ export function AudiovisualRoom({
                   <p className="empty-state">まだ保存済みの解説ボードはありません。</p>
                 )}
               </div>
-            </div>
-          ) : null}
-
-          {detailClip && (detailPanelOpen || (canManageTeam && selectedVideo && editingClipId === detailClip.id)) ? (
-            <div className="film-active-card film-detail-sheet">
-              {canManageTeam && selectedVideo && editingClipId === detailClip.id ? (
-                <>
-                  <div className="film-editing-banner">
-                    <strong>このプレーをカード内で編集しています</strong>
-                    <button
-                      className="button secondary button-compact"
-                      type="button"
-                      onClick={() => resetClipForm(selectedVideo.id)}
-                      disabled={syncing}
-                    >
-                      閉じる
-                    </button>
-                  </div>
-                  <VideoClipEditor
-                    activePlayers={activePlayers}
-                    availableFormations={availableFormations}
-                    availablePenaltyTypes={availablePenaltyTypes}
-                    availablePlayTypes={availablePlayTypes}
-                    canManageTeam={canManageTeam}
-                    clipForm={clipForm}
-                    editingClipId={editingClipId}
-                    filmRoomVideos={filmRoomVideos}
-                    formationListId={formationListId}
-                    inline
-                    onAddClipPlayerLink={addClipPlayerLink}
-                    onRemoveClipPlayerLink={removeClipPlayerLink}
-                    onReset={resetClipForm}
-                    onSave={handleSaveClip}
-                    onUpdateClipForm={updateClipForm}
-                    onUpdateClipPlayerLink={updateClipPlayerLink}
-                    penaltyTypeListId={penaltyTypeListId}
-                    playTypeListId={playTypeListId}
-                    positionMasters={positionMasters}
-                    syncing={syncing}
-                    targetVideoId={selectedVideo.id}
-                  />
-                </>
-              ) : (
-                <>
-                  <div className="film-meta-groups">
-                    {detailClip.formation || detailClip.playType ? (
-                      <div className="film-meta-group">
-                        <span className="film-meta-label">プレー情報</span>
-                        <div className="chip-row">
-                          {detailClip.formation ? <span className="chip">{detailClip.formation}</span> : null}
-                          {detailClip.playType ? <span className="chip">{detailClip.playType}</span> : null}
-                        </div>
-                      </div>
-                    ) : null}
-                    {detailClip.playerLinks.length ? (
-                      <div className="film-meta-group">
-                        <span className="film-meta-label">参加選手</span>
-                        <div className="chip-row">
-                          {formatClipPlayers(detailClip.playerLinks).map((label) => (
-                            <span key={label} className="chip">{label}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    {detailClip.penaltyType ? (
-                      <div className="film-meta-group">
-                        <span className="film-meta-label">反則</span>
-                        <div className="chip-row">
-                          <span className="chip warn">{detailClip.penaltyType}</span>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                  <p className="film-comment">{detailClip.comment || "コメントは未登録です。"}</p>
-                  {canManageTeam && detailClip.coachComment ? (
-                    <div className="film-meta-group">
-                      <span className="film-meta-label">コーチ間コメント</span>
-                      <p className="film-comment">{detailClip.coachComment}</p>
-                    </div>
-                  ) : null}
-                  {canManageTeam && selectedVideo ? (
-                    <div className="film-inline-actions film-detail-actions">
-                      <button
-                        className="button secondary button-compact"
-                        type="button"
-                        onClick={() => handleCopyClipLink(detailClip)}
-                      >
-                        リンクをコピー
-                      </button>
-                      <button
-                        className="button secondary button-compact"
-                        type="button"
-                        onClick={() => {
-                          setShowClipComposer(false);
-                          loadClipIntoForm(detailClip, selectedVideo.id);
-                        }}
-                        disabled={syncing}
-                      >
-                        このプレーを編集
-                      </button>
-                      <button
-                        className="button secondary button-compact"
-                        type="button"
-                        onClick={() => handleDeleteClip(detailClip, selectedVideo.id)}
-                        disabled={syncing}
-                      >
-                        このプレーを削除
-                      </button>
-                    </div>
-                  ) : selectedVideo ? (
-                    <div className="film-inline-actions film-detail-actions">
-                      <button
-                        className="button secondary button-compact"
-                        type="button"
-                        onClick={() => handleCopyClipLink(detailClip)}
-                      >
-                        リンクをコピー
-                      </button>
-                    </div>
-                  ) : null}
-                </>
-              )}
             </div>
           ) : null}
         </div>
