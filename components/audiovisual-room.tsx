@@ -4,7 +4,7 @@ import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
 import { PlaybookWhiteboard, type PlaybookWhiteboardHandle, type PlaybookWhiteboardState } from "@/components/video-room/playbook-whiteboard";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
-import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
+import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateClipWhiteboard, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
@@ -213,8 +213,11 @@ export function AudiovisualRoom({
   const [playbookSourceMode, setPlaybookSourceMode] = useState<PlaybookSourceMode>("upload");
   const [playbookUrls, setPlaybookUrls] = useState<Record<string, string>>({});
   const [clipWhiteboardUrls, setClipWhiteboardUrls] = useState<Record<string, string>>({});
+  const [clipWhiteboardBaseUrls, setClipWhiteboardBaseUrls] = useState<Record<string, string>>({});
   const [whiteboardMode, setWhiteboardMode] = useState<ClipWhiteboardBaseMode>("blank");
   const [whiteboardTitle, setWhiteboardTitle] = useState("");
+  const [editingSavedWhiteboardId, setEditingSavedWhiteboardId] = useState<string | null>(null);
+  const [editingSavedWhiteboardBaseImageUrl, setEditingSavedWhiteboardBaseImageUrl] = useState<string | null>(null);
   const [uploadedWhiteboardFile, setUploadedWhiteboardFile] = useState<File | null>(null);
   const [uploadedWhiteboardPreviewUrl, setUploadedWhiteboardPreviewUrl] = useState<string | null>(null);
   const [uploadedWhiteboardInputKey, setUploadedWhiteboardInputKey] = useState(0);
@@ -582,17 +585,36 @@ export function AudiovisualRoom({
   const whiteboardTargetClip = activeClip ?? detailClip;
   const currentPlaybookUrl = activePlaybookAsset ? playbookUrls[activePlaybookAsset.id] : "";
   const activeClipWhiteboards = whiteboardTargetClip?.whiteboards ?? [];
+  const editingSavedWhiteboard =
+    editingSavedWhiteboardId && whiteboardTargetClip
+      ? whiteboardTargetClip.whiteboards.find((whiteboard) => whiteboard.id === editingSavedWhiteboardId) ?? null
+      : null;
+  const editingSavedWhiteboardPlaybook = editingSavedWhiteboard?.basePlaybookAssetId
+    ? playbookAssets.find((asset) => asset.id === editingSavedWhiteboard.basePlaybookAssetId) ?? null
+    : null;
+  const editingSavedWhiteboardPlaybookUrl = editingSavedWhiteboardPlaybook ? playbookUrls[editingSavedWhiteboardPlaybook.id] ?? "" : "";
   const currentWhiteboardBaseImageUrl =
-    whiteboardMode === "playbook"
-      ? currentPlaybookUrl || null
-      : whiteboardMode === "image"
-        ? uploadedWhiteboardPreviewUrl
-        : null;
+    editingSavedWhiteboard
+      ? editingSavedWhiteboard.baseMode === "playbook"
+        ? editingSavedWhiteboardPlaybookUrl || null
+        : editingSavedWhiteboard.baseMode === "image"
+          ? editingSavedWhiteboardBaseImageUrl || editingSavedWhiteboard.baseImageUrl || null
+          : null
+      : whiteboardMode === "playbook"
+        ? currentPlaybookUrl || null
+        : whiteboardMode === "image"
+          ? uploadedWhiteboardPreviewUrl
+          : null;
+  const currentWhiteboardInitialState = (editingSavedWhiteboard?.boardState as PlaybookWhiteboardState | undefined) ?? null;
   const currentWhiteboardBoardId = whiteboardTargetClip
-    ? `${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}:${uploadedWhiteboardFile?.name ?? "none"}`
+    ? editingSavedWhiteboard
+      ? `whiteboard-edit:${editingSavedWhiteboard.id}`
+      : `${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}:${uploadedWhiteboardFile?.name ?? "none"}`
     : "whiteboard:none";
   const currentWhiteboardKey = whiteboardTargetClip
-    ? `${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}-${uploadedWhiteboardPreviewUrl ?? "none"}-${isWhiteboardModalOpen ? "modal" : "inline"}`
+    ? editingSavedWhiteboard
+      ? `${editingSavedWhiteboard.id}-${isWhiteboardModalOpen ? "modal" : "inline"}`
+      : `${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}-${uploadedWhiteboardPreviewUrl ?? "none"}-${isWhiteboardModalOpen ? "modal" : "inline"}`
     : "whiteboard:none";
 
   function buildClipUrl(videoId: string, clipId?: string | null): string {
@@ -764,9 +786,7 @@ export function AudiovisualRoom({
   useEffect(() => {
     const nextMode = activePlaybookAsset && currentPlaybookUrl ? "playbook" : "blank";
     setWhiteboardMode(nextMode);
-    setWhiteboardTitle("");
-    setUploadedWhiteboardFile(null);
-    setUploadedWhiteboardInputKey((current) => current + 1);
+    resetWhiteboardComposer();
     setIsWhiteboardModalOpen(false);
   }, [activeClip?.id, activePlaybookAsset, currentPlaybookUrl]);
 
@@ -791,6 +811,7 @@ export function AudiovisualRoom({
 
     if (!allWhiteboards.length) {
       setClipWhiteboardUrls({});
+      setClipWhiteboardBaseUrls({});
       return;
     }
 
@@ -802,16 +823,30 @@ export function AudiovisualRoom({
             .map((whiteboard) => [whiteboard.id, whiteboard.imageUrl as string]),
         ),
       );
+      setClipWhiteboardBaseUrls(
+        Object.fromEntries(
+          allWhiteboards
+            .filter((whiteboard) => whiteboard.baseImageUrl)
+            .map((whiteboard) => [whiteboard.id, whiteboard.baseImageUrl as string]),
+        ),
+      );
       return;
     }
 
     Promise.all(
       allWhiteboards.map(async (whiteboard) => {
-        const { data, error } = await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).createSignedUrl(whiteboard.imagePath, 60 * 60);
-        if (error || !data?.signedUrl) {
-          return [whiteboard.id, ""] as const;
-        }
-        return [whiteboard.id, data.signedUrl] as const;
+        const [imageResult, baseImageResult] = await Promise.all([
+          supabase.storage.from(CLIP_WHITEBOARD_BUCKET).createSignedUrl(whiteboard.imagePath, 60 * 60),
+          whiteboard.baseImagePath
+            ? supabase.storage.from(CLIP_WHITEBOARD_BUCKET).createSignedUrl(whiteboard.baseImagePath, 60 * 60)
+            : Promise.resolve({ data: null, error: null }),
+        ]);
+
+        return {
+          id: whiteboard.id,
+          imageUrl: imageResult.error || !imageResult.data?.signedUrl ? "" : imageResult.data.signedUrl,
+          baseImageUrl: baseImageResult.error || !baseImageResult.data?.signedUrl ? "" : baseImageResult.data.signedUrl,
+        } as const;
       }),
     )
       .then((entries) => {
@@ -819,11 +854,13 @@ export function AudiovisualRoom({
           return;
         }
 
-        setClipWhiteboardUrls(Object.fromEntries(entries.filter((entry) => entry[1])));
+        setClipWhiteboardUrls(Object.fromEntries(entries.filter((entry) => entry.imageUrl).map((entry) => [entry.id, entry.imageUrl])));
+        setClipWhiteboardBaseUrls(Object.fromEntries(entries.filter((entry) => entry.baseImageUrl).map((entry) => [entry.id, entry.baseImageUrl])));
       })
       .catch(() => {
         if (!cancelled) {
           setClipWhiteboardUrls({});
+          setClipWhiteboardBaseUrls({});
         }
       });
 
@@ -1327,12 +1364,25 @@ export function AudiovisualRoom({
 
               {canManageTeam ? (
                 <>
+                  {editingSavedWhiteboard ? (
+                    <div className="status-strip">
+                      <span className="chip ok">保存済みボードを編集中</span>
+                      <button
+                        className="button ghost"
+                        type="button"
+                        onClick={resetWhiteboardComposer}
+                        disabled={syncing}
+                      >
+                        新規作成に戻す
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="film-whiteboard-mode-row">
                     <button
                       className={`button secondary button-compact ${whiteboardMode === "playbook" ? "is-selected" : ""}`}
                       type="button"
                       onClick={() => setWhiteboardMode("playbook")}
-                      disabled={!activePlaybookAsset || !currentPlaybookUrl}
+                      disabled={Boolean(editingSavedWhiteboard) || !activePlaybookAsset || !currentPlaybookUrl}
                     >
                       プレーブックに書く
                     </button>
@@ -1340,6 +1390,7 @@ export function AudiovisualRoom({
                       className={`button secondary button-compact ${whiteboardMode === "blank" ? "is-selected" : ""}`}
                       type="button"
                       onClick={() => setWhiteboardMode("blank")}
+                      disabled={Boolean(editingSavedWhiteboard)}
                     >
                       白紙に書く
                     </button>
@@ -1347,6 +1398,7 @@ export function AudiovisualRoom({
                       className={`button secondary button-compact ${whiteboardMode === "image" ? "is-selected" : ""}`}
                       type="button"
                       onClick={() => setWhiteboardMode("image")}
+                      disabled={Boolean(editingSavedWhiteboard)}
                     >
                       画像に書く
                     </button>
@@ -1363,7 +1415,7 @@ export function AudiovisualRoom({
                     />
                   </label>
 
-                  {whiteboardMode === "image" ? (
+                  {!editingSavedWhiteboard && whiteboardMode === "image" ? (
                     <label className="field-stack">
                       <span className="field-label">背景画像</span>
                       <input
@@ -1382,6 +1434,7 @@ export function AudiovisualRoom({
                       ref={whiteboardRef}
                       boardId={currentWhiteboardBoardId}
                       baseImageUrl={currentWhiteboardBaseImageUrl}
+                      initialState={currentWhiteboardInitialState}
                       title={whiteboardTargetClip.title}
                     />
                   ) : null}
@@ -1404,12 +1457,12 @@ export function AudiovisualRoom({
                       onClick={() => void handleSaveClipWhiteboard()}
                       disabled={
                         syncing ||
-                        (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl)) ||
-                        (whiteboardMode === "image" && !uploadedWhiteboardPreviewUrl)
+                        ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "playbook" && !currentWhiteboardBaseImageUrl) ||
+                        ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "image" && !currentWhiteboardBaseImageUrl)
                       }
                     >
                       <Save aria-hidden="true" />
-                      このボードを保存
+                      {editingSavedWhiteboard ? "変更を保存" : "このボードを保存"}
                     </button>
                   </div>
                 </>
@@ -1438,6 +1491,7 @@ export function AudiovisualRoom({
                       ref={whiteboardRef}
                       boardId={currentWhiteboardBoardId}
                       baseImageUrl={currentWhiteboardBaseImageUrl}
+                      initialState={currentWhiteboardInitialState}
                       title={whiteboardTargetClip.title}
                     />
                     <div className="film-whiteboard-modal-actions">
@@ -1454,12 +1508,12 @@ export function AudiovisualRoom({
                         onClick={() => void handleSaveClipWhiteboard()}
                         disabled={
                           syncing ||
-                          (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl)) ||
-                          (whiteboardMode === "image" && !uploadedWhiteboardPreviewUrl)
+                          ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "playbook" && !currentWhiteboardBaseImageUrl) ||
+                          ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "image" && !currentWhiteboardBaseImageUrl)
                         }
                       >
                         <Save aria-hidden="true" />
-                        このボードを保存
+                        {editingSavedWhiteboard ? "変更を保存" : "このボードを保存"}
                       </button>
                     </div>
                   </div>
@@ -1482,15 +1536,25 @@ export function AudiovisualRoom({
                           </div>
                         </div>
                         {canManageTeam ? (
-                          <button
-                            className="button ghost"
-                            type="button"
-                            onClick={() => void handleDeleteClipWhiteboard(whiteboardTargetClip.id, whiteboard.id, whiteboard.imagePath, whiteboard.title)}
-                            disabled={syncing}
-                          >
-                            <Trash2 aria-hidden="true" />
-                            削除
-                          </button>
+                          <div className="chip-row">
+                            <button
+                              className="button ghost"
+                              type="button"
+                              onClick={() => startEditingClipWhiteboard(whiteboard)}
+                              disabled={syncing}
+                            >
+                              編集
+                            </button>
+                            <button
+                              className="button ghost"
+                              type="button"
+                              onClick={() => void handleDeleteClipWhiteboard(whiteboardTargetClip.id, whiteboard.id, whiteboard.imagePath, whiteboard.title, whiteboard.baseImagePath)}
+                              disabled={syncing}
+                            >
+                              <Trash2 aria-hidden="true" />
+                              削除
+                            </button>
+                          </div>
                         ) : null}
                       </div>
                       {clipWhiteboardUrls[whiteboard.id] ? (
@@ -1654,6 +1718,15 @@ export function AudiovisualRoom({
     setPlaybookInputKey((current) => current + 1);
   }
 
+  function resetWhiteboardComposer() {
+    setEditingSavedWhiteboardId(null);
+    setEditingSavedWhiteboardBaseImageUrl(null);
+    setWhiteboardTitle("");
+    setUploadedWhiteboardFile(null);
+    setUploadedWhiteboardPreviewUrl(null);
+    setUploadedWhiteboardInputKey((current) => current + 1);
+  }
+
   function updateClipWhiteboards(clipId: string, updater: (current: VideoClip["whiteboards"]) => VideoClip["whiteboards"]) {
     setFilmRoomVideos((current) =>
       current.map((video) => ({
@@ -1667,17 +1740,35 @@ export function AudiovisualRoom({
     );
   }
 
+  function startEditingClipWhiteboard(whiteboard: VideoClip["whiteboards"][number]) {
+    const nextBaseImageUrl = whiteboard.baseMode === "image"
+      ? (whiteboard.baseImageUrl ?? clipWhiteboardBaseUrls[whiteboard.id] ?? null)
+      : null;
+
+    setEditingSavedWhiteboardId(whiteboard.id);
+    setWhiteboardMode(whiteboard.baseMode);
+    setWhiteboardTitle(whiteboard.title);
+    setUploadedWhiteboardFile(null);
+    setUploadedWhiteboardPreviewUrl(nextBaseImageUrl);
+    setEditingSavedWhiteboardBaseImageUrl(nextBaseImageUrl);
+    setUploadedWhiteboardInputKey((current) => current + 1);
+    setIsWhiteboardModalOpen(false);
+  }
+
   async function handleSaveClipWhiteboard() {
     if (!whiteboardTargetClip || !whiteboardRef.current || syncing) {
       return;
     }
 
-    if (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl)) {
+    const effectiveMode = editingSavedWhiteboard?.baseMode ?? whiteboardMode;
+    const effectivePlaybookAssetId = editingSavedWhiteboard?.basePlaybookAssetId ?? (effectiveMode === "playbook" ? activePlaybookAsset?.id : undefined);
+
+    if (effectiveMode === "playbook" && !currentWhiteboardBaseImageUrl) {
       setTeamMessage("プレーブック背景がないため、白紙モードで保存してください。");
       return;
     }
 
-    if (whiteboardMode === "image" && !uploadedWhiteboardPreviewUrl) {
+    if (effectiveMode === "image" && !currentWhiteboardBaseImageUrl) {
       setTeamMessage("背景に使う画像を選択してください。");
       return;
     }
@@ -1688,6 +1779,7 @@ export function AudiovisualRoom({
       return;
     }
 
+    const boardState = whiteboardRef.current.exportState();
     const nextTitle =
       whiteboardTitle.trim() ||
       `${whiteboardTargetClip.title} ${whiteboardTargetClip.whiteboards.length + 1}`;
@@ -1706,35 +1798,85 @@ export function AudiovisualRoom({
           throw new Error(uploadError.message);
         }
 
-        const saved = await insertClipWhiteboard(supabase, {
-          clipId: whiteboardTargetClip.id,
-          title: nextTitle,
-          baseMode: whiteboardMode,
-          basePlaybookAssetId: whiteboardMode === "playbook" ? activePlaybookAsset?.id : undefined,
-          imagePath: storagePath,
-          sortOrder: whiteboardTargetClip.whiteboards.length + 1,
-        });
+        let baseImagePath = editingSavedWhiteboard?.baseImagePath;
+        if (effectiveMode === "image" && uploadedWhiteboardFile) {
+          const extension = uploadedWhiteboardFile.name.includes(".")
+            ? uploadedWhiteboardFile.name.split(".").pop()?.toLowerCase() ?? "png"
+            : "png";
+          const safeExtension = extension.replace(/[^a-z0-9]/g, "") || "png";
+          const nextBaseImagePath = `${whiteboardTargetClip.id}/base-${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
+          const { error: baseUploadError } = await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).upload(nextBaseImagePath, uploadedWhiteboardFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
 
-        updateClipWhiteboards(saved.clipId, (current) => [...current, saved.whiteboard]);
+          if (baseUploadError) {
+            throw new Error(baseUploadError.message);
+          }
+
+          if (editingSavedWhiteboard?.baseImagePath && editingSavedWhiteboard.baseImagePath !== nextBaseImagePath) {
+            await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).remove([editingSavedWhiteboard.baseImagePath]);
+          }
+
+          baseImagePath = nextBaseImagePath;
+        }
+
+        if (editingSavedWhiteboard) {
+          const saved = await updateClipWhiteboard(supabase, {
+            id: editingSavedWhiteboard.id,
+            title: nextTitle,
+            baseMode: effectiveMode,
+            basePlaybookAssetId: effectivePlaybookAssetId,
+            imagePath: storagePath,
+            baseImagePath,
+            boardState,
+          });
+
+          if (editingSavedWhiteboard.imagePath && editingSavedWhiteboard.imagePath !== storagePath) {
+            await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).remove([editingSavedWhiteboard.imagePath]);
+          }
+
+          updateClipWhiteboards(whiteboardTargetClip.id, (current) =>
+            current.map((whiteboard) => (whiteboard.id === saved.id ? saved : whiteboard)),
+          );
+        } else {
+          const saved = await insertClipWhiteboard(supabase, {
+            clipId: whiteboardTargetClip.id,
+            title: nextTitle,
+            baseMode: effectiveMode,
+            basePlaybookAssetId: effectivePlaybookAssetId,
+            imagePath: storagePath,
+            baseImagePath,
+            boardState,
+            sortOrder: whiteboardTargetClip.whiteboards.length + 1,
+          });
+
+          updateClipWhiteboards(saved.clipId, (current) => [...current, saved.whiteboard]);
+        }
       } else {
         const saved = {
-          id: `cw-${Date.now()}`,
+          id: editingSavedWhiteboard?.id ?? `cw-${Date.now()}`,
           title: nextTitle,
-          baseMode: whiteboardMode,
-          basePlaybookAssetId: whiteboardMode === "playbook" ? activePlaybookAsset?.id : undefined,
+          baseMode: effectiveMode,
+          basePlaybookAssetId: effectivePlaybookAssetId,
           imagePath: "",
+          baseImagePath: undefined,
           imageUrl: exported.dataUrl,
+          baseImageUrl: effectiveMode === "image" ? currentWhiteboardBaseImageUrl ?? undefined : undefined,
+          boardState,
           updatedAt: new Date().toISOString().slice(0, 10),
         };
 
-        updateClipWhiteboards(whiteboardTargetClip.id, (current) => [...current, saved]);
+        updateClipWhiteboards(whiteboardTargetClip.id, (current) =>
+          editingSavedWhiteboard
+            ? current.map((whiteboard) => (whiteboard.id === saved.id ? saved : whiteboard))
+            : [...current, saved],
+        );
       }
 
       whiteboardRef.current.clear();
-      setWhiteboardTitle("");
-      setUploadedWhiteboardFile(null);
-      setUploadedWhiteboardInputKey((current) => current + 1);
-      setTeamMessage(`解説ボード「${nextTitle}」を保存しました。`);
+      resetWhiteboardComposer();
+      setTeamMessage(`解説ボード「${nextTitle}」を${editingSavedWhiteboard ? "更新" : "保存"}しました。`);
     } catch (error) {
       setTeamMessage(error instanceof Error ? error.message : "解説ボードの保存に失敗しました。");
     } finally {
@@ -1742,7 +1884,7 @@ export function AudiovisualRoom({
     }
   }
 
-  async function handleDeleteClipWhiteboard(clipId: string, whiteboardId: string, imagePath: string, title: string) {
+  async function handleDeleteClipWhiteboard(clipId: string, whiteboardId: string, imagePath: string, title: string, baseImagePath?: string) {
     if (syncing) {
       return;
     }
@@ -1757,6 +1899,9 @@ export function AudiovisualRoom({
       if (usingRemoteData && supabase) {
         if (imagePath) {
           await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).remove([imagePath]);
+        }
+        if (baseImagePath) {
+          await supabase.storage.from(CLIP_WHITEBOARD_BUCKET).remove([baseImagePath]);
         }
         await deleteClipWhiteboard(supabase, whiteboardId);
       }

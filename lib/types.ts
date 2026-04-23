@@ -91,8 +91,11 @@ export type ClipWhiteboard = {
   baseMode: ClipWhiteboardBaseMode;
   basePlaybookAssetId?: string;
   imagePath: string;
+  baseImagePath?: string;
   updatedAt: string;
   imageUrl?: string;
+  baseImageUrl?: string;
+  boardState?: unknown;
 };
 
 export type VideoClip = {

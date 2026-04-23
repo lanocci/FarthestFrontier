@@ -112,6 +112,8 @@ type ClipWhiteboardRow = {
   base_mode: ClipWhiteboard["baseMode"];
   base_playbook_asset_id: string | null;
   image_path: string;
+  base_image_path: string | null;
+  board_state: ClipWhiteboard["boardState"] | null;
   sort_order: number;
   updated_at: string;
 };
@@ -281,6 +283,8 @@ function toClipWhiteboard(row: ClipWhiteboardRow): ClipWhiteboard {
     baseMode: row.base_mode,
     basePlaybookAssetId: row.base_playbook_asset_id ?? undefined,
     imagePath: row.image_path,
+    baseImagePath: row.base_image_path ?? undefined,
+    boardState: row.board_state ?? undefined,
     updatedAt: row.updated_at.slice(0, 10),
   };
 }
@@ -401,7 +405,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
       .order("sort_order", { ascending: true }),
     supabase
       .from("clip_whiteboards")
-      .select("id, clip_id, title, base_mode, base_playbook_asset_id, image_path, sort_order, updated_at")
+      .select("id, clip_id, title, base_mode, base_playbook_asset_id, image_path, base_image_path, board_state, sort_order, updated_at")
       .order("sort_order", { ascending: true }),
     supabase.from("penalty_type_masters").select("id, label").order("label", { ascending: true }),
     supabase.from("play_type_masters").select("id, label").order("label", { ascending: true }),
@@ -988,7 +992,7 @@ export async function deletePlaybookAsset(supabase: SupabaseClient, assetId: str
 
 export async function insertClipWhiteboard(
   supabase: SupabaseClient,
-  whiteboard: Omit<ClipWhiteboard, "id" | "updatedAt" | "imageUrl"> & { clipId: string; sortOrder: number },
+  whiteboard: Omit<ClipWhiteboard, "id" | "updatedAt" | "imageUrl" | "baseImageUrl"> & { clipId: string; sortOrder: number },
 ): Promise<{ clipId: string; whiteboard: ClipWhiteboard }> {
   const { data, error } = await supabase
     .from("clip_whiteboards")
@@ -998,9 +1002,11 @@ export async function insertClipWhiteboard(
       base_mode: whiteboard.baseMode,
       base_playbook_asset_id: whiteboard.basePlaybookAssetId ?? null,
       image_path: whiteboard.imagePath,
+      base_image_path: whiteboard.baseImagePath ?? null,
+      board_state: whiteboard.boardState ?? null,
       sort_order: whiteboard.sortOrder,
     })
-    .select("id, clip_id, title, base_mode, base_playbook_asset_id, image_path, sort_order, updated_at")
+    .select("id, clip_id, title, base_mode, base_playbook_asset_id, image_path, base_image_path, board_state, sort_order, updated_at")
     .single();
 
   if (error) {
@@ -1011,6 +1017,31 @@ export async function insertClipWhiteboard(
     clipId: data.clip_id,
     whiteboard: toClipWhiteboard(data),
   };
+}
+
+export async function updateClipWhiteboard(
+  supabase: SupabaseClient,
+  whiteboard: Omit<ClipWhiteboard, "updatedAt" | "imageUrl" | "baseImageUrl">,
+): Promise<ClipWhiteboard> {
+  const { data, error } = await supabase
+    .from("clip_whiteboards")
+    .update({
+      title: whiteboard.title,
+      base_mode: whiteboard.baseMode,
+      base_playbook_asset_id: whiteboard.basePlaybookAssetId ?? null,
+      image_path: whiteboard.imagePath,
+      base_image_path: whiteboard.baseImagePath ?? null,
+      board_state: whiteboard.boardState ?? null,
+    })
+    .eq("id", whiteboard.id)
+    .select("id, clip_id, title, base_mode, base_playbook_asset_id, image_path, base_image_path, board_state, sort_order, updated_at")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return toClipWhiteboard(data);
 }
 
 export async function deleteClipWhiteboard(supabase: SupabaseClient, whiteboardId: string): Promise<void> {

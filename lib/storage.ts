@@ -189,6 +189,9 @@ function normalizeClipWhiteboard(whiteboard: ClipWhiteboard): ClipWhiteboard {
     ...whiteboard,
     baseMode: whiteboard.baseMode ?? "blank",
     basePlaybookAssetId: whiteboard.basePlaybookAssetId ?? undefined,
+    baseImagePath: whiteboard.baseImagePath ?? undefined,
+    baseImageUrl: whiteboard.baseImageUrl ?? undefined,
+    boardState: whiteboard.boardState ?? undefined,
   };
 }
 

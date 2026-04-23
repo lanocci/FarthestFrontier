@@ -1,6 +1,6 @@
 "use client";
 
-import { Eraser, Move, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Eraser, Move, Pause, Pencil, Play, RotateCcw, Trash2 } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 type Point = {
@@ -65,6 +65,13 @@ type RouteTapState = {
   time: number;
 };
 
+type AnimatedRouteBinding = {
+  route: RouteElement;
+  routeIndex: number;
+  token: TokenElement;
+  tokenIndex: number;
+};
+
 type BoardState = {
   elements: BoardElement[];
   strokes: Stroke[];
@@ -86,12 +93,21 @@ export type PlaybookWhiteboardHandle = {
 };
 
 const STORAGE_PREFIX = "ff-playbook-whiteboard";
-const COLORS = ["#e8602d", "#17324d", "#2f8f5b", "#ca9632"] as const;
+const COLORS = ["#111111", "#e8602d", "#17324d", "#2f8f5b", "#ca9632"] as const;
 const WIDTHS = [4, 8, 12] as const;
 const OFFENSE_TOKENS = ["C", "QB", "RB", "TE", "WR"] as const;
 const DEFENSE_TOKENS = ["SF", "CB", "LB"] as const;
 const MIN_LINEAR_DISTANCE = 0.025;
 const TOKEN_RADIUS = 0.045;
+const ROUTE_PLAYBACK_SPEED = 0.00035;
+const FIELD_LINE_WIDTH = 1;
+const FIELD_LINE_X_START = 0.04;
+const FIELD_LINE_X_END = 0.96;
+const LOS_Y = 0.5;
+const FIVE_YARDS_Y = 0.3;
+const TEN_YARDS_Y = 0.1;
+const MINUS_FIVE_YARDS_Y = 0.7;
+const MINUS_TEN_YARDS_Y = 0.9;
 
 function toSvgPoints(points: Point[], width: number, height: number) {
   return points.map((point) => `${point.x * width},${point.y * height}`).join(" ");
@@ -99,6 +115,49 @@ function toSvgPoints(points: Point[], width: number, height: number) {
 
 function distanceBetween(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function getPolylineLength(points: Point[]) {
+  let total = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    total += distanceBetween(points[index - 1], points[index]);
+  }
+  return total;
+}
+
+function getPointAtProgress(points: Point[], progress: number) {
+  if (points.length === 0) {
+    return null;
+  }
+
+  if (points.length === 1) {
+    return points[0];
+  }
+
+  const clamped = Math.max(0, Math.min(1, progress));
+  const totalLength = getPolylineLength(points);
+  if (totalLength === 0) {
+    return points[points.length - 1];
+  }
+
+  const targetDistance = totalLength * clamped;
+  let traversed = 0;
+
+  for (let index = 1; index < points.length; index += 1) {
+    const start = points[index - 1];
+    const end = points[index];
+    const segmentLength = distanceBetween(start, end);
+    if (traversed + segmentLength >= targetDistance) {
+      const ratio = segmentLength === 0 ? 0 : (targetDistance - traversed) / segmentLength;
+      return {
+        x: start.x + ((end.x - start.x) * ratio),
+        y: start.y + ((end.y - start.y) * ratio),
+      };
+    }
+    traversed += segmentLength;
+  }
+
+  return points[points.length - 1];
 }
 
 function distanceToSegment(point: Point, start: Point, end: Point) {
@@ -420,6 +479,8 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   const [routeDraft, setRouteDraft] = useState<RouteDraft | null>(null);
   const [routePreviewPoint, setRoutePreviewPoint] = useState<Point | null>(null);
   const [selectedElementIndex, setSelectedElementIndex] = useState<number | null>(null);
+  const [isRoutePlaybackActive, setIsRoutePlaybackActive] = useState(false);
+  const [routePlaybackElapsedMs, setRoutePlaybackElapsedMs] = useState(0);
   const [surfaceSize, setSurfaceSize] = useState({ height: 1000, width: 1000 });
 
   const storageKey = useMemo(() => `${STORAGE_PREFIX}:${boardId}`, [boardId]);
@@ -480,6 +541,81 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       return current < elements.length ? current : null;
     });
   }, [elements.length]);
+
+  useEffect(() => {
+    if (!isRoutePlaybackActive) {
+      return;
+    }
+
+    let frameId = 0;
+    const startedAt = performance.now() - routePlaybackElapsedMs;
+
+    const tick = (now: number) => {
+      const nextElapsedMs = now - startedAt;
+      setRoutePlaybackElapsedMs(nextElapsedMs);
+
+      const hasRemainingRoute = elements.some((element) => {
+        if (element.type !== "route") {
+          return false;
+        }
+        const routeLength = getPolylineLength(element.points);
+        if (routeLength === 0) {
+          return false;
+        }
+        return (nextElapsedMs * ROUTE_PLAYBACK_SPEED) < routeLength;
+      });
+
+      if (!hasRemainingRoute) {
+        setIsRoutePlaybackActive(false);
+        return;
+      }
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [elements, isRoutePlaybackActive, routePlaybackElapsedMs]);
+
+  const animatedRouteBindings = useMemo<AnimatedRouteBinding[]>(() => {
+    const tokens = elements
+      .map((element, index) => (element.type === "token" ? { element, index } : null))
+      .filter((value): value is { element: TokenElement; index: number } => Boolean(value));
+
+    return elements.flatMap((element, routeIndex) => {
+      if (element.type !== "route" || element.points.length < 2) {
+        return [];
+      }
+
+      let bestMatch: { element: TokenElement; index: number } | null = null;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (const token of tokens) {
+        const nextDistance = distanceBetween(token.element.center, element.points[0]);
+        if (nextDistance < bestDistance) {
+          bestDistance = nextDistance;
+          bestMatch = token;
+        }
+      }
+
+      if (!bestMatch || bestDistance > TOKEN_RADIUS * 1.5) {
+        return [];
+      }
+
+      return [{
+        route: element,
+        routeIndex,
+        token: bestMatch.element,
+        tokenIndex: bestMatch.index,
+      }];
+    });
+  }, [elements]);
+
+  const animatedTokenIndexes = useMemo(
+    () => new Set(animatedRouteBindings.map((binding) => binding.tokenIndex)),
+    [animatedRouteBindings],
+  );
 
   useEffect(() => {
     const node = surfaceRef.current;
@@ -702,6 +838,10 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (isRoutePlaybackActive) {
+      return;
+    }
+
     const point = getPointFromEvent(event);
     if (!point) {
       return;
@@ -822,6 +962,10 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (isRoutePlaybackActive) {
+      return;
+    }
+
     const point = getPointFromEvent(event);
     if (!point) {
       return;
@@ -878,6 +1022,10 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   }
 
   function handlePointerUp() {
+    if (isRoutePlaybackActive) {
+      return;
+    }
+
     activeDragRef.current = null;
 
     const currentLinear = activeLinearRef.current;
@@ -933,6 +1081,59 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     setRouteDraft(null);
     setRoutePreviewPoint(null);
     lastRouteTapRef.current = null;
+  }
+
+  function handleToggleRoutePlayback() {
+    if (!animatedRouteBindings.length) {
+      return;
+    }
+
+    setRouteDraft(null);
+    setRoutePreviewPoint(null);
+    activeDragRef.current = null;
+    activeLinearRef.current = null;
+    activeStrokeRef.current = null;
+    setDraftElement(null);
+    setDraftStroke(null);
+    setSelectedElementIndex(null);
+    setIsRoutePlaybackActive((current) => {
+      if (!current) {
+        const hasRemainingRoute = animatedRouteBindings.some((binding) => {
+          const routeLength = getPolylineLength(binding.route.points);
+          return routeLength > 0 && (routePlaybackElapsedMs * ROUTE_PLAYBACK_SPEED) < routeLength;
+        });
+
+        if (!hasRemainingRoute) {
+          setRoutePlaybackElapsedMs(0);
+        }
+      }
+      return !current;
+    });
+  }
+
+  function handleResetRoutePlayback() {
+    setIsRoutePlaybackActive(false);
+    setRoutePlaybackElapsedMs(0);
+  }
+
+  function handleAddFieldLines() {
+    const lineColor = "#AAAAAA";
+    const nextLines: Stroke[] = [
+      LOS_Y,
+      FIVE_YARDS_Y,
+      TEN_YARDS_Y,
+      MINUS_FIVE_YARDS_Y,
+      MINUS_TEN_YARDS_Y,
+    ].map((y) => ({
+      color: lineColor,
+      width: FIELD_LINE_WIDTH,
+      points: [
+        { x: FIELD_LINE_X_START, y },
+        { x: FIELD_LINE_X_END, y },
+      ],
+    }));
+
+    setStrokes((current) => [...current, ...nextLines]);
   }
 
   function renderStroke(stroke: Stroke, key: string) {
@@ -1117,7 +1318,26 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     );
   }
 
-  function renderElement(element: BoardElement, key: string, isSelected = false) {
+  function renderAnimatedToken(binding: AnimatedRouteBinding) {
+    const routeLength = getPolylineLength(binding.route.points);
+    const progress = routeLength === 0
+      ? 1
+      : Math.min(1, (routePlaybackElapsedMs * ROUTE_PLAYBACK_SPEED) / routeLength);
+    const point = getPointAtProgress(binding.route.points, progress);
+    if (!point) {
+      return null;
+    }
+
+    return renderTokenElement(
+      {
+        ...binding.token,
+        center: point,
+      },
+      `animated-token-${binding.routeIndex}-${binding.tokenIndex}`,
+    );
+  }
+
+  function renderElement(element: BoardElement, key: string, isSelected = false, elementIndex?: number) {
     if (element.type === "spotlight") {
       return (
         <g key={key}>
@@ -1153,7 +1373,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     if (element.type === "token") {
       return (
         <g key={key}>
-          {renderTokenElement(element, `${key}-token`)}
+          {!isRoutePlaybackActive || elementIndex == null || !animatedTokenIndexes.has(elementIndex)
+            ? renderTokenElement(element, `${key}-token`)
+            : null}
           {isSelected ? (
             <circle
               cx={element.center.x * surfaceSize.width}
@@ -1297,6 +1519,17 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           ))}
         </div>
 
+        <div className="playbook-board-tools">
+          <span className="playbook-board-label">フィールド</span>
+          <button
+            className="button secondary button-compact"
+            type="button"
+            onClick={handleAddFieldLines}
+          >
+            LOS / 5 / 10yd
+          </button>
+        </div>
+
         {tool === "route" || routeDraft ? (
           <div className="playbook-board-tools">
             <span className="playbook-board-label">ルート先端</span>
@@ -1323,7 +1556,30 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           </div>
         ) : null}
 
+        {animatedRouteBindings.length ? (
           <div className="playbook-board-tools">
+            <span className="playbook-board-label">アニメーション</span>
+            <button
+              className={`button secondary button-compact ${isRoutePlaybackActive ? "is-selected" : ""}`}
+              type="button"
+              onClick={handleToggleRoutePlayback}
+            >
+              {isRoutePlaybackActive ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+              {isRoutePlaybackActive ? "停止" : "再生"}
+            </button>
+            <button
+              className="button secondary button-compact"
+              type="button"
+              onClick={handleResetRoutePlayback}
+              disabled={!routePlaybackElapsedMs && !isRoutePlaybackActive}
+            >
+              <RotateCcw aria-hidden="true" />
+              戻す
+            </button>
+          </div>
+        ) : null}
+
+        <div className="playbook-board-tools">
           <span className="playbook-board-label">O</span>
           {OFFENSE_TOKENS.map((candidate) => (
             <button
@@ -1409,7 +1665,8 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           viewBox={`0 0 ${surfaceSize.width} ${surfaceSize.height}`}
           aria-hidden="true"
         >
-          {elements.map((element, index) => renderElement(element, `element-${index}`, index === selectedElementIndex))}
+          {elements.map((element, index) => renderElement(element, `element-${index}`, index === selectedElementIndex, index))}
+          {isRoutePlaybackActive ? animatedRouteBindings.map((binding) => renderAnimatedToken(binding)) : null}
           {strokes.map((stroke, index) => renderStroke(stroke, `stroke-${index}`))}
           {draftElement ? renderElement(draftElement, "draft-element") : null}
           {routeDraft ? renderElement({
