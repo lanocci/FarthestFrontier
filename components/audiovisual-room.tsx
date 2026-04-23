@@ -8,7 +8,7 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
-import { Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
+import { Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload, X } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -46,6 +46,7 @@ type YouTubePlayer = {
   destroy: () => void;
   getCurrentTime: () => number;
   loadVideoById: (videoId: string, startSeconds?: number) => void;
+  pauseVideo?: () => void;
   playVideo: () => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 };
@@ -212,6 +213,7 @@ export function AudiovisualRoom({
   const [uploadedWhiteboardFile, setUploadedWhiteboardFile] = useState<File | null>(null);
   const [uploadedWhiteboardPreviewUrl, setUploadedWhiteboardPreviewUrl] = useState<string | null>(null);
   const [uploadedWhiteboardInputKey, setUploadedWhiteboardInputKey] = useState(0);
+  const [isWhiteboardModalOpen, setIsWhiteboardModalOpen] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
@@ -555,6 +557,18 @@ export function AudiovisualRoom({
   const whiteboardTargetClip = activeClip ?? detailClip;
   const currentPlaybookUrl = activePlaybookAsset ? playbookUrls[activePlaybookAsset.id] : "";
   const activeClipWhiteboards = whiteboardTargetClip?.whiteboards ?? [];
+  const currentWhiteboardBaseImageUrl =
+    whiteboardMode === "playbook"
+      ? currentPlaybookUrl || null
+      : whiteboardMode === "image"
+        ? uploadedWhiteboardPreviewUrl
+        : null;
+  const currentWhiteboardBoardId = whiteboardTargetClip
+    ? `${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}:${uploadedWhiteboardFile?.name ?? "none"}`
+    : "whiteboard:none";
+  const currentWhiteboardKey = whiteboardTargetClip
+    ? `${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}-${uploadedWhiteboardPreviewUrl ?? "none"}-${isWhiteboardModalOpen ? "modal" : "inline"}`
+    : "whiteboard:none";
 
   function buildClipUrl(videoId: string, clipId?: string | null): string {
     const params = new URLSearchParams();
@@ -728,6 +742,7 @@ export function AudiovisualRoom({
     setWhiteboardTitle("");
     setUploadedWhiteboardFile(null);
     setUploadedWhiteboardInputKey((current) => current + 1);
+    setIsWhiteboardModalOpen(false);
   }, [activeClip?.id, activePlaybookAsset, currentPlaybookUrl]);
 
   useEffect(() => {
@@ -1326,21 +1341,28 @@ export function AudiovisualRoom({
                     </label>
                   ) : null}
 
-                  <PlaybookWhiteboard
-                    key={`${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}-${uploadedWhiteboardPreviewUrl ?? "none"}`}
-                    ref={whiteboardRef}
-                    boardId={`${whiteboardTargetClip.id}:${whiteboardMode}:${activePlaybookAsset?.id ?? "none"}:${uploadedWhiteboardFile?.name ?? "none"}`}
-                    baseImageUrl={
-                      whiteboardMode === "playbook"
-                        ? currentPlaybookUrl || null
-                        : whiteboardMode === "image"
-                          ? uploadedWhiteboardPreviewUrl
-                          : null
-                    }
-                    title={whiteboardTargetClip.title}
-                  />
+                  {!isWhiteboardModalOpen ? (
+                    <PlaybookWhiteboard
+                      key={currentWhiteboardKey}
+                      ref={whiteboardRef}
+                      boardId={currentWhiteboardBoardId}
+                      baseImageUrl={currentWhiteboardBaseImageUrl}
+                      title={whiteboardTargetClip.title}
+                    />
+                  ) : null}
 
                   <div className="film-inline-actions">
+                    <button
+                      className="button secondary button-compact"
+                      type="button"
+                      onClick={() => {
+                        playerRef.current?.pauseVideo?.();
+                        setIsWhiteboardModalOpen(true);
+                      }}
+                    >
+                      <Expand aria-hidden="true" />
+                      拡大して編集
+                    </button>
                     <button
                       className="button"
                       type="button"
@@ -1356,6 +1378,57 @@ export function AudiovisualRoom({
                     </button>
                   </div>
                 </>
+              ) : null}
+
+              {isWhiteboardModalOpen ? (
+                <div className="film-whiteboard-modal" role="dialog" aria-modal="true" aria-label="解説ボードを拡大表示">
+                  <div className="film-whiteboard-modal-backdrop" onClick={() => setIsWhiteboardModalOpen(false)} />
+                  <div className="film-whiteboard-modal-body">
+                    <div className="film-whiteboard-modal-header">
+                      <div>
+                        <span className="film-meta-label">解説ボード拡大表示</span>
+                        <strong>{whiteboardTargetClip.title}</strong>
+                      </div>
+                      <button
+                        className="button secondary button-compact"
+                        type="button"
+                        onClick={() => setIsWhiteboardModalOpen(false)}
+                      >
+                        <X aria-hidden="true" />
+                        閉じる
+                      </button>
+                    </div>
+                    <PlaybookWhiteboard
+                      key={currentWhiteboardKey}
+                      ref={whiteboardRef}
+                      boardId={currentWhiteboardBoardId}
+                      baseImageUrl={currentWhiteboardBaseImageUrl}
+                      title={whiteboardTargetClip.title}
+                    />
+                    <div className="film-whiteboard-modal-actions">
+                      <button
+                        className="button secondary button-compact"
+                        type="button"
+                        onClick={() => setIsWhiteboardModalOpen(false)}
+                      >
+                        閉じる
+                      </button>
+                      <button
+                        className="button"
+                        type="button"
+                        onClick={() => void handleSaveClipWhiteboard()}
+                        disabled={
+                          syncing ||
+                          (whiteboardMode === "playbook" && (!activePlaybookAsset || !currentPlaybookUrl)) ||
+                          (whiteboardMode === "image" && !uploadedWhiteboardPreviewUrl)
+                        }
+                      >
+                        <Save aria-hidden="true" />
+                        このボードを保存
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : null}
 
               <div className="film-whiteboard-gallery">

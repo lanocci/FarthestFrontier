@@ -1425,6 +1425,16 @@ select:disabled {
     font-size: 0.66rem;
   }
 
+  .film-whiteboard-modal-body {
+    width: calc(100vw - 16px);
+    width: calc(100dvw - 16px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    margin: 8px auto;
+    padding: 10px;
+    border-radius: 16px;
+  }
+
   .film-whiteboard-mode-row,
   .playbook-board-toolbar,
   .playbook-board-tools {
@@ -1599,6 +1609,50 @@ select:disabled {
 .film-whiteboard-card {
   display: grid;
   gap: 12px;
+}
+
+.film-whiteboard-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.film-whiteboard-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 13, 24, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.film-whiteboard-modal-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  width: min(1200px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  margin: 16px auto;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 252, 246, 0.98);
+  box-shadow: 0 24px 60px rgba(7, 13, 24, 0.32);
+}
+
+.film-whiteboard-modal-header,
+.film-whiteboard-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.film-whiteboard-modal-header strong {
+  display: block;
+  margin-top: 2px;
 }
 
 .film-playbook-library-placeholder {
