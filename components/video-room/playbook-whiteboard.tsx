@@ -33,6 +33,7 @@ type RouteEndCap = "none" | "arrow" | "block" | "dropback";
 
 type RouteElement = {
   color: string;
+  dashed?: boolean;
   endCap: RouteEndCap;
   points: Point[];
   type: "route";
@@ -94,7 +95,7 @@ const WIDTHS = [4, 8, 12] as const;
 const OFFENSE_TOKENS = ["C", "QB", "RB", "TE", "WR"] as const;
 const DEFENSE_TOKENS = ["SF", "CB", "LB"] as const;
 const MIN_LINEAR_DISTANCE = 0.025;
-const TOKEN_RADIUS = 0.052;
+const TOKEN_RADIUS = 0.044;
 const ROUTE_PLAYBACK_SPEED = 0.00035;
 const FIELD_LINE_WIDTH = 1;
 const FIELD_LINE_X_START = 0.04;
@@ -104,6 +105,10 @@ const FIVE_YARDS_Y = 0.3;
 const TEN_YARDS_Y = 0.1;
 const MINUS_FIVE_YARDS_Y = 0.7;
 const MINUS_TEN_YARDS_Y = 0.9;
+
+function getRouteDashPattern(width: number) {
+  return [Math.max(6, width * 1.6), Math.max(4, width * 1.1)];
+}
 
 function toSvgPoints(points: Point[], width: number, height: number) {
   return points.map((point) => `${point.x * width},${point.y * height}`).join(" ");
@@ -361,7 +366,7 @@ function drawOffenseToken(
   context.stroke();
 
   context.fillStyle = color;
-  context.font = `700 ${Math.max(10, Math.min(radius * 0.66, radius - borderWidth - 6))}px sans-serif`;
+  context.font = `700 ${Math.max(10, Math.min(radius * 0.62, radius - borderWidth - 6))}px sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillText(label, centerX, centerY);
@@ -421,9 +426,9 @@ function drawDefenseToken(
   color: string,
   label: string,
 ) {
-  const top = { x: centerX, y: centerY + radius * 1.18 };
-  const left = { x: centerX - radius * 1.24, y: centerY - radius * 1.02 };
-  const right = { x: centerX + radius * 1.24, y: centerY - radius * 1.02 };
+  const top = { x: centerX, y: centerY + radius * 1.16 };
+  const left = { x: centerX - radius * 1.18, y: centerY - radius * 0.98 };
+  const right = { x: centerX + radius * 1.18, y: centerY - radius * 0.98 };
 
   const borderWidth = Math.max(2, radius * 0.11);
   context.fillStyle = "#ffffff";
@@ -438,10 +443,10 @@ function drawDefenseToken(
   context.stroke();
 
   context.fillStyle = color;
-  context.font = `700 ${Math.max(8, Math.min(radius * 0.38, radius - borderWidth - 10))}px sans-serif`;
+  context.font = `700 ${Math.max(9, Math.min(radius * 0.5, radius - borderWidth - 8))}px sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(label, centerX, centerY - radius * 0.12);
+  context.fillText(label, centerX, centerY - radius * 0.1);
 }
 
 function findTopmostToken(elements: BoardElement[], point: Point) {
@@ -468,8 +473,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   const activeDragRef = useRef<DragState | null>(null);
   const [tool, setTool] = useState<Tool>("draw");
   const [color, setColor] = useState<(typeof COLORS)[number]>(COLORS[0]);
-  const [strokeWidth, setStrokeWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[1]);
+  const [strokeWidth, setStrokeWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0]);
   const [routeEndCap, setRouteEndCap] = useState<RouteEndCap>("arrow");
+  const [routeDashed, setRouteDashed] = useState(false);
   const [selectedTokenLabel, setSelectedTokenLabel] = useState<string>(OFFENSE_TOKENS[0]);
   const [selectedTokenVariant, setSelectedTokenVariant] = useState<"defense" | "offense">("offense");
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -613,6 +619,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     () => new Set(animatedRouteBindings.map((binding) => binding.tokenIndex)),
     [animatedRouteBindings],
   );
+  const selectedElement = selectedElementIndex == null ? null : elements[selectedElementIndex] ?? null;
 
   useEffect(() => {
     const node = surfaceRef.current;
@@ -760,6 +767,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           context.lineWidth = Math.max(4, element.width);
           context.lineCap = "round";
           context.lineJoin = "round";
+          context.setLineDash(element.dashed ? getRouteDashPattern(element.width) : []);
           context.beginPath();
           drawablePoints.forEach((point, index) => {
             if (index === 0) {
@@ -771,8 +779,10 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           context.stroke();
 
           if (element.endCap !== "none") {
+            context.setLineDash([]);
             renderLinearEnding(context, element.endCap, previous, end, headSize);
           }
+          context.setLineDash([]);
           continue;
         }
 
@@ -1031,6 +1041,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       {
         type: "route",
         color,
+        dashed: routeDashed,
         endCap: routeEndCap,
         points: routeDraft.points,
         width: strokeWidth,
@@ -1095,6 +1106,57 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     }));
 
     setStrokes((current) => [...current, ...nextLines]);
+  }
+
+  function handleDeleteFieldLines() {
+    const targetYs = [LOS_Y, FIVE_YARDS_Y, TEN_YARDS_Y, MINUS_FIVE_YARDS_Y, MINUS_TEN_YARDS_Y];
+
+    setStrokes((current) =>
+      current.filter((stroke) => {
+        if (stroke.width !== FIELD_LINE_WIDTH || stroke.points.length !== 2) {
+          return true;
+        }
+
+        const [start, end] = stroke.points;
+        const isHorizontal = Math.abs(start.y - end.y) < 0.0001;
+        const matchesRange =
+          Math.abs(start.x - FIELD_LINE_X_START) < 0.0001 &&
+          Math.abs(end.x - FIELD_LINE_X_END) < 0.0001;
+        const matchesY = targetYs.some((targetY) => Math.abs(start.y - targetY) < 0.0001);
+
+        return !(isHorizontal && matchesRange && matchesY);
+      }),
+    );
+  }
+
+  function updateSelectedElement(updater: (element: BoardElement) => BoardElement) {
+    if (selectedElementIndex == null) {
+      return;
+    }
+
+    setElements((current) =>
+      current.map((element, index) => (index === selectedElementIndex ? updater(element) : element)),
+    );
+  }
+
+  function handleDeleteRoutesFromSelectedToken() {
+    if (!selectedElement || selectedElement.type !== "token") {
+      return;
+    }
+
+    setElements((current) =>
+      current.filter((element, index) => {
+        if (index === selectedElementIndex) {
+          return true;
+        }
+
+        if (element.type !== "route" || element.points.length < 2) {
+          return true;
+        }
+
+        return distanceBetween(element.points[0], selectedElement.center) > TOKEN_RADIUS * 1.5;
+      }),
+    );
   }
 
   function renderStroke(stroke: Stroke, key: string) {
@@ -1192,6 +1254,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           fill="none"
           points={drawablePoints.map((point) => `${point.x},${point.y}`).join(" ")}
           stroke={element.color}
+          strokeDasharray={element.dashed ? getRouteDashPattern(element.width).join(" ") : undefined}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={element.width}
@@ -1230,8 +1293,8 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     const centerY = element.center.y * surfaceSize.height;
     const radius = TOKEN_RADIUS * Math.min(surfaceSize.width, surfaceSize.height);
     const borderWidth = Math.max(2, radius * 0.11);
-    const offenseFontSize = Math.max(10, Math.min(radius * 0.66, radius - borderWidth - 6));
-    const defenseFontSize = Math.max(8, Math.min(radius * 0.38, radius - borderWidth - 10));
+    const offenseFontSize = Math.max(10, Math.min(radius * 0.62, radius - borderWidth - 6));
+    const defenseFontSize = Math.max(9, Math.min(radius * 0.5, radius - borderWidth - 8));
 
     if (element.variant === "offense") {
       return (
@@ -1262,7 +1325,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     return (
       <g key={key}>
         <path
-          d={`M ${centerX},${centerY + radius * 1.18} L ${centerX - radius * 1.24},${centerY - radius * 1.02} L ${centerX + radius * 1.24},${centerY - radius * 1.02} Z`}
+          d={`M ${centerX},${centerY + radius * 1.16} L ${centerX - radius * 1.18},${centerY - radius * 0.98} L ${centerX + radius * 1.18},${centerY - radius * 0.98} Z`}
           fill="#ffffff"
           stroke={element.color}
           strokeWidth={borderWidth}
@@ -1274,7 +1337,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           fontWeight="700"
           textAnchor="middle"
           x={centerX}
-          y={centerY - radius * 0.12}
+          y={centerY - radius * 0.1}
         >
           {element.label}
         </text>
@@ -1409,6 +1472,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     <div className="playbook-board">
       <div className="playbook-board-toolbar">
         <div className="playbook-board-tools">
+          <span className="playbook-board-label">機能</span>
           <button
             className={`button secondary button-compact ${tool === "select" ? "is-selected" : ""}`}
             type="button"
@@ -1454,33 +1518,33 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           >
             ルート
           </button>
-        </div>
-
-        <div className="playbook-board-tools">
-          {COLORS.map((candidate) => (
-            <button
-              key={candidate}
-              className={`playbook-swatch ${color === candidate ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => setColor(candidate)}
-              style={{ backgroundColor: candidate }}
-              aria-label={`色を選択: ${candidate}`}
-              title="色を選択"
-            />
-          ))}
-        </div>
-
-        <div className="playbook-board-tools">
-          {WIDTHS.map((candidate) => (
-            <button
-              key={candidate}
-              className={`button secondary button-compact ${strokeWidth === candidate ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => setStrokeWidth(candidate)}
-            >
-              太さ {candidate}
-            </button>
-          ))}
+          <button
+            className="button secondary button-compact"
+            type="button"
+            onClick={() => {
+              if (elements.length) {
+                setElements((current) => current.slice(0, -1));
+                return;
+              }
+              setStrokes((current) => current.slice(0, -1));
+            }}
+            disabled={!strokes.length && !elements.length}
+          >
+            <RotateCcw aria-hidden="true" />
+            ひとつ戻す
+          </button>
+          <button
+            className="button secondary button-compact"
+            type="button"
+            onClick={() => {
+              setStrokes([]);
+              setElements([]);
+            }}
+            disabled={!strokes.length && !elements.length}
+          >
+            <Trash2 aria-hidden="true" />
+            全消し
+          </button>
         </div>
 
         <div className="playbook-board-tools">
@@ -1490,48 +1554,16 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
             type="button"
             onClick={handleAddFieldLines}
           >
-            LOS / 5 / 10yd
+            線を追加
+          </button>
+          <button
+            className="button secondary button-compact"
+            type="button"
+            onClick={handleDeleteFieldLines}
+          >
+            線を削除
           </button>
         </div>
-
-        {tool === "route" || routeDraft ? (
-          <div className="playbook-board-tools">
-            <span className="playbook-board-label">ルート先端</span>
-            {(["none", "arrow", "block", "dropback"] as const).map((candidate) => (
-              <button
-                key={candidate}
-                className={`button secondary button-compact ${routeEndCap === candidate ? "is-selected" : ""}`}
-                type="button"
-                onClick={() => setRouteEndCap(candidate)}
-              >
-                {candidate === "none" ? "なし" : candidate === "arrow" ? "矢印" : candidate === "block" ? "T字" : "丸"}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {animatedRouteBindings.length ? (
-          <div className="playbook-board-tools">
-            <span className="playbook-board-label">アニメーション</span>
-            <button
-              className={`button secondary button-compact ${isRoutePlaybackActive ? "is-selected" : ""}`}
-              type="button"
-              onClick={handleToggleRoutePlayback}
-            >
-              {isRoutePlaybackActive ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-              {isRoutePlaybackActive ? "停止" : "再生"}
-            </button>
-            <button
-              className="button secondary button-compact"
-              type="button"
-              onClick={handleResetRoutePlayback}
-              disabled={!routePlaybackElapsedMs && !isRoutePlaybackActive}
-            >
-              <RotateCcw aria-hidden="true" />
-              戻す
-            </button>
-          </div>
-        ) : null}
 
         <div className="playbook-board-tools">
           <span className="playbook-board-label">O</span>
@@ -1569,35 +1601,127 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           ))}
         </div>
 
+        {tool === "route" || routeDraft ? (
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">ルート先端</span>
+            {(["none", "arrow", "block", "dropback"] as const).map((candidate) => (
+              <button
+                key={candidate}
+                className={`button secondary button-compact ${routeEndCap === candidate ? "is-selected" : ""}`}
+                type="button"
+                onClick={() => setRouteEndCap(candidate)}
+              >
+                {candidate === "none" ? "なし" : candidate === "arrow" ? "矢印" : candidate === "block" ? "T字" : "丸"}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {selectedElement?.type === "token" ? (
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">選択中の{selectedElement.variant === "offense" ? "O" : "D"}</span>
+            <button
+              className="button secondary button-compact"
+              type="button"
+              onClick={handleDeleteRoutesFromSelectedToken}
+            >
+              この選手のルートを削除
+            </button>
+          </div>
+        ) : null}
+
         <div className="playbook-board-tools">
-          <button
-            className="button secondary button-compact"
-            type="button"
-            onClick={() => {
-              if (elements.length) {
-                setElements((current) => current.slice(0, -1));
-                return;
-              }
-              setStrokes((current) => current.slice(0, -1));
-            }}
-            disabled={!strokes.length && !elements.length}
-          >
-            <RotateCcw aria-hidden="true" />
-            ひとつ戻す
-          </button>
-          <button
-            className="button secondary button-compact"
-            type="button"
-            onClick={() => {
-              setStrokes([]);
-              setElements([]);
-            }}
-            disabled={!strokes.length && !elements.length}
-          >
-            <Trash2 aria-hidden="true" />
-            全消し
-          </button>
+          <span className="playbook-board-label">スタイル</span>
+          {COLORS.map((candidate) => (
+            <button
+              key={candidate}
+              className={`playbook-swatch ${color === candidate ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => {
+                setColor(candidate);
+                if (selectedElementIndex != null) {
+                  updateSelectedElement((element) => ({ ...element, color: candidate }));
+                }
+              }}
+              style={{ backgroundColor: candidate }}
+              aria-label={`色を選択: ${candidate}`}
+              title="色を選択"
+            >
+            </button>
+          ))}
         </div>
+
+        <div className="playbook-board-tools">
+          {WIDTHS.map((candidate) => (
+            <button
+              key={candidate}
+              className={`button secondary button-compact ${strokeWidth === candidate ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => setStrokeWidth(candidate)}
+            >
+              太さ {candidate}
+            </button>
+          ))}
+        </div>
+
+        {(tool === "route" || routeDraft || selectedElement?.type === "route") ? (
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">線のスタイル</span>
+            <button
+              className={`button secondary button-compact ${!(selectedElement?.type === "route" ? selectedElement.dashed : routeDashed) ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => {
+                if (selectedElement?.type === "route") {
+                  updateSelectedElement((element) => (
+                    element.type === "route" ? { ...element, dashed: false } : element
+                  ));
+                  return;
+                }
+                setRouteDashed(false);
+              }}
+            >
+              実線
+            </button>
+            <button
+              className={`button secondary button-compact ${(selectedElement?.type === "route" ? selectedElement.dashed : routeDashed) ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => {
+                if (selectedElement?.type === "route") {
+                  updateSelectedElement((element) => (
+                    element.type === "route" ? { ...element, dashed: true } : element
+                  ));
+                  return;
+                }
+                setRouteDashed(true);
+              }}
+            >
+              点線
+            </button>
+          </div>
+        ) : null}
+
+        {animatedRouteBindings.length ? (
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">アニメーション</span>
+            <button
+              className={`button secondary button-compact ${isRoutePlaybackActive ? "is-selected" : ""}`}
+              type="button"
+              onClick={handleToggleRoutePlayback}
+            >
+              {isRoutePlaybackActive ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+              {isRoutePlaybackActive ? "停止" : "再生"}
+            </button>
+            <button
+              className="button secondary button-compact"
+              type="button"
+              onClick={handleResetRoutePlayback}
+              disabled={!routePlaybackElapsedMs && !isRoutePlaybackActive}
+            >
+              <RotateCcw aria-hidden="true" />
+              戻す
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div

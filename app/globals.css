@@ -833,6 +833,10 @@ select:disabled {
   grid-column: 1 / -1;
 }
 
+.film-playbook-panel {
+  grid-column: 1 / -1;
+}
+
 .film-player-frame {
   position: relative;
   overflow: hidden;
@@ -1697,6 +1701,7 @@ body.video-whiteboard-modal-open {
   display: grid;
   gap: 10px;
   min-width: 0;
+  width: 100%;
 }
 
 .film-whiteboard-modal .playbook-board {

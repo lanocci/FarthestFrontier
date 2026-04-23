@@ -2794,7 +2794,7 @@ export function AudiovisualRoom({
                 </div>
               </div>
 
-              <div className="panel inset-panel">
+              <div className="panel inset-panel film-playbook-panel">
                 <div className="panel-body">
                   <div className="section-row">
                     <div>
