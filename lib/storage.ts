@@ -179,6 +179,7 @@ function normalizeVideoClip(clip: VideoClip & { playerLabel?: string }): VideoCl
     penaltyType: clip.penaltyType ?? undefined,
     coachComment: clip.coachComment ?? undefined,
     playerLinks: clip.playerLinks ?? [],
+    focusTargets: clip.focusTargets ?? [],
     whiteboards: (clip.whiteboards ?? []).map(normalizeClipWhiteboard),
   };
 }

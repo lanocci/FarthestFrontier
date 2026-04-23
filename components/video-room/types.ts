@@ -20,6 +20,7 @@ export type ClipForm = {
   formation: string;
   playType: string;
   playerLinks: VideoClipPlayerLink[];
+  focusTargets: string[];
   comment: string;
   coachComment: string;
 };

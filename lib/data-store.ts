@@ -101,6 +101,7 @@ type FilmClipRow = {
   comment: string;
   coach_comment: string | null;
   player_links: VideoClipPlayerLink[] | null;
+  focus_targets: string[] | null;
   sort_order: number;
 };
 
@@ -123,6 +124,7 @@ type PlaybookAssetRow = {
   play_type: string;
   image_path: string;
   audience: PlaybookAsset["audience"];
+  board_state: PlaybookAsset["boardState"] | null;
   updated_at: string;
 };
 
@@ -267,6 +269,7 @@ function toVideoClip(row: FilmClipRow): VideoClip {
     comment: row.comment,
     coachComment: row.coach_comment ?? undefined,
     playerLinks: row.player_links ?? [],
+    focusTargets: row.focus_targets ?? [],
     whiteboards: [],
   };
 }
@@ -347,6 +350,7 @@ function toPlaybookAsset(row: PlaybookAssetRow): PlaybookAsset {
     imagePath: row.image_path,
     audience: row.audience,
     updatedAt: row.updated_at.slice(0, 10),
+    boardState: row.board_state ?? undefined,
   };
 }
 
@@ -393,7 +397,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
       .order("match_date", { ascending: false, nullsFirst: false }),
     supabase
     .from("film_clips")
-      .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, sort_order")
+      .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, focus_targets, sort_order")
       .order("sort_order", { ascending: true }),
     supabase
       .from("clip_whiteboards")
@@ -403,7 +407,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     supabase.from("play_type_masters").select("id, label").order("label", { ascending: true }),
     supabase
       .from("playbook_assets")
-      .select("id, title, side, formation, play_type, image_path, audience, updated_at")
+      .select("id, title, side, formation, play_type, image_path, audience, board_state, updated_at")
       .order("formation", { ascending: true })
       .order("play_type", { ascending: true }),
     supabase.from("position_masters").select("id, label, side").order("label", { ascending: true }),
@@ -893,9 +897,10 @@ export async function insertFilmClip(
       comment: clip.comment,
       coach_comment: clip.coachComment ?? null,
       player_links: clip.playerLinks,
+      focus_targets: clip.focusTargets,
       sort_order: clip.sortOrder,
     })
-    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, sort_order")
+    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, focus_targets, sort_order")
     .single();
 
   if (error) {
@@ -926,9 +931,10 @@ export async function updateFilmClip(
       comment: clip.comment,
       coach_comment: clip.coachComment ?? null,
       player_links: clip.playerLinks,
+      focus_targets: clip.focusTargets,
     })
     .eq("id", clip.id)
-    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, sort_order")
+    .select("id, video_id, title, start_seconds, end_seconds, down, to_go_yards, penalty_type, formation, play_type, comment, coach_comment, player_links, focus_targets, sort_order")
     .single();
 
   if (error) {
@@ -952,6 +958,7 @@ export async function upsertPlaybookAsset(
     play_type: asset.playType,
     image_path: asset.imagePath,
     audience: asset.audience,
+    board_state: asset.boardState ?? null,
   };
 
   if (asset.id && !asset.id.startsWith("pa-")) {
@@ -961,7 +968,7 @@ export async function upsertPlaybookAsset(
   const { data, error } = await supabase
     .from("playbook_assets")
     .upsert(payload, { onConflict: "side,formation,play_type" })
-    .select("id, title, side, formation, play_type, image_path, audience, updated_at")
+    .select("id, title, side, formation, play_type, image_path, audience, board_state, updated_at")
     .single();
 
   if (error) {

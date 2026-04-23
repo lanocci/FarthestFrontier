@@ -224,6 +224,49 @@ export function VideoClipEditor({
           選手を追加
         </button>
       </div>
+      <div className="field-stack admin-form-full">
+        <span className="field-label">注目してほしい選手</span>
+        <div className="chip-row">
+          {activePlayers.map((player) => {
+            const label = `${player.name} #${player.jerseyNumber}`;
+            const isSelected = clipForm.focusTargets.includes(label);
+
+            return (
+              <button
+                key={player.id}
+                className={`chip-button ${isSelected ? "is-selected" : ""}`}
+                type="button"
+                onClick={() =>
+                  onUpdateClipForm(
+                    "focusTargets",
+                    isSelected
+                      ? clipForm.focusTargets.filter((target) => target !== label)
+                      : [...clipForm.focusTargets, label],
+                  )
+                }
+                disabled={syncing || !filmRoomVideos.length}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <input
+          type="text"
+          placeholder="相手QB, #12, 右のWR などをカンマ区切りで入力"
+          value={clipForm.focusTargets.join(", ")}
+          onChange={(event) =>
+            onUpdateClipForm(
+              "focusTargets",
+              event.target.value
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean),
+            )
+          }
+          disabled={syncing || !filmRoomVideos.length}
+        />
+      </div>
       <label className="field-stack admin-form-full">
         <span className="field-label">コメント</span>
         <textarea

@@ -1687,6 +1687,13 @@ select:disabled {
   min-width: 0;
 }
 
+.playbook-board-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .playbook-board-tools .button {
   min-width: 0;
   flex: 0 1 auto;

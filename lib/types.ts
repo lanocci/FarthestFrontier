@@ -108,6 +108,7 @@ export type VideoClip = {
   comment: string;
   coachComment?: string;
   playerLinks: VideoClipPlayerLink[];
+  focusTargets: string[];
   whiteboards: ClipWhiteboard[];
 };
 
@@ -123,6 +124,7 @@ export type PlaybookAsset = {
   audience: MaterialAudience;
   updatedAt: string;
   imageUrl?: string;
+  boardState?: unknown;
 };
 
 export type FilmRoomVideo = {

@@ -2,7 +2,7 @@
 
 import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
-import { PlaybookWhiteboard, type PlaybookWhiteboardHandle } from "@/components/video-room/playbook-whiteboard";
+import { PlaybookWhiteboard, type PlaybookWhiteboardHandle, type PlaybookWhiteboardState } from "@/components/video-room/playbook-whiteboard";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
 import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
@@ -41,6 +41,8 @@ type PlaybookForm = {
   playType: string;
   audience: MaterialAudience;
 };
+
+type PlaybookSourceMode = "upload" | "canvas";
 
 type YouTubePlayer = {
   destroy: () => void;
@@ -96,6 +98,7 @@ const initialClipForm: ClipForm = {
   formation: "",
   playType: "",
   playerLinks: [{ playerId: "", positionId: "" }],
+  focusTargets: [],
   comment: "",
   coachComment: "",
 };
@@ -182,6 +185,7 @@ export function AudiovisualRoom({
   const playbookPlayTypeListId = useId().replace(/:/g, "");
   const playerRef = useRef<YouTubePlayer | null>(null);
   const whiteboardRef = useRef<PlaybookWhiteboardHandle | null>(null);
+  const playbookCreatorRef = useRef<PlaybookWhiteboardHandle | null>(null);
   const playbackShellRef = useRef<HTMLDivElement | null>(null);
   const clipCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingSharedClipIdRef = useRef<string | null>(null);
@@ -206,6 +210,7 @@ export function AudiovisualRoom({
   const [playbookForm, setPlaybookForm] = useState<PlaybookForm>(initialPlaybookForm);
   const [playbookFile, setPlaybookFile] = useState<File | null>(null);
   const [playbookInputKey, setPlaybookInputKey] = useState(0);
+  const [playbookSourceMode, setPlaybookSourceMode] = useState<PlaybookSourceMode>("upload");
   const [playbookUrls, setPlaybookUrls] = useState<Record<string, string>>({});
   const [clipWhiteboardUrls, setClipWhiteboardUrls] = useState<Record<string, string>>({});
   const [whiteboardMode, setWhiteboardMode] = useState<ClipWhiteboardBaseMode>("blank");
@@ -554,6 +559,26 @@ export function AudiovisualRoom({
       ) ?? null
     );
   }, [activeClip, playbackClip, playbookAssets]);
+  const editingPlaybookAsset = useMemo(() => {
+    const normalizedFormation = playbookForm.formation.trim().toLowerCase();
+    const normalizedPlayType = playbookForm.playType.trim().toLowerCase();
+
+    if (!normalizedFormation || !normalizedPlayType) {
+      return null;
+    }
+
+    return (
+      playbookAssets.find((asset) =>
+        asset.side === playbookForm.side &&
+        asset.formation.trim().toLowerCase() === normalizedFormation &&
+        asset.playType.trim().toLowerCase() === normalizedPlayType,
+      ) ?? null
+    );
+  }, [playbookAssets, playbookForm.formation, playbookForm.playType, playbookForm.side]);
+  const playbookCanvasInitialState = (editingPlaybookAsset?.boardState as PlaybookWhiteboardState | undefined) ?? null;
+  const playbookCanvasBoardId = editingPlaybookAsset
+    ? `playbook-asset:${editingPlaybookAsset.id}`
+    : `playbook-draft:${playbookForm.side}:${playbookForm.formation.trim().toLowerCase()}:${playbookForm.playType.trim().toLowerCase()}`;
   const whiteboardTargetClip = activeClip ?? detailClip;
   const currentPlaybookUrl = activePlaybookAsset ? playbookUrls[activePlaybookAsset.id] : "";
   const activeClipWhiteboards = whiteboardTargetClip?.whiteboards ?? [];
@@ -1196,6 +1221,16 @@ export function AudiovisualRoom({
                         </div>
                       </div>
                     ) : null}
+                    {detailClip.focusTargets.length ? (
+                      <div className="film-meta-group">
+                        <span className="film-meta-label">注目してほしい選手</span>
+                        <div className="chip-row">
+                          {detailClip.focusTargets.map((label) => (
+                            <span key={label} className="chip ok">{label}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                     {detailClip.penaltyType ? (
                       <div className="film-meta-group">
                         <span className="film-meta-label">反則</span>
@@ -1585,6 +1620,7 @@ export function AudiovisualRoom({
       formation: clip.formation,
       playType: clip.playType,
       playerLinks: clip.playerLinks.length ? clip.playerLinks.map((link) => ({ ...link, positionId: link.positionId ?? "" })) : [{ playerId: "", positionId: "" }],
+      focusTargets: clip.focusTargets,
       comment: clip.comment,
       coachComment: clip.coachComment ?? "",
     });
@@ -1614,6 +1650,7 @@ export function AudiovisualRoom({
   function resetPlaybookForm() {
     setPlaybookForm(initialPlaybookForm);
     setPlaybookFile(null);
+    setPlaybookSourceMode("upload");
     setPlaybookInputKey((current) => current + 1);
   }
 
@@ -1751,16 +1788,11 @@ export function AudiovisualRoom({
       return;
     }
 
-    if (!nextAsset.formation || !nextAsset.playType || !playbookFile) {
-      setTeamMessage("隊形・プレー種類・画像ファイルを入れてください。");
+    if (!nextAsset.formation || !nextAsset.playType) {
+      setTeamMessage("隊形とプレー種類を入れてください。");
       return;
     }
 
-    const extension = playbookFile.name.includes(".")
-      ? playbookFile.name.split(".").pop()?.toLowerCase() ?? "png"
-      : "png";
-    const safeExtension = extension.replace(/[^a-z0-9]/g, "") || "png";
-    const storagePath = `${nextAsset.side}/${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
     const existingAsset =
       playbookAssets.find((asset) =>
         asset.side === nextAsset.side &&
@@ -1771,7 +1803,38 @@ export function AudiovisualRoom({
     try {
       setSyncing(true);
 
-      const { error: uploadError } = await supabase.storage.from(PLAYBOOK_BUCKET).upload(storagePath, playbookFile, {
+      let uploadFile: File | Blob;
+      let storageExtension = "png";
+      let boardState: PlaybookWhiteboardState | undefined;
+
+      if (playbookSourceMode === "canvas") {
+        if (!playbookCreatorRef.current) {
+          throw new Error("プレーブック作成キャンバスの準備ができていません。");
+        }
+
+        const exported = await playbookCreatorRef.current.exportToPng();
+        if (!exported) {
+          throw new Error("キャンバスの画像書き出しに失敗しました。");
+        }
+
+        uploadFile = exported.blob;
+        boardState = playbookCreatorRef.current.exportState();
+      } else {
+        if (!playbookFile) {
+          setTeamMessage("画像ファイルを選ぶか、キャンバスでプレーブックを作成してください。");
+          return;
+        }
+
+        const extension = playbookFile.name.includes(".")
+          ? playbookFile.name.split(".").pop()?.toLowerCase() ?? "png"
+          : "png";
+        storageExtension = extension.replace(/[^a-z0-9]/g, "") || "png";
+        uploadFile = playbookFile;
+      }
+
+      const storagePath = `${nextAsset.side}/${Date.now()}-${crypto.randomUUID()}.${storageExtension}`;
+
+      const { error: uploadError } = await supabase.storage.from(PLAYBOOK_BUCKET).upload(storagePath, uploadFile, {
         cacheControl: "3600",
         upsert: false,
       });
@@ -1784,6 +1847,7 @@ export function AudiovisualRoom({
         id: existingAsset?.id,
         ...nextAsset,
         imagePath: storagePath,
+        boardState,
       });
 
       if (existingAsset?.imagePath && existingAsset.imagePath !== storagePath) {
@@ -1914,6 +1978,7 @@ export function AudiovisualRoom({
       whiteboards: editingClipId
         ? currentVideo?.clips.find((clip) => clip.id === editingClipId)?.whiteboards ?? []
         : [],
+      focusTargets: clipForm.focusTargets,
     };
 
     try {
@@ -2081,6 +2146,7 @@ export function AudiovisualRoom({
         comment: string;
         coachComment: string;
         playerLinks: VideoClipPlayerLink[];
+        focusTargets: string[];
         whiteboards: VideoClip["whiteboards"];
       }> = [];
 
@@ -2125,6 +2191,7 @@ export function AudiovisualRoom({
           comment: getImportCell(row, ["コメント", "comment", "memo", "メモ"]),
           coachComment: getImportCell(row, ["コーチコメント", "コーチ間コメント", "coachcomment", "coach_comment"]),
           playerLinks,
+          focusTargets: [],
           whiteboards: [],
         });
       }
@@ -2641,16 +2708,53 @@ export function AudiovisualRoom({
                         placeholder="未入力なら隊形 / 種類で自動作成"
                       />
                     </label>
-                    <label className="field-stack admin-form-full">
-                      <span className="field-label">画像ファイル</span>
-                      <input
-                        key={playbookInputKey}
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                        onChange={(event) => setPlaybookFile(event.target.files?.[0] ?? null)}
-                        disabled={syncing || !usingRemoteData}
-                      />
-                    </label>
+                    <div className="field-stack admin-form-full">
+                      <span className="field-label">登録方法</span>
+                      <div className="film-whiteboard-mode-row">
+                        <button
+                          className={`button secondary button-compact ${playbookSourceMode === "upload" ? "is-selected" : ""}`}
+                          type="button"
+                          onClick={() => setPlaybookSourceMode("upload")}
+                          disabled={syncing}
+                        >
+                          画像をアップロード
+                        </button>
+                        <button
+                          className={`button secondary button-compact ${playbookSourceMode === "canvas" ? "is-selected" : ""}`}
+                          type="button"
+                          onClick={() => setPlaybookSourceMode("canvas")}
+                          disabled={syncing}
+                        >
+                          キャンバスで作成
+                        </button>
+                      </div>
+                    </div>
+                    {playbookSourceMode === "upload" ? (
+                      <label className="field-stack admin-form-full">
+                        <span className="field-label">画像ファイル</span>
+                        <input
+                          key={playbookInputKey}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          onChange={(event) => setPlaybookFile(event.target.files?.[0] ?? null)}
+                          disabled={syncing || !usingRemoteData}
+                        />
+                      </label>
+                    ) : (
+                      <div className="field-stack admin-form-full">
+                        <span className="field-label">プレーブック作成キャンバス</span>
+                        {editingPlaybookAsset?.boardState ? (
+                          <span className="subtle">同じ隊形とプレー種類の既存プレーブックを読み込んでいます。</span>
+                        ) : null}
+                        <PlaybookWhiteboard
+                          key={`${playbookCanvasBoardId}-${playbookSourceMode}`}
+                          ref={playbookCreatorRef}
+                          boardId={playbookCanvasBoardId}
+                          initialState={playbookCanvasInitialState}
+                          title={playbookForm.title.trim() || `${playbookForm.formation || "新規"} / ${playbookForm.playType || "プレー"}`}
+                        />
+                      </div>
+                    )}
                     <div className="card-actions admin-form-full">
                       <button
                         className="button"
@@ -2659,7 +2763,7 @@ export function AudiovisualRoom({
                         disabled={syncing || !usingRemoteData}
                       >
                         <Upload aria-hidden="true" />
-                        画像を登録
+                        {playbookSourceMode === "canvas" ? "プレーブックを保存" : "画像を登録"}
                       </button>
                     </div>
                   </div>
