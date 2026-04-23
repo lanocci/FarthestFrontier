@@ -1249,10 +1249,6 @@ export function AudiovisualRoom({
                   <span className="film-meta-label">自動表示プレーブック</span>
                   <strong>{activePlaybookAsset.title}</strong>
                 </div>
-                <div className="chip-row">
-                  <span className="chip">{activePlaybookAsset.formation}</span>
-                  <span className="chip">{activePlaybookAsset.playType}</span>
-                </div>
               </div>
               {playbookUrls[activePlaybookAsset.id] ? (
                 // eslint-disable-next-line @next/next/no-img-element

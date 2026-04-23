@@ -1017,8 +1017,10 @@ select:disabled {
 .film-focus-shell.is-fullscreen .film-playback-side,
 .film-focus-shell:fullscreen .film-playback-side,
 .film-focus-shell:-webkit-full-screen .film-playback-side {
+  min-width: 0;
   max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
   overflow-y: auto;
+  overflow-x: hidden;
   padding-top: 54px;
 }
 
@@ -1494,7 +1496,9 @@ select:disabled {
 
 .film-playbook-image,
 .film-playbook-library-image {
+  display: block;
   width: 100%;
+  max-width: 100%;
   border: 1px solid rgba(23, 50, 77, 0.12);
   border-radius: 14px;
   background: #fff;
@@ -1555,6 +1559,27 @@ select:disabled {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  min-width: 0;
+}
+
+.playbook-board-tools .button {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.film-focus-shell.is-fullscreen .film-playbook-card,
+.film-focus-shell:fullscreen .film-playbook-card,
+.film-focus-shell:-webkit-full-screen .film-playbook-card,
+.film-focus-shell.is-fullscreen .playbook-board,
+.film-focus-shell:fullscreen .playbook-board,
+.film-focus-shell:-webkit-full-screen .playbook-board,
+.film-focus-shell.is-fullscreen .playbook-board-toolbar,
+.film-focus-shell:fullscreen .playbook-board-toolbar,
+.film-focus-shell:-webkit-full-screen .playbook-board-toolbar,
+.film-focus-shell.is-fullscreen .playbook-board-tools,
+.film-focus-shell:fullscreen .playbook-board-tools,
+.film-focus-shell:-webkit-full-screen .playbook-board-tools {
+  min-width: 0;
 }
 
 .playbook-swatch {
