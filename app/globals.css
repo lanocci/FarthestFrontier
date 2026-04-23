@@ -1088,6 +1088,39 @@ select:disabled {
   gap: 4px;
 }
 
+.film-focus-shell.is-pseudo-fullscreen .playbook-board-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.film-focus-shell.is-pseudo-fullscreen .playbook-board,
+.film-focus-shell.is-pseudo-fullscreen .playbook-board-toolbar,
+.film-focus-shell.is-pseudo-fullscreen .playbook-board-surface,
+.film-focus-shell.is-pseudo-fullscreen .film-whiteboard-mode-row,
+.film-focus-shell.is-pseudo-fullscreen .film-whiteboard-gallery,
+.film-focus-shell.is-pseudo-fullscreen .field-stack {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.film-focus-shell.is-pseudo-fullscreen .field-stack input,
+.film-focus-shell.is-pseudo-fullscreen .field-stack select,
+.film-focus-shell.is-pseudo-fullscreen .field-stack textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.film-focus-shell.is-pseudo-fullscreen .playbook-board-tools {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.film-focus-shell.is-pseudo-fullscreen .playbook-board-tools .button {
+  flex: 1 1 0;
+}
+
 .film-focus-shell.is-pseudo-fullscreen .playbook-board-tools .button {
   padding: 5px 6px;
 }
