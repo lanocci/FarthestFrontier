@@ -1428,11 +1428,14 @@ select:disabled {
   .film-whiteboard-modal-body {
     width: calc(100vw - 16px);
     width: calc(100dvw - 16px);
-    max-height: calc(100vh - 16px);
-    max-height: calc(100dvh - 16px);
-    margin: 8px auto;
+    height: calc(100vh - 16px);
+    height: calc(100dvh - 16px);
     padding: 10px;
     border-radius: 16px;
+  }
+
+  .film-whiteboard-modal {
+    padding: 8px;
   }
 
   .film-whiteboard-mode-row,
@@ -1458,6 +1461,22 @@ select:disabled {
 
   .playbook-board-blank {
     aspect-ratio: 4 / 3;
+  }
+
+  .film-whiteboard-modal .playbook-board-surface {
+    height: min(46vh, 46dvh);
+    max-height: min(46vh, 46dvh);
+  }
+
+  .playbook-route-actions {
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .playbook-route-actions .button {
+    padding: 5px 8px;
+    font-size: 0.68rem;
   }
 
   .film-playbook-library-image,
@@ -1614,7 +1633,15 @@ select:disabled {
 .film-whiteboard-modal {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overscroll-behavior: contain;
+}
+
+body.video-whiteboard-modal-open {
+  overflow: hidden;
 }
 
 .film-whiteboard-modal-backdrop {
@@ -1628,13 +1655,13 @@ select:disabled {
   position: relative;
   z-index: 1;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
   width: min(1200px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
-  max-height: calc(100dvh - 32px);
-  margin: 16px auto;
+  height: min(920px, calc(100vh - 32px));
+  height: min(920px, calc(100dvh - 32px));
   padding: 16px;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
   background: rgba(255, 252, 246, 0.98);
@@ -1670,6 +1697,11 @@ select:disabled {
   display: grid;
   gap: 10px;
   min-width: 0;
+}
+
+.film-whiteboard-modal .playbook-board {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .playbook-board-toolbar {
@@ -1739,6 +1771,12 @@ select:disabled {
   cursor: crosshair;
 }
 
+.film-whiteboard-modal .playbook-board-surface {
+  min-height: 0;
+  height: min(58vh, 58dvh);
+  max-height: min(58vh, 58dvh);
+}
+
 .playbook-board-surface.is-erasing {
   cursor: cell;
 }
@@ -1762,6 +1800,19 @@ select:disabled {
   inset: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+}
+
+.playbook-route-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  pointer-events: auto;
 }
 
 .film-meta-label {

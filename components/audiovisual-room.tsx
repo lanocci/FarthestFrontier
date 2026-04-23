@@ -12,6 +12,7 @@ import { Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateC
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type AudiovisualRoomProps = {
   canManageTeam: boolean;
@@ -616,6 +617,60 @@ export function AudiovisualRoom({
       ? `${editingSavedWhiteboard.id}-${isWhiteboardModalOpen ? "modal" : "inline"}`
       : `${whiteboardTargetClip.id}-${whiteboardMode}-${activePlaybookAsset?.id ?? "none"}-${uploadedWhiteboardPreviewUrl ?? "none"}-${isWhiteboardModalOpen ? "modal" : "inline"}`
     : "whiteboard:none";
+  const whiteboardModal = isWhiteboardModalOpen && whiteboardTargetClip && typeof document !== "undefined"
+    ? createPortal(
+      <div className="film-whiteboard-modal" role="dialog" aria-modal="true" aria-label="解説ボードを拡大表示">
+        <div className="film-whiteboard-modal-backdrop" onClick={() => setIsWhiteboardModalOpen(false)} />
+        <div className="film-whiteboard-modal-body">
+          <div className="film-whiteboard-modal-header">
+            <div>
+              <span className="film-meta-label">解説ボード拡大表示</span>
+              <strong>{whiteboardTargetClip.title}</strong>
+            </div>
+            <button
+              className="button secondary button-compact"
+              type="button"
+              onClick={() => setIsWhiteboardModalOpen(false)}
+            >
+              <X aria-hidden="true" />
+              閉じる
+            </button>
+          </div>
+          <PlaybookWhiteboard
+            key={currentWhiteboardKey}
+            ref={whiteboardRef}
+            boardId={currentWhiteboardBoardId}
+            baseImageUrl={currentWhiteboardBaseImageUrl}
+            initialState={currentWhiteboardInitialState}
+            title={whiteboardTargetClip.title}
+          />
+          <div className="film-whiteboard-modal-actions">
+            <button
+              className="button secondary button-compact"
+              type="button"
+              onClick={() => setIsWhiteboardModalOpen(false)}
+            >
+              閉じる
+            </button>
+            <button
+              className="button"
+              type="button"
+              onClick={() => void handleSaveClipWhiteboard()}
+              disabled={
+                syncing ||
+                ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "playbook" && !currentWhiteboardBaseImageUrl) ||
+                ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "image" && !currentWhiteboardBaseImageUrl)
+              }
+            >
+              <Save aria-hidden="true" />
+              {editingSavedWhiteboard ? "変更を保存" : "このボードを保存"}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    )
+    : null;
 
   function buildClipUrl(videoId: string, clipId?: string | null): string {
     const params = new URLSearchParams();
@@ -677,6 +732,17 @@ export function AudiovisualRoom({
       videoId: selectedVideo?.id ?? "",
     }));
   }, [selectedVideo?.id]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.body.classList.toggle("video-whiteboard-modal-open", isWhiteboardModalOpen);
+    return () => {
+      document.body.classList.remove("video-whiteboard-modal-open");
+    };
+  }, [isWhiteboardModalOpen]);
 
   useEffect(() => {
     if (!selectedVideoYoutubeId) {
@@ -1466,58 +1532,6 @@ export function AudiovisualRoom({
                     </button>
                   </div>
                 </>
-              ) : null}
-
-              {isWhiteboardModalOpen ? (
-                <div className="film-whiteboard-modal" role="dialog" aria-modal="true" aria-label="解説ボードを拡大表示">
-                  <div className="film-whiteboard-modal-backdrop" onClick={() => setIsWhiteboardModalOpen(false)} />
-                  <div className="film-whiteboard-modal-body">
-                    <div className="film-whiteboard-modal-header">
-                      <div>
-                        <span className="film-meta-label">解説ボード拡大表示</span>
-                        <strong>{whiteboardTargetClip.title}</strong>
-                      </div>
-                      <button
-                        className="button secondary button-compact"
-                        type="button"
-                        onClick={() => setIsWhiteboardModalOpen(false)}
-                      >
-                        <X aria-hidden="true" />
-                        閉じる
-                      </button>
-                    </div>
-                    <PlaybookWhiteboard
-                      key={currentWhiteboardKey}
-                      ref={whiteboardRef}
-                      boardId={currentWhiteboardBoardId}
-                      baseImageUrl={currentWhiteboardBaseImageUrl}
-                      initialState={currentWhiteboardInitialState}
-                      title={whiteboardTargetClip.title}
-                    />
-                    <div className="film-whiteboard-modal-actions">
-                      <button
-                        className="button secondary button-compact"
-                        type="button"
-                        onClick={() => setIsWhiteboardModalOpen(false)}
-                      >
-                        閉じる
-                      </button>
-                      <button
-                        className="button"
-                        type="button"
-                        onClick={() => void handleSaveClipWhiteboard()}
-                        disabled={
-                          syncing ||
-                          ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "playbook" && !currentWhiteboardBaseImageUrl) ||
-                          ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "image" && !currentWhiteboardBaseImageUrl)
-                        }
-                      >
-                        <Save aria-hidden="true" />
-                        {editingSavedWhiteboard ? "変更を保存" : "このボードを保存"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
               ) : null}
 
               <div className="film-whiteboard-gallery">
@@ -2965,6 +2979,7 @@ export function AudiovisualRoom({
             YouTube側で埋め込みが許可されている限定公開動画を想定しています。埋め込み禁止の動画はURL登録できても再生できない場合があります。
           </p>
         </Section>
+        {whiteboardModal}
       </div>
     </div>
   );

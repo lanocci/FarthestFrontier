@@ -57,12 +57,8 @@ type DragState = {
 };
 
 type RouteDraft = {
+  anchorIndex: number;
   points: Point[];
-};
-
-type RouteTapState = {
-  point: Point;
-  time: number;
 };
 
 type AnimatedRouteBinding = {
@@ -98,7 +94,7 @@ const WIDTHS = [4, 8, 12] as const;
 const OFFENSE_TOKENS = ["C", "QB", "RB", "TE", "WR"] as const;
 const DEFENSE_TOKENS = ["SF", "CB", "LB"] as const;
 const MIN_LINEAR_DISTANCE = 0.025;
-const TOKEN_RADIUS = 0.045;
+const TOKEN_RADIUS = 0.052;
 const ROUTE_PLAYBACK_SPEED = 0.00035;
 const FIELD_LINE_WIDTH = 1;
 const FIELD_LINE_X_START = 0.04;
@@ -355,16 +351,17 @@ function drawOffenseToken(
   color: string,
   label: string,
 ) {
+  const borderWidth = Math.max(2, radius * 0.11);
   context.fillStyle = "#ffffff";
   context.strokeStyle = color;
-  context.lineWidth = Math.max(4, radius * 0.14);
+  context.lineWidth = borderWidth;
   context.beginPath();
   context.arc(centerX, centerY, radius, 0, Math.PI * 2);
   context.fill();
   context.stroke();
 
   context.fillStyle = color;
-  context.font = `700 ${Math.max(18, radius * 0.95)}px sans-serif`;
+  context.font = `700 ${Math.max(10, Math.min(radius * 0.66, radius - borderWidth - 6))}px sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillText(label, centerX, centerY);
@@ -424,13 +421,14 @@ function drawDefenseToken(
   color: string,
   label: string,
 ) {
-  const top = { x: centerX, y: centerY + radius * 1.1 };
-  const left = { x: centerX - radius, y: centerY - radius * 0.9 };
-  const right = { x: centerX + radius, y: centerY - radius * 0.9 };
+  const top = { x: centerX, y: centerY + radius * 1.18 };
+  const left = { x: centerX - radius * 1.24, y: centerY - radius * 1.02 };
+  const right = { x: centerX + radius * 1.24, y: centerY - radius * 1.02 };
 
+  const borderWidth = Math.max(2, radius * 0.11);
   context.fillStyle = "#ffffff";
   context.strokeStyle = color;
-  context.lineWidth = Math.max(4, radius * 0.14);
+  context.lineWidth = borderWidth;
   context.beginPath();
   context.moveTo(top.x, top.y);
   context.lineTo(left.x, left.y);
@@ -440,17 +438,20 @@ function drawDefenseToken(
   context.stroke();
 
   context.fillStyle = color;
-  context.font = `700 ${Math.max(18, radius * 0.68)}px sans-serif`;
+  context.font = `700 ${Math.max(8, Math.min(radius * 0.38, radius - borderWidth - 10))}px sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(label, centerX, centerY - radius * 0.05);
+  context.fillText(label, centerX, centerY - radius * 0.12);
 }
 
 function findTopmostToken(elements: BoardElement[], point: Point) {
   for (let index = elements.length - 1; index >= 0; index -= 1) {
     const element = elements[index];
     if (element.type === "token" && distanceBetween(element.center, point) <= TOKEN_RADIUS) {
-      return element;
+      return {
+        element,
+        index,
+      };
     }
   }
 
@@ -465,7 +466,6 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   const activeStrokeRef = useRef<Stroke | null>(null);
   const activeLinearRef = useRef<LinearElement | null>(null);
   const activeDragRef = useRef<DragState | null>(null);
-  const lastRouteTapRef = useRef<RouteTapState | null>(null);
   const [tool, setTool] = useState<Tool>("draw");
   const [color, setColor] = useState<(typeof COLORS)[number]>(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[1]);
@@ -477,7 +477,6 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   const [draftStroke, setDraftStroke] = useState<Stroke | null>(null);
   const [draftElement, setDraftElement] = useState<LinearElement | null>(null);
   const [routeDraft, setRouteDraft] = useState<RouteDraft | null>(null);
-  const [routePreviewPoint, setRoutePreviewPoint] = useState<Point | null>(null);
   const [selectedElementIndex, setSelectedElementIndex] = useState<number | null>(null);
   const [isRoutePlaybackActive, setIsRoutePlaybackActive] = useState(false);
   const [routePlaybackElapsedMs, setRoutePlaybackElapsedMs] = useState(0);
@@ -516,11 +515,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     setDraftStroke(null);
     setDraftElement(null);
     setRouteDraft(null);
-    setRoutePreviewPoint(null);
     activeStrokeRef.current = null;
     activeLinearRef.current = null;
     activeDragRef.current = null;
-    lastRouteTapRef.current = null;
     setSelectedElementIndex(null);
   }, [initialState, storageKey]);
 
@@ -647,11 +644,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       setDraftStroke(null);
       setDraftElement(null);
       setRouteDraft(null);
-      setRoutePreviewPoint(null);
       activeStrokeRef.current = null;
       activeLinearRef.current = null;
       activeDragRef.current = null;
-      lastRouteTapRef.current = null;
       setSelectedElementIndex(null);
     },
     exportState() {
@@ -902,24 +897,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
           return;
         }
 
-        const nextDraft = { points: [anchorToken.center] };
+        const nextDraft = { anchorIndex: anchorToken.index, points: [anchorToken.element.center] };
+        setSelectedElementIndex(anchorToken.index);
         setRouteDraft(nextDraft);
-        setRoutePreviewPoint(anchorToken.center);
-        lastRouteTapRef.current = null;
-        return;
-      }
-
-      const lastTap = lastRouteTapRef.current;
-      const isDoubleTap = Boolean(
-        lastTap &&
-        Date.now() - lastTap.time < 320 &&
-        distanceBetween(lastTap.point, point) < 0.03,
-      );
-
-      if (isDoubleTap) {
-        setRoutePreviewPoint(point);
-        handleCommitRoute(point);
-        lastRouteTapRef.current = null;
         return;
       }
 
@@ -929,13 +909,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       }
 
       setRouteDraft({
+        anchorIndex: routeDraft.anchorIndex,
         points: [...routeDraft.points, point],
       });
-      setRoutePreviewPoint(point);
-      lastRouteTapRef.current = {
-        point,
-        time: Date.now(),
-      };
       return;
     }
 
@@ -1003,11 +979,6 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       return;
     }
 
-    if (routeDraft) {
-      setRoutePreviewPoint(point);
-      return;
-    }
-
     const currentStroke = activeStrokeRef.current;
     if (!currentStroke) {
       return;
@@ -1046,18 +1017,12 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     setDraftStroke(null);
   }
 
-  function handleCommitRoute(finalPoint?: Point) {
+  function handleCommitRoute() {
     if (!routeDraft) {
       return;
     }
 
-    const candidatePoint = finalPoint ?? routePreviewPoint;
-    const lastCommittedPoint = routeDraft.points[routeDraft.points.length - 1];
-    const committedPoints = candidatePoint && distanceBetween(lastCommittedPoint, candidatePoint) >= MIN_LINEAR_DISTANCE
-      ? [...routeDraft.points, candidatePoint]
-      : routeDraft.points;
-
-    if (committedPoints.length < 2) {
+    if (routeDraft.points.length < 2) {
       return;
     }
 
@@ -1067,20 +1032,17 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
         type: "route",
         color,
         endCap: routeEndCap,
-        points: committedPoints,
+        points: routeDraft.points,
         width: strokeWidth,
       },
     ]);
     setSelectedElementIndex(null);
     setRouteDraft(null);
-    setRoutePreviewPoint(null);
-    lastRouteTapRef.current = null;
   }
 
   function handleCancelRoute() {
     setRouteDraft(null);
-    setRoutePreviewPoint(null);
-    lastRouteTapRef.current = null;
+    setSelectedElementIndex(null);
   }
 
   function handleToggleRoutePlayback() {
@@ -1089,7 +1051,6 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     }
 
     setRouteDraft(null);
-    setRoutePreviewPoint(null);
     activeDragRef.current = null;
     activeLinearRef.current = null;
     activeStrokeRef.current = null;
@@ -1268,6 +1229,9 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     const centerX = element.center.x * surfaceSize.width;
     const centerY = element.center.y * surfaceSize.height;
     const radius = TOKEN_RADIUS * Math.min(surfaceSize.width, surfaceSize.height);
+    const borderWidth = Math.max(2, radius * 0.11);
+    const offenseFontSize = Math.max(10, Math.min(radius * 0.66, radius - borderWidth - 6));
+    const defenseFontSize = Math.max(8, Math.min(radius * 0.38, radius - borderWidth - 10));
 
     if (element.variant === "offense") {
       return (
@@ -1278,12 +1242,12 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
             fill="#ffffff"
             r={radius}
             stroke={element.color}
-            strokeWidth={8}
+            strokeWidth={borderWidth}
           />
           <text
             dominantBaseline="middle"
             fill={element.color}
-            fontSize={radius * 0.95}
+            fontSize={offenseFontSize}
             fontWeight="700"
             textAnchor="middle"
             x={centerX}
@@ -1298,19 +1262,19 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     return (
       <g key={key}>
         <path
-          d={`M ${centerX},${centerY + radius * 1.1} L ${centerX - radius},${centerY - radius * 0.9} L ${centerX + radius},${centerY - radius * 0.9} Z`}
+          d={`M ${centerX},${centerY + radius * 1.18} L ${centerX - radius * 1.24},${centerY - radius * 1.02} L ${centerX + radius * 1.24},${centerY - radius * 1.02} Z`}
           fill="#ffffff"
           stroke={element.color}
-          strokeWidth={8}
+          strokeWidth={borderWidth}
         />
         <text
           dominantBaseline="middle"
           fill={element.color}
-          fontSize={radius * 0.68}
+          fontSize={defenseFontSize}
           fontWeight="700"
           textAnchor="middle"
           x={centerX}
-          y={centerY - radius * 0.05}
+          y={centerY - radius * 0.12}
         >
           {element.label}
         </text>
@@ -1543,16 +1507,6 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
                 {candidate === "none" ? "なし" : candidate === "arrow" ? "矢印" : candidate === "block" ? "T字" : "丸"}
               </button>
             ))}
-            {routeDraft ? (
-              <>
-                <button className="button secondary button-compact" type="button" onClick={() => handleCommitRoute()}>
-                  ルート確定
-                </button>
-                <button className="button secondary button-compact" type="button" onClick={handleCancelRoute}>
-                  キャンセル
-                </button>
-              </>
-            ) : null}
           </div>
         ) : null}
 
@@ -1674,10 +1628,31 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
             color,
             endCap: routeEndCap,
             width: strokeWidth,
-            points: routePreviewPoint ? [...routeDraft.points, routePreviewPoint] : routeDraft.points,
+            points: routeDraft.points,
           }, "draft-route") : null}
           {draftStroke ? renderStroke(draftStroke, "draft-stroke") : null}
         </svg>
+        {routeDraft ? (
+          <div className="playbook-route-actions">
+            <button
+              className="button secondary button-compact"
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={handleCancelRoute}
+            >
+              キャンセル
+            </button>
+            <button
+              className="button button-compact"
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={handleCommitRoute}
+              disabled={routeDraft.points.length < 2}
+            >
+              ルート確定
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
