@@ -8,7 +8,7 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
-import { Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -226,6 +226,7 @@ export function AudiovisualRoom({
   const [isWhiteboardModalOpen, setIsWhiteboardModalOpen] = useState(false);
   const [wasFullscreenBeforeWhiteboard, setWasFullscreenBeforeWhiteboard] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [expandedPlaybookIds, setExpandedPlaybookIds] = useState<string[]>([]);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
@@ -2946,34 +2947,63 @@ export function AudiovisualRoom({
                               <strong>{asset.title}</strong>
                               <div className="subtle">{asset.formation} / {asset.playType}</div>
                             </div>
-                            <button
-                              className="button ghost"
-                              type="button"
-                              onClick={() => handleDeletePlaybookAsset(asset)}
-                              disabled={syncing}
-                            >
-                              <Trash2 aria-hidden="true" />
-                              削除
-                            </button>
-                          </div>
-                          <div className="chip-row">
-                            <span className="chip">{asset.side === "offense" ? "オフェンス" : "ディフェンス"}</span>
-                            <span className="chip">{formatAudienceLabel(asset.audience)}</span>
-                            <span className="chip">更新: {asset.updatedAt}</span>
-                          </div>
-                          {playbookUrls[asset.id] ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              className="film-playbook-library-image"
-                              src={playbookUrls[asset.id]}
-                              alt={`${asset.title} のプレーブック`}
-                            />
-                          ) : (
-                            <div className="film-playbook-library-placeholder">
-                              <ImageIcon aria-hidden="true" />
-                              <span>プレビューを読み込み中</span>
+                            <div className="chip-row">
+                              <button
+                                className="button ghost"
+                                type="button"
+                                onClick={() => {
+                                  setExpandedPlaybookIds((current) =>
+                                    current.includes(asset.id)
+                                      ? current.filter((id) => id !== asset.id)
+                                      : [...current, asset.id]
+                                  );
+                                }}
+                              >
+                                {expandedPlaybookIds.includes(asset.id) ? (
+                                  <>
+                                    <ChevronUp aria-hidden="true" />
+                                    閉じる
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown aria-hidden="true" />
+                                    詳細
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                className="button ghost"
+                                type="button"
+                                onClick={() => handleDeletePlaybookAsset(asset)}
+                                disabled={syncing}
+                              >
+                                <Trash2 aria-hidden="true" />
+                                削除
+                              </button>
                             </div>
-                          )}
+                          </div>
+                          {expandedPlaybookIds.includes(asset.id) ? (
+                            <>
+                              <div className="chip-row">
+                                <span className="chip">{asset.side === "offense" ? "オフェンス" : "ディフェンス"}</span>
+                                <span className="chip">{formatAudienceLabel(asset.audience)}</span>
+                                <span className="chip">更新: {asset.updatedAt}</span>
+                              </div>
+                              {playbookUrls[asset.id] ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  className="film-playbook-library-image"
+                                  src={playbookUrls[asset.id]}
+                                  alt={`${asset.title} のプレーブック`}
+                                />
+                              ) : (
+                                <div className="film-playbook-library-placeholder">
+                                  <ImageIcon aria-hidden="true" />
+                                  <span>プレビューを読み込み中</span>
+                                </div>
+                              )}
+                            </>
+                          ) : null}
                         </article>
                       ))
                     ) : (
