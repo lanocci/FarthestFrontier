@@ -1979,7 +1979,10 @@ body.video-whiteboard-modal-open {
 }
 
 .playbook-floating-palette-handle {
-  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 6px 6px 12px;
   border-bottom: 1px solid rgba(23, 50, 77, 0.08);
   color: var(--muted);
   font-size: 0.74rem;

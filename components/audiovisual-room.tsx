@@ -224,6 +224,7 @@ export function AudiovisualRoom({
   const [uploadedWhiteboardInputKey, setUploadedWhiteboardInputKey] = useState(0);
   const [transientWhiteboardState, setTransientWhiteboardState] = useState<PlaybookWhiteboardState | null>(null);
   const [isWhiteboardModalOpen, setIsWhiteboardModalOpen] = useState(false);
+  const [wasFullscreenBeforeWhiteboard, setWasFullscreenBeforeWhiteboard] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
@@ -625,7 +626,7 @@ export function AudiovisualRoom({
           if (whiteboardRef.current) {
             setTransientWhiteboardState(whiteboardRef.current.exportState());
           }
-          setIsWhiteboardModalOpen(false);
+          closeWhiteboardModal();
         }} />
         <div className="film-whiteboard-modal-body is-canvas-only">
           <PlaybookWhiteboard
@@ -639,7 +640,7 @@ export function AudiovisualRoom({
               if (whiteboardRef.current) {
                 setTransientWhiteboardState(whiteboardRef.current.exportState());
               }
-              setIsWhiteboardModalOpen(false);
+              closeWhiteboardModal();
             }}
             onRequestSave={() => void handleSaveClipWhiteboard()}
             saveDisabled={
@@ -1066,7 +1067,10 @@ export function AudiovisualRoom({
   async function openWhiteboardModal() {
     playerRef.current?.pauseVideo?.();
 
-    if (isPlaybackFullscreen || isPseudoFullscreen) {
+    const wasFullscreen = isPlaybackFullscreen || isPseudoFullscreen;
+    setWasFullscreenBeforeWhiteboard(wasFullscreen);
+
+    if (wasFullscreen) {
       await exitPlaybackFullscreen();
     }
 
@@ -1074,6 +1078,14 @@ export function AudiovisualRoom({
       setTransientWhiteboardState(whiteboardRef.current.exportState());
     }
     setIsWhiteboardModalOpen(true);
+  }
+
+  function closeWhiteboardModal() {
+    setIsWhiteboardModalOpen(false);
+    if (wasFullscreenBeforeWhiteboard) {
+      void enterPlaybackFullscreen();
+      setWasFullscreenBeforeWhiteboard(false);
+    }
   }
 
   function updateVideoForm<Key extends keyof VideoForm>(key: Key, value: VideoForm[Key]) {
@@ -1764,7 +1776,7 @@ export function AudiovisualRoom({
     setEditingSavedWhiteboardBaseImageUrl(nextBaseImageUrl);
     setUploadedWhiteboardInputKey((current) => current + 1);
     setTransientWhiteboardState(null);
-    setIsWhiteboardModalOpen(false);
+    closeWhiteboardModal();
   }
 
   async function handleSaveClipWhiteboard() {

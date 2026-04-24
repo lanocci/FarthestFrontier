@@ -1,6 +1,6 @@
 "use client";
 
-import { Eraser, Move, Pause, Pencil, Play, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Eraser, Move, Pause, Pencil, Play, RotateCcw, Trash2 } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 type Point = {
@@ -541,6 +541,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   const [routePlaybackElapsedMs, setRoutePlaybackElapsedMs] = useState(0);
   const [surfaceSize, setSurfaceSize] = useState({ height: 1000, width: 1000 });
   const [activePaletteSection, setActivePaletteSection] = useState<PaletteSection>("objects");
+  const [isPaletteExpanded, setIsPaletteExpanded] = useState(true);
   const [palettePositions, setPalettePositions] = useState<Record<PaletteKey, Point>>({
     functions: { x: 16, y: 16 },
     styles: { x: 16, y: 228 },
@@ -1875,10 +1876,24 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
         onPointerUp={(event) => handlePalettePointerUp("functions", event)}
         onPointerCancel={(event) => handlePalettePointerUp("functions", event)}
       >
-        ツール
+        <span>ツール</span>
+        <button
+          className="button ghost button-compact"
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setIsPaletteExpanded((current) => !current)}
+          aria-label={isPaletteExpanded ? "ツールを折りたたむ" : "ツールを展開する"}
+          style={{ padding: "0 4px", minWidth: 0, height: "24px" }}
+        >
+          {isPaletteExpanded ? <ChevronUp aria-hidden="true" style={{ width: 16, height: 16 }} /> : <ChevronDown aria-hidden="true" style={{ width: 16, height: 16 }} />}
+        </button>
       </div>
-      {paletteTabs}
-      {paletteBody}
+      {isPaletteExpanded ? (
+        <>
+          {paletteTabs}
+          {paletteBody}
+        </>
+      ) : null}
     </div>
   ) : null;
 
