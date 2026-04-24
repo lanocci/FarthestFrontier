@@ -8,7 +8,7 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
-import { Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload, X } from "lucide-react";
+import { Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -222,6 +222,7 @@ export function AudiovisualRoom({
   const [uploadedWhiteboardFile, setUploadedWhiteboardFile] = useState<File | null>(null);
   const [uploadedWhiteboardPreviewUrl, setUploadedWhiteboardPreviewUrl] = useState<string | null>(null);
   const [uploadedWhiteboardInputKey, setUploadedWhiteboardInputKey] = useState(0);
+  const [transientWhiteboardState, setTransientWhiteboardState] = useState<PlaybookWhiteboardState | null>(null);
   const [isWhiteboardModalOpen, setIsWhiteboardModalOpen] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
@@ -606,7 +607,7 @@ export function AudiovisualRoom({
         : whiteboardMode === "image"
           ? uploadedWhiteboardPreviewUrl
           : null;
-  const currentWhiteboardInitialState = (editingSavedWhiteboard?.boardState as PlaybookWhiteboardState | undefined) ?? null;
+  const currentWhiteboardInitialState = transientWhiteboardState ?? (editingSavedWhiteboard?.boardState as PlaybookWhiteboardState | undefined) ?? null;
   const currentWhiteboardBoardId = whiteboardTargetClip
     ? editingSavedWhiteboard
       ? `whiteboard-edit:${editingSavedWhiteboard.id}`
@@ -620,52 +621,35 @@ export function AudiovisualRoom({
   const whiteboardModal = isWhiteboardModalOpen && whiteboardTargetClip && typeof document !== "undefined"
     ? createPortal(
       <div className="film-whiteboard-modal" role="dialog" aria-modal="true" aria-label="解説ボードを拡大表示">
-        <div className="film-whiteboard-modal-backdrop" onClick={() => setIsWhiteboardModalOpen(false)} />
-        <div className="film-whiteboard-modal-body">
-          <div className="film-whiteboard-modal-header">
-            <div>
-              <span className="film-meta-label">解説ボード拡大表示</span>
-              <strong>{whiteboardTargetClip.title}</strong>
-            </div>
-            <button
-              className="button secondary button-compact"
-              type="button"
-              onClick={() => setIsWhiteboardModalOpen(false)}
-            >
-              <X aria-hidden="true" />
-              閉じる
-            </button>
-          </div>
+        <div className="film-whiteboard-modal-backdrop" onClick={() => {
+          if (whiteboardRef.current) {
+            setTransientWhiteboardState(whiteboardRef.current.exportState());
+          }
+          setIsWhiteboardModalOpen(false);
+        }} />
+        <div className="film-whiteboard-modal-body is-canvas-only">
           <PlaybookWhiteboard
             key={currentWhiteboardKey}
             ref={whiteboardRef}
             boardId={currentWhiteboardBoardId}
             baseImageUrl={currentWhiteboardBaseImageUrl}
+            fullscreenMode
             initialState={currentWhiteboardInitialState}
+            onRequestClose={() => {
+              if (whiteboardRef.current) {
+                setTransientWhiteboardState(whiteboardRef.current.exportState());
+              }
+              setIsWhiteboardModalOpen(false);
+            }}
+            onRequestSave={() => void handleSaveClipWhiteboard()}
+            saveDisabled={
+              syncing ||
+              ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "playbook" && !currentWhiteboardBaseImageUrl) ||
+              ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "image" && !currentWhiteboardBaseImageUrl)
+            }
+            saveLabel={editingSavedWhiteboard ? "変更を保存" : "このボードを保存"}
             title={whiteboardTargetClip.title}
           />
-          <div className="film-whiteboard-modal-actions">
-            <button
-              className="button secondary button-compact"
-              type="button"
-              onClick={() => setIsWhiteboardModalOpen(false)}
-            >
-              閉じる
-            </button>
-            <button
-              className="button"
-              type="button"
-              onClick={() => void handleSaveClipWhiteboard()}
-              disabled={
-                syncing ||
-                ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "playbook" && !currentWhiteboardBaseImageUrl) ||
-                ((editingSavedWhiteboard?.baseMode ?? whiteboardMode) === "image" && !currentWhiteboardBaseImageUrl)
-              }
-            >
-              <Save aria-hidden="true" />
-              {editingSavedWhiteboard ? "変更を保存" : "このボードを保存"}
-            </button>
-          </div>
         </div>
       </div>,
       document.body,
@@ -1077,6 +1061,19 @@ export function AudiovisualRoom({
     }
 
     setIsPlaybackFullscreen(false);
+  }
+
+  async function openWhiteboardModal() {
+    playerRef.current?.pauseVideo?.();
+
+    if (isPlaybackFullscreen || isPseudoFullscreen) {
+      await exitPlaybackFullscreen();
+    }
+
+    if (whiteboardRef.current) {
+      setTransientWhiteboardState(whiteboardRef.current.exportState());
+    }
+    setIsWhiteboardModalOpen(true);
   }
 
   function updateVideoForm<Key extends keyof VideoForm>(key: Key, value: VideoForm[Key]) {
@@ -1510,8 +1507,7 @@ export function AudiovisualRoom({
                       className="button secondary button-compact"
                       type="button"
                       onClick={() => {
-                        playerRef.current?.pauseVideo?.();
-                        setIsWhiteboardModalOpen(true);
+                        void openWhiteboardModal();
                       }}
                     >
                       <Expand aria-hidden="true" />
@@ -1739,6 +1735,7 @@ export function AudiovisualRoom({
     setUploadedWhiteboardFile(null);
     setUploadedWhiteboardPreviewUrl(null);
     setUploadedWhiteboardInputKey((current) => current + 1);
+    setTransientWhiteboardState(null);
   }
 
   function updateClipWhiteboards(clipId: string, updater: (current: VideoClip["whiteboards"]) => VideoClip["whiteboards"]) {
@@ -1766,6 +1763,7 @@ export function AudiovisualRoom({
     setUploadedWhiteboardPreviewUrl(nextBaseImageUrl);
     setEditingSavedWhiteboardBaseImageUrl(nextBaseImageUrl);
     setUploadedWhiteboardInputKey((current) => current + 1);
+    setTransientWhiteboardState(null);
     setIsWhiteboardModalOpen(false);
   }
 

@@ -1436,10 +1436,25 @@ select:disabled {
     height: calc(100dvh - 16px);
     padding: 10px;
     border-radius: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .film-whiteboard-modal-body.is-canvas-only {
+    width: calc(100vw - 8px);
+    width: calc(100dvw - 8px);
+    height: calc(100vh - 8px);
+    height: calc(100dvh - 8px);
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
   }
 
   .film-whiteboard-modal {
     padding: 8px;
+    place-items: start center;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .film-whiteboard-mode-row,
@@ -1468,19 +1483,55 @@ select:disabled {
   }
 
   .film-whiteboard-modal .playbook-board-surface {
-    height: min(46vh, 46dvh);
-    max-height: min(46vh, 46dvh);
+    height: min(34vh, 34dvh);
+    max-height: min(34vh, 34dvh);
+  }
+
+  .playbook-board-surface.is-fullscreen-surface {
+    height: 100%;
+    max-height: none;
+  }
+
+  .playbook-floating-palette {
+    width: min(296px, calc(100vw - 24px));
+  }
+
+  .playbook-floating-palette-main {
+    width: min(320px, calc(100vw - 20px));
+  }
+
+  .playbook-floating-palette-body {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .playbook-floating-palette-tabs {
+    gap: 6px;
+    padding: 10px 10px 0;
   }
 
   .playbook-route-actions {
-    top: 8px;
-    right: 8px;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
     gap: 6px;
   }
 
   .playbook-route-actions .button {
     padding: 5px 8px;
     font-size: 0.68rem;
+  }
+
+  .playbook-floating-actions {
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .playbook-floating-actions {
+    top: 8px;
+    right: 8px;
+    gap: 6px;
   }
 
   .film-playbook-library-image,
@@ -1672,6 +1723,26 @@ body.video-whiteboard-modal-open {
   box-shadow: 0 24px 60px rgba(7, 13, 24, 0.32);
 }
 
+.film-whiteboard-modal-body.is-canvas-only {
+  width: calc(100vw - 16px);
+  width: calc(100dvw - 16px);
+  height: calc(100vh - 16px);
+  height: calc(100dvh - 16px);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  padding: 0;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 245, 238, 0.98)),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 31px,
+      rgba(23, 50, 77, 0.06) 31px,
+      rgba(23, 50, 77, 0.06) 32px
+    );
+}
+
 .film-whiteboard-modal-header,
 .film-whiteboard-modal-actions {
   display: flex;
@@ -1704,9 +1775,23 @@ body.video-whiteboard-modal-open {
   width: 100%;
 }
 
+.playbook-board.is-fullscreen-mode {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  gap: 0;
+  overflow: hidden;
+}
+
 .film-whiteboard-modal .playbook-board {
   min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
+}
+
+.film-whiteboard-modal .playbook-board.is-fullscreen-mode {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .playbook-board-toolbar {
@@ -1714,6 +1799,12 @@ body.video-whiteboard-modal-open {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.playbook-board-toolbar-organized {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .playbook-board-tools {
@@ -1776,10 +1867,35 @@ body.video-whiteboard-modal-open {
   cursor: crosshair;
 }
 
+.playbook-board-surface.is-fullscreen-surface {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 245, 238, 0.98)),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 31px,
+      rgba(23, 50, 77, 0.06) 31px,
+      rgba(23, 50, 77, 0.06) 32px
+    );
+}
+
 .film-whiteboard-modal .playbook-board-surface {
   min-height: 0;
   height: min(58vh, 58dvh);
   max-height: min(58vh, 58dvh);
+}
+
+.film-whiteboard-modal .playbook-board-surface.is-fullscreen-surface {
+  height: 100%;
+  max-height: none;
 }
 
 .playbook-board-surface.is-erasing {
@@ -1798,6 +1914,23 @@ body.video-whiteboard-modal-open {
       rgba(23, 50, 77, 0.06) 31px,
       rgba(23, 50, 77, 0.06) 32px
     );
+  pointer-events: none;
+}
+
+.playbook-board-blank.is-fullscreen-blank {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.film-playbook-image.is-fullscreen-playbook-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .playbook-board-overlay {
@@ -1810,14 +1943,92 @@ body.video-whiteboard-modal-open {
 
 .playbook-route-actions {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.playbook-floating-palette {
+  grid-column: 1;
+  grid-row: 1;
+  position: absolute;
+  z-index: 3;
+  width: min(340px, calc(100vw - 40px));
+  border: 1px solid rgba(23, 50, 77, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 36px rgba(7, 13, 24, 0.18);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.film-whiteboard-modal .playbook-floating-palette {
+  position: fixed;
+  z-index: 130;
+}
+
+.playbook-floating-palette-main {
+  width: min(380px, calc(100vw - 36px));
+}
+
+.playbook-floating-palette-handle {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(23, 50, 77, 0.08);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.playbook-floating-palette-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.playbook-floating-palette-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 12px 0;
+}
+
+.playbook-floating-palette .playbook-board-tools {
+  width: 100%;
+}
+
+.playbook-floating-divider {
+  height: 1px;
+  background: rgba(23, 50, 77, 0.08);
+}
+
+.playbook-floating-actions {
+  grid-column: 1;
+  grid-row: 1;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   justify-content: flex-end;
   pointer-events: auto;
+}
+
+.film-whiteboard-modal .playbook-floating-actions {
+  position: fixed;
+  z-index: 131;
 }
 
 .film-meta-label {

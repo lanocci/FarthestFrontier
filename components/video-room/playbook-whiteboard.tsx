@@ -57,6 +57,18 @@ type DragState = {
   lastPoint: Point;
 };
 
+type PaletteKey = "functions" | "styles";
+
+type PaletteSection = "freehand" | "history" | "objects" | "route";
+
+type PaletteDragState = {
+  key: PaletteKey;
+  originX: number;
+  originY: number;
+  startClientX: number;
+  startClientY: number;
+};
+
 type RouteDraft = {
   anchorIndex: number;
   points: Point[];
@@ -79,7 +91,12 @@ export type PlaybookWhiteboardState = BoardState;
 type PlaybookWhiteboardProps = {
   boardId: string;
   baseImageUrl?: string | null;
+  fullscreenMode?: boolean;
   initialState?: PlaybookWhiteboardState | null;
+  onRequestClose?: () => void;
+  onRequestSave?: () => void;
+  saveDisabled?: boolean;
+  saveLabel?: string;
   title: string;
 };
 
@@ -107,7 +124,31 @@ const MINUS_FIVE_YARDS_Y = 0.7;
 const MINUS_TEN_YARDS_Y = 0.9;
 
 function getRouteDashPattern(width: number) {
-  return [Math.max(6, width * 1.6), Math.max(4, width * 1.1)];
+  return [Math.max(4, width * 1.0), Math.max(8, width * 2.4)];
+}
+
+function safelySetPointerCapture(target: EventTarget & HTMLDivElement, pointerId: number) {
+  if (typeof target.setPointerCapture !== "function") {
+    return;
+  }
+
+  try {
+    target.setPointerCapture(pointerId);
+  } catch {
+    // Safari can reject pointer capture in some fullscreen/touch flows.
+  }
+}
+
+function safelyReleasePointerCapture(target: EventTarget & HTMLDivElement, pointerId: number) {
+  if (typeof target.releasePointerCapture !== "function") {
+    return;
+  }
+
+  try {
+    target.releasePointerCapture(pointerId);
+  } catch {
+    // No-op when capture was never acquired.
+  }
 }
 
 function toSvgPoints(points: Point[], width: number, height: number) {
@@ -464,14 +505,26 @@ function findTopmostToken(elements: BoardElement[], point: Point) {
 }
 
 export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookWhiteboardProps>(function PlaybookWhiteboard(
-  { boardId, baseImageUrl, initialState, title },
+  {
+    boardId,
+    baseImageUrl,
+    fullscreenMode = false,
+    initialState,
+    onRequestClose,
+    onRequestSave,
+    saveDisabled = false,
+    saveLabel = "このボードを保存",
+    title,
+  },
   ref,
 ) {
+  const boardRef = useRef<HTMLDivElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const activeStrokeRef = useRef<Stroke | null>(null);
   const activeLinearRef = useRef<LinearElement | null>(null);
   const activeDragRef = useRef<DragState | null>(null);
-  const [tool, setTool] = useState<Tool>("draw");
+  const activePaletteDragRef = useRef<PaletteDragState | null>(null);
+  const [tool, setTool] = useState<Tool>("select");
   const [color, setColor] = useState<(typeof COLORS)[number]>(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0]);
   const [routeEndCap, setRouteEndCap] = useState<RouteEndCap>("arrow");
@@ -487,6 +540,11 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
   const [isRoutePlaybackActive, setIsRoutePlaybackActive] = useState(false);
   const [routePlaybackElapsedMs, setRoutePlaybackElapsedMs] = useState(0);
   const [surfaceSize, setSurfaceSize] = useState({ height: 1000, width: 1000 });
+  const [activePaletteSection, setActivePaletteSection] = useState<PaletteSection>("objects");
+  const [palettePositions, setPalettePositions] = useState<Record<PaletteKey, Point>>({
+    functions: { x: 16, y: 16 },
+    styles: { x: 16, y: 228 },
+  });
 
   const storageKey = useMemo(() => `${STORAGE_PREFIX}:${boardId}`, [boardId]);
 
@@ -643,6 +701,33 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       observer.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (!fullscreenMode || typeof window === "undefined") {
+      return;
+    }
+
+    setPalettePositions({
+      functions: { x: 12, y: 12 },
+      styles: { x: 12, y: 12 },
+    });
+  }, [fullscreenMode]);
+
+  useEffect(() => {
+    if (tool === "token" || tool === "select") {
+      setActivePaletteSection("objects");
+      return;
+    }
+
+    if (tool === "route") {
+      setActivePaletteSection("route");
+      return;
+    }
+
+    if (tool === "draw" || tool === "erase" || tool === "arrow" || tool === "spotlight") {
+      setActivePaletteSection("freehand");
+    }
+  }, [tool]);
 
   useImperativeHandle(ref, () => ({
     clear() {
@@ -837,6 +922,60 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     };
   }
 
+  function updatePalettePosition(key: PaletteKey, clientX: number, clientY: number) {
+    const drag = activePaletteDragRef.current;
+    const boardBounds = boardRef.current?.getBoundingClientRect();
+    if (!drag || drag.key !== key || !boardBounds) {
+      return;
+    }
+
+    const nextX = drag.originX + (clientX - drag.startClientX);
+    const nextY = drag.originY + (clientY - drag.startClientY);
+
+    setPalettePositions((current) => ({
+      ...current,
+      [key]: {
+        x: Math.max(8, Math.min(boardBounds.width - 148, nextX)),
+        y: Math.max(8, Math.min(boardBounds.height - 84, nextY)),
+      },
+    }));
+  }
+
+  function handlePalettePointerDown(key: PaletteKey, event: React.PointerEvent<HTMLDivElement>) {
+    if (!fullscreenMode) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    safelySetPointerCapture(event.currentTarget, event.pointerId);
+    activePaletteDragRef.current = {
+      key,
+      originX: palettePositions[key].x,
+      originY: palettePositions[key].y,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+    };
+  }
+
+  function handlePalettePointerMove(key: PaletteKey, event: React.PointerEvent<HTMLDivElement>) {
+    if (!activePaletteDragRef.current || activePaletteDragRef.current.key !== key) {
+      return;
+    }
+
+    updatePalettePosition(key, event.clientX, event.clientY);
+  }
+
+  function handlePalettePointerUp(key: PaletteKey, event: React.PointerEvent<HTMLDivElement>) {
+    if (!activePaletteDragRef.current || activePaletteDragRef.current.key !== key) {
+      return;
+    }
+
+    event.stopPropagation();
+    activePaletteDragRef.current = null;
+    safelyReleasePointerCapture(event.currentTarget, event.pointerId);
+  }
+
   function eraseAtPoint(point: Point) {
     setStrokes((current) => current.filter((stroke) => !isStrokeNearPoint(stroke, point)));
     setElements((current) => current.filter((element) => !isElementNearPoint(element, point)));
@@ -852,7 +991,7 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       return;
     }
 
-    event.currentTarget.setPointerCapture(event.pointerId);
+    safelySetPointerCapture(event.currentTarget, event.pointerId);
 
     if (tool === "erase") {
       eraseAtPoint(point);
@@ -1468,56 +1607,230 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
     );
   }
 
-  return (
-    <div className="playbook-board">
-      <div className="playbook-board-toolbar">
+  const activeDashSetting = selectedElement?.type === "route" ? Boolean(selectedElement.dashed) : routeDashed;
+
+  const colorSwatches = (
+    <div className="playbook-board-tools">
+      <span className="playbook-board-label">色</span>
+      {COLORS.map((candidate) => (
+        <button
+          key={candidate}
+          className={`playbook-swatch ${color === candidate ? "is-selected" : ""}`}
+          type="button"
+          onClick={() => {
+            setColor(candidate);
+            if (selectedElementIndex != null) {
+              updateSelectedElement((element) => ({ ...element, color: candidate }));
+            }
+          }}
+          style={{ backgroundColor: candidate }}
+          aria-label={`色を選択: ${candidate}`}
+          title="色を選択"
+        />
+      ))}
+    </div>
+  );
+
+  const widthControls = (
+    <div className="playbook-board-tools">
+      <span className="playbook-board-label">太さ</span>
+      {WIDTHS.map((candidate) => (
+        <button
+          key={candidate}
+          className={`button secondary button-compact ${strokeWidth === candidate ? "is-selected" : ""}`}
+          type="button"
+          onClick={() => setStrokeWidth(candidate)}
+        >
+          太さ {candidate}
+        </button>
+      ))}
+    </div>
+  );
+
+  const animationPanel = animatedRouteBindings.length ? (
+    <div className="playbook-board-tools">
+      <span className="playbook-board-label">アニメーション</span>
+      <button className={`button secondary button-compact ${isRoutePlaybackActive ? "is-selected" : ""}`} type="button" onClick={handleToggleRoutePlayback}>
+        {isRoutePlaybackActive ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+        {isRoutePlaybackActive ? "停止" : "再生"}
+      </button>
+      <button className="button secondary button-compact" type="button" onClick={handleResetRoutePlayback} disabled={!routePlaybackElapsedMs && !isRoutePlaybackActive}>
+        <RotateCcw aria-hidden="true" />
+        戻す
+      </button>
+    </div>
+  ) : null;
+
+  const paletteTabs = (
+    <div
+      className="playbook-floating-palette-tabs"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+    >
+      <button className={`button secondary button-compact ${activePaletteSection === "objects" ? "is-selected" : ""}`} type="button" onClick={() => setActivePaletteSection("objects")}>
+        オブジェクト
+      </button>
+      <button className={`button secondary button-compact ${activePaletteSection === "route" ? "is-selected" : ""}`} type="button" onClick={() => {
+        setActivePaletteSection("route");
+        setTool("route");
+      }}>
+        ルート
+      </button>
+      <button className={`button secondary button-compact ${activePaletteSection === "freehand" ? "is-selected" : ""}`} type="button" onClick={() => {
+        setActivePaletteSection("freehand");
+        if (!["draw", "erase", "arrow", "spotlight"].includes(tool)) {
+          setTool("draw");
+        }
+      }}>
+        フリーハンド
+      </button>
+      <button className={`button secondary button-compact ${activePaletteSection === "history" ? "is-selected" : ""}`} type="button" onClick={() => setActivePaletteSection("history")}>
+        戻す・消す
+      </button>
+    </div>
+  );
+
+  const paletteBody = (
+    <div
+      className="playbook-floating-palette-body"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+    >
+      {activePaletteSection === "objects" ? (
+        <>
+          <div className="playbook-board-tools">
+            <button className={`button secondary button-compact ${tool === "select" ? "is-selected" : ""}`} type="button" onClick={() => setTool("select")}>
+              <Move aria-hidden="true" />
+              移動
+            </button>
+          </div>
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">O</span>
+            {OFFENSE_TOKENS.map((candidate) => (
+              <button
+                key={candidate}
+                className={`button secondary button-compact ${tool === "token" && selectedTokenVariant === "offense" && selectedTokenLabel === candidate ? "is-selected" : ""}`}
+                type="button"
+                onClick={() => {
+                  setSelectedTokenVariant("offense");
+                  setSelectedTokenLabel(candidate);
+                  setTool("token");
+                }}
+              >
+                {candidate}
+              </button>
+            ))}
+          </div>
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">D</span>
+            {DEFENSE_TOKENS.map((candidate) => (
+              <button
+                key={candidate}
+                className={`button secondary button-compact ${tool === "token" && selectedTokenVariant === "defense" && selectedTokenLabel === candidate ? "is-selected" : ""}`}
+                type="button"
+                onClick={() => {
+                  setSelectedTokenVariant("defense");
+                  setSelectedTokenLabel(candidate);
+                  setTool("token");
+                }}
+              >
+                {candidate}
+              </button>
+            ))}
+          </div>
+          {colorSwatches}
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">フィールド</span>
+            <button className="button secondary button-compact" type="button" onClick={handleAddFieldLines}>線を追加</button>
+            <button className="button secondary button-compact" type="button" onClick={handleDeleteFieldLines}>線を削除</button>
+          </div>
+          {selectedElement?.type === "token" ? (
+            <div className="playbook-board-tools">
+              <button className="button secondary button-compact" type="button" onClick={handleDeleteRoutesFromSelectedToken}>
+                この選手のルートを削除
+              </button>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {activePaletteSection === "route" ? (
+        <>
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">先端</span>
+            {(["none", "arrow", "block", "dropback"] as const).map((candidate) => (
+              <button
+                key={candidate}
+                className={`button secondary button-compact ${routeEndCap === candidate ? "is-selected" : ""}`}
+                type="button"
+                onClick={() => setRouteEndCap(candidate)}
+              >
+                {candidate === "none" ? "なし" : candidate === "arrow" ? "矢印" : candidate === "block" ? "T字" : "丸"}
+              </button>
+            ))}
+          </div>
+          {colorSwatches}
+          {widthControls}
+          <div className="playbook-board-tools">
+            <span className="playbook-board-label">線種</span>
+            <button
+              className={`button secondary button-compact ${!activeDashSetting ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => {
+                if (selectedElement?.type === "route") {
+                  updateSelectedElement((element) => (element.type === "route" ? { ...element, dashed: false } : element));
+                  return;
+                }
+                setRouteDashed(false);
+              }}
+            >
+              実線
+            </button>
+            <button
+              className={`button secondary button-compact ${activeDashSetting ? "is-selected" : ""}`}
+              type="button"
+              onClick={() => {
+                if (selectedElement?.type === "route") {
+                  updateSelectedElement((element) => (element.type === "route" ? { ...element, dashed: true } : element));
+                  return;
+                }
+                setRouteDashed(true);
+              }}
+            >
+              点線
+            </button>
+          </div>
+          {animationPanel}
+        </>
+      ) : null}
+
+      {activePaletteSection === "freehand" ? (
+        <>
+          <div className="playbook-board-tools">
+            <button className={`button secondary button-compact ${tool === "draw" ? "is-selected" : ""}`} type="button" onClick={() => setTool("draw")}>
+              <Pencil aria-hidden="true" />
+              ペン
+            </button>
+            <button className={`button secondary button-compact ${tool === "erase" ? "is-selected" : ""}`} type="button" onClick={() => setTool("erase")}>
+              <Eraser aria-hidden="true" />
+              消しゴム
+            </button>
+            <button className={`button secondary button-compact ${tool === "arrow" ? "is-selected" : ""}`} type="button" onClick={() => setTool("arrow")}>
+              矢印
+            </button>
+            <button className={`button secondary button-compact ${tool === "spotlight" ? "is-selected" : ""}`} type="button" onClick={() => setTool("spotlight")}>
+              スポット
+            </button>
+          </div>
+          {colorSwatches}
+          {widthControls}
+        </>
+      ) : null}
+
+      {activePaletteSection === "history" ? (
         <div className="playbook-board-tools">
-          <span className="playbook-board-label">機能</span>
-          <button
-            className={`button secondary button-compact ${tool === "select" ? "is-selected" : ""}`}
-            type="button"
-            onClick={() => setTool("select")}
-          >
-            <Move aria-hidden="true" />
-            移動
-          </button>
-          <button
-            className={`button secondary button-compact ${tool === "draw" ? "is-selected" : ""}`}
-            type="button"
-            onClick={() => setTool("draw")}
-          >
-            <Pencil aria-hidden="true" />
-            ペン
-          </button>
-          <button
-            className={`button secondary button-compact ${tool === "erase" ? "is-selected" : ""}`}
-            type="button"
-            onClick={() => setTool("erase")}
-          >
-            <Eraser aria-hidden="true" />
-            消しゴム
-          </button>
-          <button
-            className={`button secondary button-compact ${tool === "spotlight" ? "is-selected" : ""}`}
-            type="button"
-            onClick={() => setTool("spotlight")}
-          >
-            スポット
-          </button>
-          <button
-            className={`button secondary button-compact ${tool === "arrow" ? "is-selected" : ""}`}
-            type="button"
-            onClick={() => setTool("arrow")}
-          >
-            矢印
-          </button>
-          <button
-            className={`button secondary button-compact ${tool === "route" ? "is-selected" : ""}`}
-            type="button"
-            onClick={() => setTool("route")}
-          >
-            ルート
-          </button>
           <button
             className="button secondary button-compact"
             type="button"
@@ -1546,187 +1859,41 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
             全消し
           </button>
         </div>
+      ) : null}
+    </div>
+  );
 
-        <div className="playbook-board-tools">
-          <span className="playbook-board-label">フィールド</span>
-          <button
-            className="button secondary button-compact"
-            type="button"
-            onClick={handleAddFieldLines}
-          >
-            線を追加
-          </button>
-          <button
-            className="button secondary button-compact"
-            type="button"
-            onClick={handleDeleteFieldLines}
-          >
-            線を削除
-          </button>
-        </div>
-
-        <div className="playbook-board-tools">
-          <span className="playbook-board-label">O</span>
-          {OFFENSE_TOKENS.map((candidate) => (
-            <button
-              key={candidate}
-              className={`button secondary button-compact ${tool === "token" && selectedTokenVariant === "offense" && selectedTokenLabel === candidate ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => {
-                setSelectedTokenVariant("offense");
-                setSelectedTokenLabel(candidate);
-                setTool("token");
-              }}
-            >
-              {candidate}
-            </button>
-          ))}
-        </div>
-
-        <div className="playbook-board-tools">
-          <span className="playbook-board-label">D</span>
-          {DEFENSE_TOKENS.map((candidate) => (
-            <button
-              key={candidate}
-              className={`button secondary button-compact ${tool === "token" && selectedTokenVariant === "defense" && selectedTokenLabel === candidate ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => {
-                setSelectedTokenVariant("defense");
-                setSelectedTokenLabel(candidate);
-                setTool("token");
-              }}
-            >
-              {candidate}
-            </button>
-          ))}
-        </div>
-
-        {tool === "route" || routeDraft ? (
-          <div className="playbook-board-tools">
-            <span className="playbook-board-label">ルート先端</span>
-            {(["none", "arrow", "block", "dropback"] as const).map((candidate) => (
-              <button
-                key={candidate}
-                className={`button secondary button-compact ${routeEndCap === candidate ? "is-selected" : ""}`}
-                type="button"
-                onClick={() => setRouteEndCap(candidate)}
-              >
-                {candidate === "none" ? "なし" : candidate === "arrow" ? "矢印" : candidate === "block" ? "T字" : "丸"}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {selectedElement?.type === "token" ? (
-          <div className="playbook-board-tools">
-            <span className="playbook-board-label">選択中の{selectedElement.variant === "offense" ? "O" : "D"}</span>
-            <button
-              className="button secondary button-compact"
-              type="button"
-              onClick={handleDeleteRoutesFromSelectedToken}
-            >
-              この選手のルートを削除
-            </button>
-          </div>
-        ) : null}
-
-        <div className="playbook-board-tools">
-          <span className="playbook-board-label">スタイル</span>
-          {COLORS.map((candidate) => (
-            <button
-              key={candidate}
-              className={`playbook-swatch ${color === candidate ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => {
-                setColor(candidate);
-                if (selectedElementIndex != null) {
-                  updateSelectedElement((element) => ({ ...element, color: candidate }));
-                }
-              }}
-              style={{ backgroundColor: candidate }}
-              aria-label={`色を選択: ${candidate}`}
-              title="色を選択"
-            >
-            </button>
-          ))}
-        </div>
-
-        <div className="playbook-board-tools">
-          {WIDTHS.map((candidate) => (
-            <button
-              key={candidate}
-              className={`button secondary button-compact ${strokeWidth === candidate ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => setStrokeWidth(candidate)}
-            >
-              太さ {candidate}
-            </button>
-          ))}
-        </div>
-
-        {(tool === "route" || routeDraft || selectedElement?.type === "route") ? (
-          <div className="playbook-board-tools">
-            <span className="playbook-board-label">線のスタイル</span>
-            <button
-              className={`button secondary button-compact ${!(selectedElement?.type === "route" ? selectedElement.dashed : routeDashed) ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => {
-                if (selectedElement?.type === "route") {
-                  updateSelectedElement((element) => (
-                    element.type === "route" ? { ...element, dashed: false } : element
-                  ));
-                  return;
-                }
-                setRouteDashed(false);
-              }}
-            >
-              実線
-            </button>
-            <button
-              className={`button secondary button-compact ${(selectedElement?.type === "route" ? selectedElement.dashed : routeDashed) ? "is-selected" : ""}`}
-              type="button"
-              onClick={() => {
-                if (selectedElement?.type === "route") {
-                  updateSelectedElement((element) => (
-                    element.type === "route" ? { ...element, dashed: true } : element
-                  ));
-                  return;
-                }
-                setRouteDashed(true);
-              }}
-            >
-              点線
-            </button>
-          </div>
-        ) : null}
-
-        {animatedRouteBindings.length ? (
-          <div className="playbook-board-tools">
-            <span className="playbook-board-label">アニメーション</span>
-            <button
-              className={`button secondary button-compact ${isRoutePlaybackActive ? "is-selected" : ""}`}
-              type="button"
-              onClick={handleToggleRoutePlayback}
-            >
-              {isRoutePlaybackActive ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-              {isRoutePlaybackActive ? "停止" : "再生"}
-            </button>
-            <button
-              className="button secondary button-compact"
-              type="button"
-              onClick={handleResetRoutePlayback}
-              disabled={!routePlaybackElapsedMs && !isRoutePlaybackActive}
-            >
-              <RotateCcw aria-hidden="true" />
-              戻す
-            </button>
-          </div>
-        ) : null}
+  const fullscreenPalette = fullscreenMode ? (
+    <div
+      className="playbook-floating-palette playbook-floating-palette-main"
+      style={{ left: palettePositions.functions.x, top: palettePositions.functions.y }}
+    >
+      <div
+        className="playbook-floating-palette-handle"
+        onPointerDown={(event) => handlePalettePointerDown("functions", event)}
+        onPointerMove={(event) => handlePalettePointerMove("functions", event)}
+        onPointerUp={(event) => handlePalettePointerUp("functions", event)}
+        onPointerCancel={(event) => handlePalettePointerUp("functions", event)}
+      >
+        ツール
       </div>
+      {paletteTabs}
+      {paletteBody}
+    </div>
+  ) : null;
+
+  return (
+    <div ref={boardRef} className={`playbook-board ${fullscreenMode ? "is-fullscreen-mode" : ""}`}>
+      {!fullscreenMode ? (
+        <div className="playbook-board-toolbar playbook-board-toolbar-organized">
+          {paletteTabs}
+          {paletteBody}
+        </div>
+      ) : null}
 
       <div
         ref={surfaceRef}
-        className={`playbook-board-surface ${tool === "erase" ? "is-erasing" : ""}`}
+        className={`playbook-board-surface ${tool === "erase" ? "is-erasing" : ""} ${fullscreenMode ? "is-fullscreen-surface" : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -1734,47 +1901,46 @@ export const PlaybookWhiteboard = forwardRef<PlaybookWhiteboardHandle, PlaybookW
       >
         {baseImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img className="film-playbook-image" src={baseImageUrl} alt={`${title} のプレーブック`} />
+          <img className={`film-playbook-image ${fullscreenMode ? "is-fullscreen-playbook-image" : ""}`} src={baseImageUrl} alt={`${title} のプレーブック`} />
         ) : (
-          <div className="playbook-board-blank" aria-label={`${title} の白紙ボード`} />
+          <div className={`playbook-board-blank ${fullscreenMode ? "is-fullscreen-blank" : ""}`} aria-label={`${title} の白紙ボード`} />
         )}
-        <svg
-          className="playbook-board-overlay"
-          viewBox={`0 0 ${surfaceSize.width} ${surfaceSize.height}`}
-          aria-hidden="true"
-        >
+        <svg className="playbook-board-overlay" viewBox={`0 0 ${surfaceSize.width} ${surfaceSize.height}`} aria-hidden="true">
           {elements.map((element, index) => renderElement(element, `element-${index}`, index === selectedElementIndex, index))}
           {isRoutePlaybackActive ? animatedRouteBindings.map((binding) => renderAnimatedToken(binding)) : null}
           {strokes.map((stroke, index) => renderStroke(stroke, `stroke-${index}`))}
           {draftElement ? renderElement(draftElement, "draft-element") : null}
-          {routeDraft ? renderElement({
-            type: "route",
-            color,
-            endCap: routeEndCap,
-            width: strokeWidth,
-            points: routeDraft.points,
-          }, "draft-route") : null}
+          {routeDraft ? renderElement({ type: "route", color, endCap: routeEndCap, width: strokeWidth, points: routeDraft.points }, "draft-route") : null}
           {draftStroke ? renderStroke(draftStroke, "draft-stroke") : null}
         </svg>
         {routeDraft ? (
           <div className="playbook-route-actions">
-            <button
-              className="button secondary button-compact"
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={handleCancelRoute}
-            >
+            <button className="button secondary button-compact" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={handleCancelRoute}>
               キャンセル
             </button>
-            <button
-              className="button button-compact"
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={handleCommitRoute}
-              disabled={routeDraft.points.length < 2}
-            >
+            <button className="button button-compact" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={handleCommitRoute} disabled={routeDraft.points.length < 2}>
               ルート確定
             </button>
+          </div>
+        ) : null}
+        {fullscreenMode ? fullscreenPalette : null}
+        {fullscreenMode ? (
+          <div
+            className="playbook-floating-actions"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerMove={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+          >
+            {onRequestClose ? (
+              <button className="button secondary button-compact" type="button" onClick={onRequestClose}>
+                閉じる
+              </button>
+            ) : null}
+            {onRequestSave ? (
+              <button className="button button-compact" type="button" onClick={onRequestSave} disabled={saveDisabled}>
+                {saveLabel}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
