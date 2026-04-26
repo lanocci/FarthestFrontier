@@ -1,53 +1,53 @@
-# Screen Role Analysis Design
+# スクリーン役分析機能 設計書
 
-## Purpose
+## 目的
 
-This feature extends the current video AI proof of concept toward practical coaching support for youth flag football. The first analysis target is an offensive screen-role player, because the team currently needs stronger individual feedback for players who should interfere with a defender's running path without contact.
+この機能は、現在の動画AI分析PoCを、低学年フラッグフットボールの実用的なコーチング支援へ発展させるためのものです。最初の分析対象は、オフェンスのスクリーン役の選手です。チームの現状では、接触を伴うブロックではなく、守備者の走路に入り、ボールキャリアが走るスペースを作る動きに課題があります。
 
-The goal is not to produce a fully automatic tactical judgment. The first version should help coaches compare a selected player's actual movement with the intended screen area from the playbook, then turn that comparison into one short, actionable improvement point for the player.
+目的は、完全自動で戦術判断を下すことではありません。最初のバージョンでは、コーチが選んだ選手の実際の動きと、プレーブック上の意図したスクリーン位置を比較し、選手が次の練習で意識できる短い改善ポイントに変換することを目指します。
 
-## Scope
+## スコープ
 
-The first version focuses on one offensive player in one clip:
+最初のバージョンでは、1つのクリップ内のオフェンス選手1人に絞ります。
 
-- Select a clip from the film room.
-- Select one target player assigned to a screen role.
-- Define or reuse the player's intended screen target area on the playbook board.
-- Display the player's detected movement trail over the video.
-- Compare that trail against the intended screen area and related offensive lane.
-- Generate a small set of coach-reviewable observations and one player-facing improvement comment.
+- フィルムルームからクリップを選ぶ。
+- スクリーン役として分析する選手を1人選ぶ。
+- プレーブック上で、その選手が入るべきスクリーン目標エリアを定義または再利用する。
+- 動画上に、検出された対象選手の移動軌跡を表示する。
+- その軌跡を、意図したスクリーン目標エリアと関連するオフェンスの走路と比較する。
+- コーチが確認できる観察結果と、選手向けの改善コメントを生成する。
 
-Defense-aware analysis, multi-player unit timing, and automatic play design evaluation are intentionally out of scope for the first version. The data model should still leave room for those later phases.
+守備者を含めた分析、複数選手の連動評価、プレー設計そのものの自動評価は最初のバージョンでは扱いません。ただし、将来それらを追加できるように、データ構造には拡張余地を残します。
 
-## User Experience
+## ユーザー体験
 
-The analysis should live near the existing audiovisual room and clip workflow, not as a separate standalone sandbox. The AI sandbox can remain useful for model experimentation, but the coaching workflow should be tied to real film clips and existing playbook assets.
+分析機能は、独立したサンドボックスではなく、既存の映像ルームとクリップ管理の流れに近い場所に置きます。AI Sandbox はモデル検証用として残してよいですが、実際のコーチング導線は、既存のフィルムクリップとプレーブックに紐づいているべきです。
 
-The expected flow is:
+想定する流れは次の通りです。
 
-1. A coach opens a film clip.
-2. The coach starts screen-role analysis for that clip.
-3. The coach chooses the target player from the clip's existing player links or active player list.
-4. The coach chooses the related playbook asset or clip whiteboard.
-5. The coach places a target screen area for that player if one is not already defined.
-6. The system tracks the player's movement in the clip and shows the trail.
-7. The system compares the movement with the target area and optional ball-carrier lane.
-8. The coach reviews the generated observations and keeps, edits, or ignores the suggested comment.
+1. コーチがフィルムクリップを開く。
+2. そのクリップでスクリーン役分析を開始する。
+3. クリップに紐づく選手、または有効な選手一覧から分析対象を選ぶ。
+4. 関連するプレーブックまたはクリップ用ホワイトボードを選ぶ。
+5. まだ設定されていなければ、その選手のスクリーン目標エリアを配置する。
+6. システムがクリップ内の対象選手の動きを追跡し、軌跡を表示する。
+7. システムが、軌跡と目標エリア、任意でボールキャリアの走路を比較する。
+8. コーチが生成された観察結果を確認し、提案コメントを採用、編集、または無視する。
 
-For low-grade elementary players, the final comment should be short and encouraging. It should focus on the next practice cue, such as "move outside right away" or "stay half a step wider so the runner has space."
+対象が小学校低学年であるため、最終コメントは短く、前向きな表現にします。「すぐ外へ動き出そう」「ランナーのために半歩外側に立とう」のように、次の練習で意識できる一言を重視します。
 
-## Analysis Model
+## 分析モデル
 
-The first useful analysis can be based on four simple checks:
+最初の分析は、次の4つのシンプルなチェックに基づけます。
 
-- Start position: whether the player begins near the expected side or area.
-- First movement: whether the first movement after the snap goes toward the screen target area.
-- Arrival: whether the player reaches the target area within the expected time.
-- Lane interference: whether the player drifts into the ball carrier's intended running lane.
+- 開始位置: 想定したサイドやエリアの近くから始められているか。
+- 初動方向: スナップ後の最初の動きがスクリーン目標エリアへ向かっているか。
+- 到達: 期待する時間内に目標エリアへ入れているか。
+- 走路干渉: ボールキャリアの想定走路に近づきすぎていないか。
 
-Each check should return a status, a measured value where possible, and a coach-readable note. The first version can use thresholds that are visible in code and easy to tune.
+各チェックは、判定ステータス、可能であれば測定値、コーチが読めるメッセージを返します。最初のバージョンでは、しきい値はコード上で見つけやすく、調整しやすい形にします。
 
-Example result shape:
+結果の型イメージ:
 
 ```ts
 type ScreenAnalysisCheck = {
@@ -58,11 +58,11 @@ type ScreenAnalysisCheck = {
 };
 ```
 
-## Data Model
+## データモデル
 
-The feature should add a clip-level analysis record rather than changing the existing video or playbook entities directly. This keeps analysis output separate from source material and allows repeated analysis attempts as the model improves.
+分析結果は、既存の動画やプレーブックの本体に直接混ぜず、クリップに紐づく分析レコードとして追加します。これにより、元データと分析結果を分けられ、モデルや判定ロジックを改善した後に再分析しやすくなります。
 
-Suggested assignment shape:
+スクリーン役の割り当てイメージ:
 
 ```ts
 type ScreenAssignment = {
@@ -78,7 +78,7 @@ type ScreenAssignment = {
 };
 ```
 
-Suggested analysis result shape:
+分析結果の型イメージ:
 
 ```ts
 type ClipMovementAnalysis = {
@@ -102,52 +102,52 @@ type ClipMovementAnalysis = {
 };
 ```
 
-The normalized `x` and `y` coordinates should match the playbook board coordinate system when possible. If the first implementation cannot reliably transform camera pixels to board coordinates, it should clearly mark analysis confidence as low and keep the visual comparison coach-assisted.
+正規化された `x` と `y` は、可能な限りプレーブックのホワイトボード座標系と揃えます。最初の実装でカメラ映像のピクセル座標を十分な精度でボード座標に変換できない場合は、分析信頼度を低く示し、コーチ補助つきの視覚比較として扱います。
 
-## Technical Approach
+## 技術方針
 
-The current AI sandbox runs YOLOv8 through `onnxruntime-web` in the browser. That is a reasonable starting point for detecting people, but screen analysis needs additional layers:
+現在の AI Sandbox は、ブラウザ内で `onnxruntime-web` を使って YOLOv8 を実行しています。人物検出の出発点としては十分ですが、スクリーン役分析には次の層が必要です。
 
-- Detection: identify people in sampled video frames.
-- Tracking: keep a stable candidate track for the selected player across time.
-- Calibration: map video positions into normalized field or board coordinates.
-- Assignment: connect the selected player to a screen-role target area.
-- Evaluation: run the four screen checks against the track.
-- Review: let the coach accept or edit the generated comment.
+- 検出: サンプリングした動画フレームから人物を検出する。
+- トラッキング: 選択された選手候補を時系列で追い続ける。
+- キャリブレーション: 動画上の位置を、正規化されたフィールド座標またはボード座標へ変換する。
+- 割り当て: 選択された選手とスクリーン目標エリアを結びつける。
+- 評価: 移動軌跡に対して4つのスクリーンチェックを実行する。
+- レビュー: コーチが生成コメントを採用または編集できるようにする。
 
-The first version can use coach-assisted tracking if automatic identity assignment is unreliable. For example, the coach may click the target player at the start of the clip, and the system follows the closest person detection in subsequent frames.
+自動の個体識別が不安定な場合、最初のバージョンではコーチ補助つきトラッキングを使ってよいです。例えば、クリップ開始時にコーチが対象選手をクリックし、その後は最も近い人物検出を追跡します。
 
-## Future Expansion
+## 将来拡張
 
-Once individual screen-role feedback is useful, the same foundation can expand in this order:
+個人のスクリーン役フィードバックが実用的になったら、同じ基盤を次の順で拡張できます。
 
-1. Add ball-carrier lane comparison so screen feedback can account for the runner's intended path.
-2. Add nearby defender tracking to judge whether the screen player gets between the defender and the runner.
-3. Add multiple offensive players to evaluate spacing and timing as a unit.
-4. Add defensive analysis for pursuit angle, spacing, and reaction to motion or fake actions.
-5. Add play-design review that compares intended space creation with actual space creation.
+1. ボールキャリアの走路比較を追加し、スクリーン評価にランナーの意図した道筋を反映する。
+2. 近くの守備者トラッキングを追加し、スクリーン役が守備者とランナーの間に入れたかを見る。
+3. 複数のオフェンス選手を扱い、スペーシングや動き出しのタイミングをユニットとして評価する。
+4. 守備側の追走角度、間隔、モーションやフェイクへの反応を分析する。
+5. 意図したスペース作りと実際のスペース作りを比較し、プレー設計レビューにつなげる。
 
-This keeps the first version focused on individual improvement while preserving a route to later unit and play-level coaching.
+この順序にすることで、最初は個人改善に集中しながら、将来的なユニット分析やプレー単位のコーチングへ広げられます。
 
-## Error Handling
+## エラー処理
 
-The analysis should be explicit when confidence is low. Common low-confidence cases include:
+分析信頼度が低い場合は、そのことを明示します。主な低信頼ケースは次の通りです。
 
-- The selected player is occluded or leaves the frame.
-- Multiple players overlap and the tracker may have switched identities.
-- The camera angle cannot be mapped to the playbook board with enough confidence.
-- The target area or expected arrival time has not been configured.
+- 対象選手が隠れる、または画面外へ出る。
+- 複数選手が重なり、トラッカーが別の選手に切り替わった可能性がある。
+- カメラ角度の都合で、プレーブック座標へ十分な精度で変換できない。
+- 目標エリアや期待到達時間が設定されていない。
 
-In those cases, the UI should show the trail and notes as review aids, not definitive judgments.
+このような場合、UIでは軌跡やメモを断定的な評価ではなく、コーチが確認するための補助情報として表示します。
 
-## Testing
+## テスト
 
-The first implementation should include focused tests for the pure analysis logic:
+最初の実装では、純粋な分析ロジックに対するテストを中心に追加します。
 
-- Start position status based on distance from the expected area.
-- First movement direction toward or away from the target area.
-- Arrival status based on entering the target radius before the expected time.
-- Lane interference status based on proximity to the runner's intended lane.
-- Suggested comment selection from check results.
+- 期待エリアからの距離に基づく開始位置判定。
+- 目標エリアへ向かっているか、離れているかに基づく初動方向判定。
+- 期待時間内に目標半径へ入ったかに基づく到達判定。
+- ランナーの想定走路との近さに基づく走路干渉判定。
+- チェック結果に基づく提案コメントの選択。
 
-UI testing can stay light initially, but the analysis panel should be checked manually with at least one sample clip where the coach can confirm whether the generated observation is reasonable.
+UIテストは最初は軽めでよいですが、少なくとも1つのサンプルクリップで分析パネルを手動確認し、生成された観察結果がコーチの感覚と大きくズレていないことを確認します。

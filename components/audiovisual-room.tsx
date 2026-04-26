@@ -8,7 +8,8 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
-import { ChevronDown, ChevronUp, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
+import { AISandbox } from "@/components/ai-sandbox";
+import { ChevronDown, ChevronUp, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload, Brain } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -229,6 +230,7 @@ export function AudiovisualRoom({
   const [expandedPlaybookIds, setExpandedPlaybookIds] = useState<string[]>([]);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+  const [showAISandbox, setShowAISandbox] = useState(false);
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
 
   function getScreenOrientationController(): ScreenOrientationController | null {
@@ -2439,6 +2441,10 @@ export function AudiovisualRoom({
                 体験データに戻す
               </button>
             ) : null}
+            <button className="button ghost" type="button" onClick={() => setShowAISandbox(true)}>
+              <Brain className="icon" />
+              AI検証 (PoC)
+            </button>
           </div>
 
           <div className="film-room-layout">
@@ -2460,6 +2466,10 @@ export function AudiovisualRoom({
                       </button>
                     ) : null}
                   </div>
+                  
+                  {showAISandbox && (
+                    <AISandbox onClose={() => setShowAISandbox(false)} />
+                  )}
                   <div className="toolbar film-toolbar">
                     <input
                       type="text"
