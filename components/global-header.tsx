@@ -12,7 +12,7 @@ type GlobalHeaderProps = {
 const navItems = [
   { href: "/", label: "ホーム", icon: Home, view: "dashboard", coachOnly: false },
   { href: "/materials", label: "資料室", icon: BookOpen, view: "materials", coachOnly: false },
-  { href: "/videos", label: "ビデオ (β)", icon: Clapperboard, view: "audiovisual", coachOnly: true },
+  { href: "/videos", label: "ビデオ (β)", icon: Clapperboard, view: "audiovisual", coachOnly: false },
   { href: "/settings", label: "設定", icon: Settings, view: "settings", coachOnly: false },
 ] as const;
 

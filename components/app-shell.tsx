@@ -111,7 +111,7 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           materials={materials}
           teamMessage={teamMessage}
         />
-      ) : view === "audiovisual" && (!authEnabled || teamRole === "coach") ? (
+      ) : view === "audiovisual" && (!authEnabled || teamRole === "coach" || teamRole === "guardian") ? (
         <AudiovisualRoom
           canManageTeam={canManageAdmin}
           dataLoading={dataLoading}
