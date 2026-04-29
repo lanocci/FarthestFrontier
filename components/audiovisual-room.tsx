@@ -7,6 +7,7 @@ import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } 
 import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateClipWhiteboard, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
+import { getMatchingPlaybookAssets } from "@/lib/video-room/playbook-matching";
 import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { ChevronDown, ChevronUp, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -119,6 +120,10 @@ const initialPlaybookForm: PlaybookForm = {
 
 const PLAYBOOK_BUCKET = "playbooks";
 const CLIP_WHITEBOARD_BUCKET = "clip-whiteboards";
+
+function formatPlaybookSideLabel(side: PlaybookSide): string {
+  return side === "offense" ? "オフェンス" : "ディフェンス";
+}
 
 let youtubeApiPromise: Promise<YouTubeNamespace> | null = null;
 
@@ -545,27 +550,11 @@ export function AudiovisualRoom({
       : playbackInsertionIndex === -1
         ? null
         : selectedVideoClips[playbackInsertionIndex] ?? null;
-  const activePlaybookAsset = useMemo(() => {
+  const activePlaybookAssets = useMemo(() => {
     const targetClip = playbackClip ?? activeClip;
-    if (!targetClip) {
-      return null;
-    }
-
-    const normalizedFormation = targetClip.formation.trim().toLowerCase();
-    const normalizedPlayType = targetClip.playType.trim().toLowerCase();
-
-    if (!normalizedFormation || !normalizedPlayType) {
-      return null;
-    }
-
-    return (
-      playbookAssets.find((asset) =>
-        asset.side === "offense" &&
-        asset.formation.trim().toLowerCase() === normalizedFormation &&
-        asset.playType.trim().toLowerCase() === normalizedPlayType,
-      ) ?? null
-    );
+    return getMatchingPlaybookAssets(targetClip, playbookAssets);
   }, [activeClip, playbackClip, playbookAssets]);
+  const activePlaybookAsset = activePlaybookAssets[0] ?? null;
   const editingPlaybookAsset = useMemo(() => {
     const normalizedFormation = playbookForm.formation.trim().toLowerCase();
     const normalizedPlayType = playbookForm.playType.trim().toLowerCase();
@@ -1405,25 +1394,28 @@ export function AudiovisualRoom({
             </div>
           ) : null}
 
-          {activePlaybookAsset ? (
-            <div className="film-playbook-card film-playbook-card-standalone">
-              <div className="film-playbook-head">
-                <div>
-                  <span className="film-meta-label">自動表示プレーブック</span>
-                  <strong>{activePlaybookAsset.title}</strong>
+          {activePlaybookAssets.length ? (
+            activePlaybookAssets.map((playbookAsset) => (
+              <div className="film-playbook-card film-playbook-card-standalone" key={playbookAsset.id}>
+                <div className="film-playbook-head">
+                  <div>
+                    <span className="film-meta-label">自動表示プレーブック</span>
+                    <strong>{playbookAsset.title}</strong>
+                  </div>
+                  <span className="chip">{formatPlaybookSideLabel(playbookAsset.side)}</span>
                 </div>
+                {playbookUrls[playbookAsset.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="film-playbook-image"
+                    src={playbookUrls[playbookAsset.id]}
+                    alt={`${playbookAsset.title} のプレーブック`}
+                  />
+                ) : (
+                  <p className="empty-state">プレーブック画像を読み込んでいます。</p>
+                )}
               </div>
-              {playbookUrls[activePlaybookAsset.id] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  className="film-playbook-image"
-                  src={playbookUrls[activePlaybookAsset.id]}
-                  alt={`${activePlaybookAsset.title} のプレーブック`}
-                />
-              ) : (
-                <p className="empty-state">プレーブック画像を読み込んでいます。</p>
-              )}
-            </div>
+            ))
           ) : null}
 
           {whiteboardTargetClip ? (
