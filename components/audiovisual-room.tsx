@@ -8,7 +8,7 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { getMatchingPlaybookAssets } from "@/lib/video-room/playbook-matching";
-import { formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
+import { buildVideoRoomUrl, formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { ChevronDown, ChevronUp, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
@@ -648,13 +648,8 @@ export function AudiovisualRoom({
     : null;
 
   function buildClipUrl(videoId: string, clipId?: string | null): string {
-    const params = new URLSearchParams();
-    params.set("video", videoId);
-    if (clipId) {
-      params.set("clip", clipId);
-    }
     const path = typeof window !== "undefined" ? window.location.pathname : "/videos";
-    return `${path}?${params.toString()}`;
+    return buildVideoRoomUrl(path, videoId, clipId);
   }
 
   function syncSelectionUrl(videoId: string, clipId?: string | null) {

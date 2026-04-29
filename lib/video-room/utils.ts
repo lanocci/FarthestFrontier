@@ -113,6 +113,18 @@ export function getVideoSearchText(video: FilmRoomVideo): string {
     .toLowerCase();
 }
 
+export function buildVideoRoomUrl(path: string, videoId: string, clipId?: string | null): string {
+  const params = new URLSearchParams();
+
+  if (clipId) {
+    params.set("clip", clipId);
+  } else {
+    params.set("video", videoId);
+  }
+
+  return `${path}?${params.toString()}`;
+}
+
 /** Strip surrounding double-quotes and unescape inner doubled quotes (RFC 4180). */
 function unquoteCsvCell(cell: string): string {
   const t = cell.trim();

@@ -6,5 +6,10 @@
     "noEmit": false,
     "outDir": "/private/tmp/ff-playbook-test"
   },
-  "include": ["lib/video-room/playbook-matching.ts", "lib/video-room/playbook-matching.test.ts"]
+  "include": [
+    "lib/video-room/playbook-matching.ts",
+    "lib/video-room/playbook-matching.test.ts",
+    "lib/video-room/utils.ts",
+    "lib/video-room/utils.test.ts"
+  ]
 }
