@@ -137,21 +137,6 @@
   }
 }
 
-@media (max-width: 640px) {
-  .weekly-review-toolbar,
-  .weekly-review-sides {
-    grid-template-columns: 1fr;
-  }
-
-  .weekly-review-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .weekly-review-card-chips {
-    justify-content: flex-start;
-  }
-}
-
 * {
   box-sizing: border-box;
 }
@@ -3084,6 +3069,19 @@ body.video-whiteboard-modal-open {
 
   .master-label {
     font-size: 0.74rem;
+  }
+
+  .weekly-review-toolbar,
+  .weekly-review-sides {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-review-card-chips {
+    justify-content: flex-start;
   }
 
 }
