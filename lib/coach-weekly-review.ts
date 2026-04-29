@@ -41,9 +41,13 @@ function parseDate(date: string): Date {
   return new Date(`${date}T00:00:00.000Z`);
 }
 
-function jerseySortValue(jerseyNumber: string): number {
-  const parsed = Number.parseInt(jerseyNumber, 10);
-  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+function jerseySortValue(jerseyNumber: string): { hasNumber: boolean; number: number } {
+  const parsed = Number(jerseyNumber);
+
+  return {
+    hasNumber: Number.isFinite(parsed) && jerseyNumber !== "",
+    number: parsed,
+  };
 }
 
 export function classifyCoachReviewEntry(entry?: PlayerPracticeEntry): CoachReviewClassification {
@@ -101,21 +105,23 @@ export function classifyCoachReviewEntry(entry?: PlayerPracticeEntry): CoachRevi
 }
 
 export function sortCoachReviewPlayers(players: Player[], linkedPlayerIds: string[]): Player[] {
-  const linkedOrder = new Map(linkedPlayerIds.map((id, index) => [id, index]));
-
   return [...players].sort((left, right) => {
-    const leftLinkedOrder = linkedOrder.get(left.id) ?? Number.POSITIVE_INFINITY;
-    const rightLinkedOrder = linkedOrder.get(right.id) ?? Number.POSITIVE_INFINITY;
+    const leftLinked = linkedPlayerIds.includes(left.id) ? 1 : 0;
+    const rightLinked = linkedPlayerIds.includes(right.id) ? 1 : 0;
 
-    if (leftLinkedOrder !== rightLinkedOrder) {
-      return leftLinkedOrder - rightLinkedOrder;
+    if (leftLinked !== rightLinked) {
+      return rightLinked - leftLinked;
     }
 
     const leftJersey = jerseySortValue(left.jerseyNumber);
     const rightJersey = jerseySortValue(right.jerseyNumber);
 
-    if (leftJersey !== rightJersey) {
-      return leftJersey - rightJersey;
+    if (leftJersey.hasNumber && rightJersey.hasNumber && leftJersey.number !== rightJersey.number) {
+      return leftJersey.number - rightJersey.number;
+    }
+
+    if (leftJersey.hasNumber !== rightJersey.hasNumber) {
+      return leftJersey.hasNumber ? -1 : 1;
     }
 
     return left.name.localeCompare(right.name, "ja");

@@ -75,6 +75,12 @@ const players: Player[] = [
 const sorted = sortCoachReviewPlayers(players, ["p2"]);
 assert(sorted.map((player) => player.id).join(",") === "p2,p1,p3", `Unexpected sort order: ${sorted.map((player) => player.id).join(",")}`);
 
+const sortedLinkedPlayersByJersey = sortCoachReviewPlayers(players, ["p2", "p1"]);
+assert(
+  sortedLinkedPlayersByJersey.map((player) => player.id).join(",") === "p1,p2,p3",
+  `Linked players should sort by jersey number, got ${sortedLinkedPlayersByJersey.map((player) => player.id).join(",")}`,
+);
+
 const dateOptions = buildCoachReviewDateOptions(players, "2026-05-02", 2);
 assert(dateOptions.includes("2026-05-02"), "Date options should include anchor date");
 assert(dateOptions.includes("2026-04-25"), "Date options should include practice entry date");
