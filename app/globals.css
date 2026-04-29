@@ -13,6 +13,145 @@
   --shadow: 0 24px 60px rgba(30, 53, 78, 0.14);
 }
 
+.weekly-review-page {
+  gap: 18px;
+}
+
+.weekly-review-hero {
+  min-height: auto;
+}
+
+.weekly-review-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.weekly-review-message {
+  margin-bottom: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(23, 50, 77, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.weekly-review-toolbar {
+  grid-template-columns: minmax(150px, 0.8fr) minmax(150px, 0.8fr) minmax(220px, 1.4fr) auto;
+  align-items: end;
+}
+
+.weekly-review-toolbar .field-stack {
+  min-width: 0;
+}
+
+.weekly-review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.weekly-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.weekly-review-card.is-complete {
+  border-color: rgba(47, 143, 91, 0.45);
+}
+
+.weekly-review-card.is-missing-goal,
+.weekly-review-card.is-goal-only,
+.weekly-review-card.is-partial-reflection {
+  border-color: rgba(202, 150, 50, 0.45);
+}
+
+.weekly-review-player-meta {
+  line-height: 1.45;
+}
+
+.weekly-review-card-chips {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weekly-review-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.weekly-review-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 148px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(23, 50, 77, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.weekly-review-side > span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.weekly-review-side > strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.weekly-review-side > p {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.weekly-review-reflection {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.weekly-review-reflection p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .weekly-review-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .weekly-review-toolbar,
+  .weekly-review-sides {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-review-card-chips {
+    justify-content: flex-start;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
