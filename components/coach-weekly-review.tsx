@@ -1,6 +1,7 @@
 "use client";
 
 import { Section } from "@/components/section";
+import { upsertPracticeEntry } from "@/lib/data-store";
 import {
   buildCoachReviewDateOptions,
   classifyCoachReviewEntry,
@@ -11,9 +12,11 @@ import {
   sortCoachReviewPlayers,
 } from "@/lib/coach-weekly-review";
 import { formatDisplayDate, getDashboardPracticeDate } from "@/lib/date";
-import type { Player, PlayerPracticeEntry, PositionMaster, TeamRole } from "@/lib/types";
-import { getPositionLabels, getPracticeEntry, getReflectionEmoji } from "@/lib/utils";
+import type { AttendanceStatus, Player, PlayerPracticeEntry, PositionMaster, TeamRole } from "@/lib/types";
+import { getPositionLabels, getPracticeEntry, getReflectionEmoji, upsertPracticeEntryForPlayer } from "@/lib/utils";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
+import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 
 type CoachWeeklyReviewProps = {
@@ -22,6 +25,12 @@ type CoachWeeklyReviewProps = {
   linkedPlayerIds: string[];
   teamRole: TeamRole | null;
   teamMessage: string | null;
+  setPlayers: Dispatch<SetStateAction<Player[]>>;
+  setTeamMessage: Dispatch<SetStateAction<string | null>>;
+  supabase: SupabaseClient | null;
+  syncing: boolean;
+  setSyncing: Dispatch<SetStateAction<boolean>>;
+  usingRemoteData: boolean;
 };
 
 const statusOptions: Array<{ value: CoachReviewStatusFilter; label: string }> = [
@@ -38,6 +47,18 @@ const statusLabels: Record<CoachReviewStatus, string> = {
   "goal-only": "目標のみ",
   "partial-reflection": "振り返り途中",
   complete: "振り返り完了",
+};
+
+const attendanceOptions: Array<{ value: AttendanceStatus | "unmarked"; label: string }> = [
+  { value: "present", label: "出席" },
+  { value: "absent", label: "欠席" },
+  { value: "unmarked", label: "未確認" },
+];
+
+const attendanceLabels: Record<AttendanceStatus | "unmarked", string> = {
+  present: "出席",
+  absent: "欠席",
+  unmarked: "未確認",
 };
 
 type ReviewSideProps = {
@@ -74,6 +95,12 @@ export function CoachWeeklyReview({
   linkedPlayerIds,
   teamRole,
   teamMessage,
+  setPlayers,
+  setTeamMessage,
+  supabase,
+  syncing,
+  setSyncing,
+  usingRemoteData,
 }: CoachWeeklyReviewProps) {
   const defaultPracticeDate = getDashboardPracticeDate();
   const [selectedPracticeDate, setSelectedPracticeDate] = useState(defaultPracticeDate);
@@ -94,6 +121,31 @@ export function CoachWeeklyReview({
     () => getCoachReviewSummary(players, selectedPracticeDate),
     [players, selectedPracticeDate],
   );
+
+  async function saveAttendance(player: Player, entry: PlayerPracticeEntry | undefined, nextStatus: AttendanceStatus | "unmarked") {
+    const attendanceStatus = nextStatus === "unmarked" ? undefined : nextStatus;
+    const nextEntry: PlayerPracticeEntry = {
+      practiceDate: selectedPracticeDate,
+      ...entry,
+      attendanceStatus,
+    };
+    const nextPlayer = upsertPracticeEntryForPlayer(player, nextEntry);
+
+    try {
+      setSyncing(true);
+
+      if (usingRemoteData && supabase) {
+        await upsertPracticeEntry(supabase, player.id, nextEntry);
+      }
+
+      setPlayers((current) => current.map((currentPlayer) => (currentPlayer.id === player.id ? nextPlayer : currentPlayer)));
+      setTeamMessage(`${player.name}を${attendanceLabels[nextStatus]}にしました。`);
+    } catch (error) {
+      setTeamMessage(error instanceof Error ? error.message : "出欠の保存に失敗しました。");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   if (teamRole === "guardian") {
     return (
@@ -120,9 +172,12 @@ export function CoachWeeklyReview({
         </div>
 
         <div className="weekly-review-summary">
-          <span className="chip ok">目標 {summary.playersWithGoal} / {summary.activePlayers}</span>
-          <span className="chip ok">振り返り {summary.playersWithAnyReflection} / {summary.activePlayers}</span>
-          <span className="chip warn">確認が必要 {summary.playersNeedingAttention}</span>
+          <span className="weekly-review-stat is-goal">目標 {summary.playersWithGoal} / {summary.activePlayers}</span>
+          <span className="weekly-review-stat is-reflection">振り返り {summary.playersWithAnyReflection} / {summary.activePlayers}</span>
+          <span className="weekly-review-stat is-attention">確認が必要 {summary.playersNeedingAttention}</span>
+          <span className="weekly-review-stat is-present">出席 {summary.playersPresent}</span>
+          <span className="weekly-review-stat is-absent">欠席 {summary.playersAbsent}</span>
+          <span className="weekly-review-stat is-unmarked">未確認 {summary.playersAttendanceUnmarked}</span>
         </div>
       </section>
 
@@ -174,6 +229,7 @@ export function CoachWeeklyReview({
             const entry = getPracticeEntry(player, selectedPracticeDate);
             const classification = classifyCoachReviewEntry(entry);
             const canOpenReflection = Boolean(entry?.offenseGoal?.trim() || entry?.defenseGoal?.trim());
+            const attendanceStatus = entry?.attendanceStatus ?? "unmarked";
 
             return (
               <article
@@ -202,10 +258,27 @@ export function CoachWeeklyReview({
                     <span className={`chip ${player.active ? "ok" : "warn"}`}>
                       {player.active ? "在籍中" : "休会"}
                     </span>
+                    <span className={`chip attendance-chip is-${attendanceStatus}`}>
+                      {attendanceLabels[attendanceStatus]}
+                    </span>
                     <span className={`chip ${classification.status === "complete" ? "ok" : "warn"}`}>
                       {statusLabels[classification.status]}
                     </span>
                   </div>
+                </div>
+
+                <div className="attendance-control" aria-label={`${player.name}の出欠`}>
+                  {attendanceOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`attendance-button ${attendanceStatus === option.value ? "is-active" : ""}`}
+                      type="button"
+                      disabled={syncing}
+                      onClick={() => saveAttendance(player, entry, option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="weekly-review-sides">

@@ -222,6 +222,12 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           linkedPlayerIds={linkedPlayerIds}
           teamRole={teamRole}
           teamMessage={teamMessage}
+          setPlayers={setPlayers}
+          setTeamMessage={setTeamMessage}
+          supabase={supabase}
+          syncing={syncing}
+          setSyncing={setSyncing}
+          usingRemoteData={usingRemoteData}
         />
       ) : (
         <TeamDashboard
