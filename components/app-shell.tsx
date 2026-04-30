@@ -1,6 +1,7 @@
 "use client";
 
 import { AudiovisualRoom } from "@/components/audiovisual-room";
+import { CoachWeeklyReview } from "@/components/coach-weekly-review";
 import { GlobalHeader } from "@/components/global-header";
 import { MastersAdmin } from "@/components/masters-admin";
 import { MaterialsLibrary } from "@/components/materials-library";
@@ -14,7 +15,7 @@ import { TeamDashboard } from "@/components/team-dashboard";
 import { useTeam } from "@/lib/team-context";
 
 type AppShellProps = {
-  view?: "dashboard" | "players" | "masters" | "materials" | "audiovisual" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal";
+  view?: "dashboard" | "players" | "masters" | "materials" | "audiovisual" | "materials-manage" | "settings" | "player-goal" | "player-reflection" | "player-season-goal" | "weekly-review";
   playerId?: string;
   practiceDate?: string;
 };
@@ -213,6 +214,14 @@ export function AppShell({ view = "dashboard", playerId, practiceDate }: AppShel
           teamMessage={teamMessage}
           usingRemoteData={usingRemoteData}
           linkedPlayerIds={linkedPlayerIds}
+        />
+      ) : view === "weekly-review" ? (
+        <CoachWeeklyReview
+          players={players}
+          positionMasters={positionMasters}
+          linkedPlayerIds={linkedPlayerIds}
+          teamRole={teamRole}
+          teamMessage={teamMessage}
         />
       ) : (
         <TeamDashboard
