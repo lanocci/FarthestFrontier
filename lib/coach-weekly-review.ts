@@ -12,6 +12,9 @@ export type CoachReviewClassification = {
 
 export type CoachReviewSummary = {
   activePlayers: number;
+  playersPresent: number;
+  playersAbsent: number;
+  playersAttendanceUnmarked: number;
   playersWithGoal: number;
   playersWithAnyReflection: number;
   playersComplete: number;
@@ -182,18 +185,25 @@ export function getCoachReviewSummary(players: Player[], practiceDate: string): 
     .filter((player) => player.active)
     .reduce<CoachReviewSummary>(
       (summary, player) => {
-        const classification = classifyCoachReviewEntry(getPracticeEntry(player, practiceDate));
+        const entry = getPracticeEntry(player, practiceDate);
+        const classification = classifyCoachReviewEntry(entry);
 
         return {
           activePlayers: summary.activePlayers + 1,
-          playersWithGoal: summary.playersWithGoal + (classification.hasGoal ? 1 : 0),
-          playersWithAnyReflection: summary.playersWithAnyReflection + (classification.hasAnyReflection ? 1 : 0),
-          playersComplete: summary.playersComplete + (classification.isComplete ? 1 : 0),
+          playersPresent: summary.playersPresent + (entry?.attendanceStatus === "present" ? 1 : 0),
+          playersAbsent: summary.playersAbsent + (entry?.attendanceStatus === "absent" ? 1 : 0),
+          playersAttendanceUnmarked: summary.playersAttendanceUnmarked + (entry?.attendanceStatus ? 0 : 1),
+        playersWithGoal: summary.playersWithGoal + (classification.hasGoal ? 1 : 0),
+        playersWithAnyReflection: summary.playersWithAnyReflection + (classification.hasAnyReflection ? 1 : 0),
+        playersComplete: summary.playersComplete + (classification.isComplete ? 1 : 0),
           playersNeedingAttention: summary.playersNeedingAttention + (classification.isComplete ? 0 : 1),
         };
       },
       {
         activePlayers: 0,
+        playersPresent: 0,
+        playersAbsent: 0,
+        playersAttendanceUnmarked: 0,
         playersWithGoal: 0,
         playersWithAnyReflection: 0,
         playersComplete: 0,

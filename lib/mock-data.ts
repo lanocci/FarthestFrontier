@@ -48,6 +48,7 @@ export const players: Player[] = [
     practiceEntries: [
       {
         practiceDate: "2026-04-18",
+        attendanceStatus: "present",
         offenseGoal: "ボールを最後まで見る",
         defenseGoal: "フラッグを1回ねらう",
       },
@@ -66,6 +67,7 @@ export const players: Player[] = [
     practiceEntries: [
       {
         practiceDate: "2026-04-18",
+        attendanceStatus: "present",
         offenseGoal: "スタートで1歩目を早く出す",
       },
     ],
@@ -83,6 +85,7 @@ export const players: Player[] = [
     practiceEntries: [
       {
         practiceDate: "2026-04-18",
+        attendanceStatus: "absent",
         defenseGoal: "中のコースを守る",
       },
     ],
@@ -100,6 +103,7 @@ export const players: Player[] = [
     practiceEntries: [
       {
         practiceDate: "2026-04-12",
+        attendanceStatus: "present",
         offenseGoal: "スナップ前に声を出す",
         offenseReflectionRating: 4,
         offenseReflectionComment: "声をかけながらスタートできた",

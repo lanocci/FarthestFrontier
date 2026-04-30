@@ -28,6 +28,45 @@
   margin-top: 14px;
 }
 
+.weekly-review-stat {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  border-radius: 999px;
+  background: #fffdf8;
+  color: var(--ink);
+  box-shadow: 0 10px 22px rgba(9, 39, 20, 0.14);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.weekly-review-stat.is-goal,
+.weekly-review-stat.is-reflection {
+  color: #0f5132;
+}
+
+.weekly-review-stat.is-attention {
+  background: #fff2c2;
+  color: #7a3b00;
+}
+
+.weekly-review-stat.is-present {
+  background: #e7f7ec;
+  color: #145f38;
+}
+
+.weekly-review-stat.is-absent {
+  background: #ffe9e3;
+  color: #922f16;
+}
+
+.weekly-review-stat.is-unmarked {
+  background: #f2f4f7;
+  color: #38465a;
+}
+
 .weekly-review-message {
   margin-bottom: 0;
   padding: 10px 14px;
@@ -77,6 +116,54 @@
   justify-content: flex-end;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.attendance-chip.is-present {
+  background: rgba(47, 143, 91, 0.16);
+  color: #17613b;
+}
+
+.attendance-chip.is-absent {
+  background: rgba(232, 96, 45, 0.16);
+  color: #9f3516;
+}
+
+.attendance-chip.is-unmarked {
+  background: rgba(90, 107, 125, 0.14);
+  color: #415062;
+}
+
+.attendance-control {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(23, 50, 77, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.attendance-button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.attendance-button.is-active {
+  background: var(--ink);
+  color: #fffdf8;
+  box-shadow: 0 8px 18px rgba(23, 50, 77, 0.18);
+}
+
+.attendance-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .weekly-review-sides {

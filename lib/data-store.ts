@@ -48,6 +48,7 @@ type GoalTemplateRow = {
 type PracticeEntryRow = {
   player_id: string;
   practice_date: string;
+  attendance_status: PlayerPracticeEntry["attendanceStatus"] | null;
   offense_goal: string | null;
   defense_goal: string | null;
   offense_reflection_rating: 1 | 2 | 3 | 4 | 5 | null;
@@ -224,6 +225,7 @@ function toGoalTemplate(row: GoalTemplateRow): GoalTemplate {
 function toPracticeEntry(row: PracticeEntryRow): PlayerPracticeEntry {
   return {
     practiceDate: row.practice_date,
+    attendanceStatus: row.attendance_status ?? undefined,
     offenseGoal: row.offense_goal ?? undefined,
     defenseGoal: row.defense_goal ?? undefined,
     offenseReflectionRating: row.offense_reflection_rating ?? undefined,
@@ -417,7 +419,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
     supabase.from("position_masters").select("id, label, side").order("label", { ascending: true }),
     supabase
       .from("practice_entries")
-      .select("player_id, practice_date, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment")
+      .select("player_id, practice_date, attendance_status, offense_goal, defense_goal, offense_reflection_rating, offense_reflection_comment, defense_reflection_rating, defense_reflection_comment")
       .order("practice_date", { ascending: false }),
     supabase
       .from("seasons")
@@ -499,6 +501,7 @@ export async function fetchTeamSnapshot(supabase: SupabaseClient): Promise<TeamS
           ? [
               {
                 practiceDate: getDashboardPracticeDate(),
+                attendanceStatus: undefined,
                 offenseGoal: row.offense_goal ?? undefined,
                 defenseGoal: row.defense_goal ?? undefined,
                 offenseReflectionRating: row.offense_reflection_rating ?? undefined,
@@ -770,6 +773,7 @@ export async function upsertPracticeEntry(
     {
       player_id: playerId,
       practice_date: entry.practiceDate,
+      attendance_status: entry.attendanceStatus ?? null,
       offense_goal: entry.offenseGoal ?? null,
       defense_goal: entry.defenseGoal ?? null,
       offense_reflection_rating: entry.offenseReflectionRating ?? null,

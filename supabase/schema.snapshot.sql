@@ -176,6 +176,7 @@ create table if not exists public.practice_entries (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references public.players(id) on delete cascade,
   practice_date date not null,
+  attendance_status text check (attendance_status in ('present', 'absent')),
   offense_goal text,
   defense_goal text,
   offense_reflection_rating smallint check (offense_reflection_rating between 1 and 5),

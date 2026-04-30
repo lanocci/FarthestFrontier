@@ -27,6 +27,7 @@ const players: Player[] = [
     practiceEntries: [
       {
         practiceDate: "2026-05-02",
+        attendanceStatus: "present",
         offenseGoal: "声を3回出す",
         offenseReflectionRating: 5,
         offenseReflectionComment: "よく声が出た",
@@ -46,6 +47,7 @@ const players: Player[] = [
     practiceEntries: [
       {
         practiceDate: "2026-05-02",
+        attendanceStatus: "absent",
         offenseGoal: "最初の1歩を速く出す",
         defenseGoal: "相手の腰を見る",
         offenseReflectionRating: 4,
@@ -96,6 +98,9 @@ assert(summary.playersWithGoal === 2, `Expected 2 players with goals, got ${summ
 assert(summary.playersWithAnyReflection === 2, `Expected 2 players with reflection, got ${summary.playersWithAnyReflection}`);
 assert(summary.playersComplete === 1, `Expected 1 complete player, got ${summary.playersComplete}`);
 assert(summary.playersNeedingAttention === 1, `Expected 1 attention player, got ${summary.playersNeedingAttention}`);
+assert(summary.playersPresent === 1, `Expected 1 present player, got ${summary.playersPresent}`);
+assert(summary.playersAbsent === 1, `Expected 1 absent player, got ${summary.playersAbsent}`);
+assert(summary.playersAttendanceUnmarked === 0, `Expected 0 unmarked attendance players, got ${summary.playersAttendanceUnmarked}`);
 
 const filteredByName = filterCoachReviewPlayers(players, "高橋", "all", "2026-05-02");
 assert(filteredByName.length === 1 && filteredByName[0].id === "p1", "Name filter should return 高橋");

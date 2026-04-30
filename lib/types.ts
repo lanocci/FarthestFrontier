@@ -6,6 +6,7 @@ export type MaterialAudience = "all" | "guardians" | "coaches";
 export type VideoAudience = MaterialAudience;
 export type PositionSide = "offense" | "defense";
 export type ReflectionRating = 1 | 2 | 3 | 4 | 5;
+export type AttendanceStatus = "present" | "absent";
 
 export type PositionMaster = {
   id: string;
@@ -20,6 +21,7 @@ export type VideoTagMaster = {
 
 export type PlayerPracticeEntry = {
   practiceDate: string;
+  attendanceStatus?: AttendanceStatus;
   offenseGoal?: string;
   defenseGoal?: string;
   offenseReflectionRating?: ReflectionRating;
