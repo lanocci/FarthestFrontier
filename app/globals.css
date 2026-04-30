@@ -107,6 +107,17 @@
   border-color: rgba(202, 150, 50, 0.45);
 }
 
+.weekly-review-card.is-absent {
+  border-color: rgba(90, 107, 125, 0.18);
+  background: rgba(255, 255, 255, 0.54);
+  filter: grayscale(0.28);
+  opacity: 0.68;
+}
+
+.weekly-review-card.is-absent .weekly-review-side {
+  background: rgba(242, 244, 247, 0.72);
+}
+
 .weekly-review-player-meta {
   line-height: 1.45;
 }
@@ -166,6 +177,19 @@
   opacity: 0.62;
 }
 
+.weekly-review-absent-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(90, 107, 125, 0.12);
+  color: #415062;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .weekly-review-sides {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -211,6 +235,69 @@
 }
 
 .weekly-review-reflection p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.practice-history-panel {
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.practice-history-header,
+.practice-history-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.practice-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.practice-history-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(23, 50, 77, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.82);
+}
+
+.practice-history-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.practice-history-sides > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.practice-history-sides span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.practice-history-sides strong {
+  overflow-wrap: anywhere;
+}
+
+.practice-history-sides p {
   margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
@@ -3169,6 +3256,10 @@ body.video-whiteboard-modal-open {
 
   .weekly-review-card-chips {
     justify-content: flex-start;
+  }
+
+  .practice-history-sides {
+    grid-template-columns: 1fr;
   }
 
 }

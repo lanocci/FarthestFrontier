@@ -113,7 +113,7 @@ export function CoachWeeklyReview({
   );
 
   const visiblePlayers = useMemo(() => {
-    const sortedPlayers = sortCoachReviewPlayers(players, linkedPlayerIds);
+    const sortedPlayers = sortCoachReviewPlayers(players, linkedPlayerIds, selectedPracticeDate);
     return filterCoachReviewPlayers(sortedPlayers, searchText, statusFilter, selectedPracticeDate);
   }, [linkedPlayerIds, players, searchText, selectedPracticeDate, statusFilter]);
 
@@ -230,12 +230,13 @@ export function CoachWeeklyReview({
             const classification = classifyCoachReviewEntry(entry);
             const canOpenReflection = Boolean(entry?.offenseGoal?.trim() || entry?.defenseGoal?.trim());
             const attendanceStatus = entry?.attendanceStatus ?? "unmarked";
+            const isAbsent = attendanceStatus === "absent";
 
             return (
               <article
                 className={`practice-card weekly-review-card is-${classification.status} ${
                   linkedPlayerIds.includes(player.id) ? "is-linked-player" : ""
-                }`}
+                } ${isAbsent ? "is-absent" : ""}`}
                 key={player.id}
               >
                 <div className="practice-card-head">
@@ -297,21 +298,27 @@ export function CoachWeeklyReview({
                 </div>
 
                 <div className="practice-actions">
-                  <Link
-                    className="button secondary button-compact"
-                    href={`/players/${player.id}/goals?date=${selectedPracticeDate}`}
-                  >
-                    目標を見る
-                  </Link>
-                  {canOpenReflection ? (
-                    <Link
-                      className="button button-compact"
-                      href={`/players/${player.id}/reflections?date=${selectedPracticeDate}`}
-                    >
-                      振り返りを見る
-                    </Link>
+                  {isAbsent ? (
+                    <span className="weekly-review-absent-note">欠席のため目標対象外</span>
                   ) : (
-                    <span className="button button-compact is-disabled">振り返り</span>
+                    <>
+                      <Link
+                        className="button secondary button-compact"
+                        href={`/players/${player.id}/goals?date=${selectedPracticeDate}`}
+                      >
+                        目標を見る
+                      </Link>
+                      {canOpenReflection ? (
+                        <Link
+                          className="button button-compact"
+                          href={`/players/${player.id}/reflections?date=${selectedPracticeDate}`}
+                        >
+                          振り返りを見る
+                        </Link>
+                      ) : (
+                        <span className="button button-compact is-disabled">振り返り</span>
+                      )}
+                    </>
                   )}
                 </div>
               </article>

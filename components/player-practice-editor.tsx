@@ -4,7 +4,7 @@ import { Section } from "@/components/section";
 import { upsertPracticeEntry } from "@/lib/data-store";
 import { formatDisplayDate, getDashboardPracticeDate, getRecentPracticeDates } from "@/lib/date";
 import { GoalTemplate, Player, PlayerPracticeEntry, PositionMaster, PositionSide, ReflectionRating, Season, SeasonGoal } from "@/lib/types";
-import { buildGoalText, getPositionLabels, getPracticeEntry, upsertPracticeEntryForPlayer } from "@/lib/utils";
+import { buildGoalText, getPositionLabels, getPracticeEntry, getReflectionEmoji, upsertPracticeEntryForPlayer } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import type { Dispatch, SetStateAction } from "react";
@@ -176,6 +176,63 @@ function ReflectionField({
   );
 }
 
+function PracticeHistoryList({
+  entries,
+}: {
+  entries: PlayerPracticeEntry[];
+}) {
+  if (!entries.length) {
+    return (
+      <div className="practice-history-panel">
+        <div className="practice-history-header">
+          <span className="entry-label">過去の目標と振り返り</span>
+        </div>
+        <p className="subtle">まだ参考にできる過去の入力はありません。</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="practice-history-panel">
+      <div className="practice-history-header">
+        <span className="entry-label">過去の目標と振り返り</span>
+        <span className="chip">新しい順</span>
+      </div>
+      <div className="practice-history-list">
+        {entries.map((entry) => (
+          <article className="practice-history-card" key={entry.practiceDate}>
+            <div className="practice-history-date">
+              <strong>{formatDisplayDate(entry.practiceDate)}</strong>
+              {entry.attendanceStatus === "absent" ? <span className="chip warn">欠席</span> : null}
+              {entry.attendanceStatus === "present" ? <span className="chip ok">出席</span> : null}
+            </div>
+            <div className="practice-history-sides">
+              <div>
+                <span>OF</span>
+                <strong>{entry.offenseGoal ?? "未入力"}</strong>
+                {entry.offenseReflectionRating ? (
+                  <p>{getReflectionEmoji(entry.offenseReflectionRating)} {entry.offenseReflectionRating} / {entry.offenseReflectionComment ?? "コメントなし"}</p>
+                ) : (
+                  <p className="subtle">振り返り未入力</p>
+                )}
+              </div>
+              <div>
+                <span>DF</span>
+                <strong>{entry.defenseGoal ?? "未入力"}</strong>
+                {entry.defenseReflectionRating ? (
+                  <p>{getReflectionEmoji(entry.defenseReflectionRating)} {entry.defenseReflectionRating} / {entry.defenseReflectionComment ?? "コメントなし"}</p>
+                ) : (
+                  <p className="subtle">振り返り未入力</p>
+                )}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PlayerPracticeEditor({
   mode,
   initialPracticeDate,
@@ -234,6 +291,10 @@ export function PlayerPracticeEditor({
   const isLinkedPlayer = linkedPlayerIds.includes(player.id);
   const selectedEntry = getPracticeEntry(player, selectedPracticeDate);
   const canOpenReflection = Boolean(selectedEntry?.offenseGoal || selectedEntry?.defenseGoal);
+  const historyEntries = player.practiceEntries
+    .filter((entry) => entry.practiceDate < selectedPracticeDate)
+    .sort((left, right) => right.practiceDate.localeCompare(left.practiceDate))
+    .slice(0, 6);
   const practiceDateOptions = Array.from(
     new Set([...getRecentPracticeDates(6, defaultPracticeDate), ...player.practiceEntries.map((entry) => entry.practiceDate)]),
   ).sort((left, right) => right.localeCompare(left));
@@ -340,6 +401,7 @@ export function PlayerPracticeEditor({
               return persist(nextPlayer, nextEntry, `${player.name}のディフェンス目標を保存しました。`);
             }}
           />
+          <PracticeHistoryList entries={historyEntries} />
         </div>
       ) : (
         <div className="entry-grid">

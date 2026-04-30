@@ -107,8 +107,33 @@ export function classifyCoachReviewEntry(entry?: PlayerPracticeEntry): CoachRevi
   };
 }
 
-export function sortCoachReviewPlayers(players: Player[], linkedPlayerIds: string[]): Player[] {
+function attendanceSortValue(entry?: PlayerPracticeEntry): number {
+  if (entry?.attendanceStatus === "present") return 0;
+  if (entry?.attendanceStatus === "absent") return 2;
+  return 1;
+}
+
+export function sortCoachReviewPlayers(players: Player[], linkedPlayerIds: string[], practiceDate?: string): Player[] {
   return [...players].sort((left, right) => {
+    const leftEntry = practiceDate ? getPracticeEntry(left, practiceDate) : undefined;
+    const rightEntry = practiceDate ? getPracticeEntry(right, practiceDate) : undefined;
+
+    if (practiceDate) {
+      const leftAttendance = attendanceSortValue(leftEntry);
+      const rightAttendance = attendanceSortValue(rightEntry);
+
+      if (leftAttendance !== rightAttendance) {
+        return leftAttendance - rightAttendance;
+      }
+
+      const leftHasGoal = classifyCoachReviewEntry(leftEntry).hasGoal ? 1 : 0;
+      const rightHasGoal = classifyCoachReviewEntry(rightEntry).hasGoal ? 1 : 0;
+
+      if (leftHasGoal !== rightHasGoal) {
+        return rightHasGoal - leftHasGoal;
+      }
+    }
+
     const leftLinked = linkedPlayerIds.includes(left.id) ? 1 : 0;
     const rightLinked = linkedPlayerIds.includes(right.id) ? 1 : 0;
 
@@ -166,7 +191,17 @@ export function filterCoachReviewPlayers(
       return false;
     }
 
-    const classification = classifyCoachReviewEntry(getPracticeEntry(player, practiceDate));
+    const entry = getPracticeEntry(player, practiceDate);
+
+    if (statusFilter !== "all" && !player.active) {
+      return false;
+    }
+
+    if (entry?.attendanceStatus === "absent") {
+      return statusFilter === "all";
+    }
+
+    const classification = classifyCoachReviewEntry(entry);
 
     if (statusFilter === "all") {
       return true;
@@ -188,15 +223,17 @@ export function getCoachReviewSummary(players: Player[], practiceDate: string): 
         const entry = getPracticeEntry(player, practiceDate);
         const classification = classifyCoachReviewEntry(entry);
 
+        const isAbsent = entry?.attendanceStatus === "absent";
+
         return {
-          activePlayers: summary.activePlayers + 1,
+          activePlayers: summary.activePlayers + (isAbsent ? 0 : 1),
           playersPresent: summary.playersPresent + (entry?.attendanceStatus === "present" ? 1 : 0),
           playersAbsent: summary.playersAbsent + (entry?.attendanceStatus === "absent" ? 1 : 0),
           playersAttendanceUnmarked: summary.playersAttendanceUnmarked + (entry?.attendanceStatus ? 0 : 1),
-        playersWithGoal: summary.playersWithGoal + (classification.hasGoal ? 1 : 0),
-        playersWithAnyReflection: summary.playersWithAnyReflection + (classification.hasAnyReflection ? 1 : 0),
-        playersComplete: summary.playersComplete + (classification.isComplete ? 1 : 0),
-          playersNeedingAttention: summary.playersNeedingAttention + (classification.isComplete ? 0 : 1),
+          playersWithGoal: summary.playersWithGoal + (!isAbsent && classification.hasGoal ? 1 : 0),
+          playersWithAnyReflection: summary.playersWithAnyReflection + (!isAbsent && classification.hasAnyReflection ? 1 : 0),
+          playersComplete: summary.playersComplete + (!isAbsent && classification.isComplete ? 1 : 0),
+          playersNeedingAttention: summary.playersNeedingAttention + (!isAbsent && !classification.isComplete ? 1 : 0),
         };
       },
       {
