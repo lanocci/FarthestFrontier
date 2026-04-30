@@ -7,6 +7,8 @@
     "outDir": "/private/tmp/ff-playbook-test"
   },
   "include": [
+    "lib/coach-weekly-review.ts",
+    "lib/coach-weekly-review.test.ts",
     "lib/video-room/playbook-matching.ts",
     "lib/video-room/playbook-matching.test.ts",
     "lib/video-room/utils.ts",

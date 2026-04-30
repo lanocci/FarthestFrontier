@@ -81,6 +81,11 @@ export function TeamDashboard({
             <h2>今週の練習</h2>
             <p>{formatDisplayDate(practiceDate)}週</p>
           </div>
+          {teamRole !== "guardian" ? (
+            <Link className="button secondary button-compact" href="/weekly-review">
+              週次レビュー
+            </Link>
+          ) : null}
         </div>
         <div className="progress-rail">
           <div className="progress-fill" style={{ width: `${completionRatio}%` }} />
