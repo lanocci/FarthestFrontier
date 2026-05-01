@@ -1671,7 +1671,7 @@ export function AudiovisualRoom({
           <QuickClipRegistrationBar
             availableFormations={availableFormations}
             availablePlayTypes={availablePlayTypes}
-            disabled={syncing || Boolean(editingClipId)}
+            disabled={syncing || Boolean(editingClipId) || showClipComposer}
             formationListId={`${formationListId}-quick`}
             form={quickClipForm}
             onNudgeTimestamp={nudgeQuickClipTimestamp}
@@ -2281,7 +2281,7 @@ export function AudiovisualRoom({
   }
 
   async function handleSaveQuickClip() {
-    if (!selectedVideo || !isEditingMode || editingClipId) {
+    if (!selectedVideo || !isEditingMode || editingClipId || showClipComposer) {
       return;
     }
 
