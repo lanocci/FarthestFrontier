@@ -1210,7 +1210,7 @@ select:disabled {
   background: rgba(255, 255, 255, 0.68);
 }
 
-.button.is-selected {
+.film-mode-toggle .button.is-selected {
   border-color: rgba(232, 96, 45, 0.38);
   background: rgba(232, 96, 45, 0.14);
   color: var(--accent-strong);
