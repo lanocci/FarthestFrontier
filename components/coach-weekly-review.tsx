@@ -74,7 +74,7 @@ function ReviewSide({ label, goal, rating, comment }: ReviewSideProps) {
   const emoji = getReflectionEmoji(rating);
 
   return (
-    <div className="weekly-review-side">
+    <div className={`weekly-review-side is-${label.toLowerCase()}`}>
       <span>{label}</span>
       <strong>{trimmedGoal || "未入力"}</strong>
       {rating ? (
@@ -225,6 +225,14 @@ export function CoachWeeklyReview({
         </div>
 
         <div className="weekly-review-grid">
+          <div className="weekly-review-row-header" aria-hidden="true">
+            <span>選手</span>
+            <span>出欠/状態</span>
+            <span>OF</span>
+            <span>DF</span>
+            <span>操作</span>
+          </div>
+
           {visiblePlayers.map((player) => {
             const entry = getPracticeEntry(player, selectedPracticeDate);
             const classification = classifyCoachReviewEntry(entry);
@@ -239,22 +247,22 @@ export function CoachWeeklyReview({
                 } ${isAbsent ? "is-absent" : ""}`}
                 key={player.id}
               >
-                <div className="practice-card-head">
-                  <div>
-                    <strong>
-                      {linkedPlayerIds.includes(player.id) ? (
-                        <span className="player-name-mark" title="担当選手" aria-label="担当選手">
-                          ⭐️
-                        </span>
-                      ) : null}
-                      {player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}
-                    </strong>
-                    <div className="subtle weekly-review-player-meta">
-                      {player.gradeLabel} / OF: {getPositionLabels(player.offensePositionIds, positionMasters)} / DF:{" "}
-                      {getPositionLabels(player.defensePositionIds, positionMasters)}
-                    </div>
+                <div className="weekly-review-player-cell">
+                  <strong>
+                    {linkedPlayerIds.includes(player.id) ? (
+                      <span className="player-name-mark" title="担当選手" aria-label="担当選手">
+                        ⭐️
+                      </span>
+                    ) : null}
+                    {player.jerseyNumber ? `#${player.jerseyNumber} ${player.name}` : player.name}
+                  </strong>
+                  <div className="subtle weekly-review-player-meta">
+                    {player.gradeLabel} / OF: {getPositionLabels(player.offensePositionIds, positionMasters)} / DF:{" "}
+                    {getPositionLabels(player.defensePositionIds, positionMasters)}
                   </div>
+                </div>
 
+                <div className="weekly-review-status-cell">
                   <div className="weekly-review-card-chips">
                     <span className={`chip ${player.active ? "ok" : "warn"}`}>
                       {player.active ? "在籍中" : "休会"}
@@ -266,36 +274,34 @@ export function CoachWeeklyReview({
                       {statusLabels[classification.status]}
                     </span>
                   </div>
+
+                  <div className="attendance-control" aria-label={`${player.name}の出欠`}>
+                    {attendanceOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        className={`attendance-button ${attendanceStatus === option.value ? "is-active" : ""}`}
+                        type="button"
+                        disabled={syncing}
+                        onClick={() => saveAttendance(player, entry, option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="attendance-control" aria-label={`${player.name}の出欠`}>
-                  {attendanceOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      className={`attendance-button ${attendanceStatus === option.value ? "is-active" : ""}`}
-                      type="button"
-                      disabled={syncing}
-                      onClick={() => saveAttendance(player, entry, option.value)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="weekly-review-sides">
-                  <ReviewSide
-                    label="OF"
-                    goal={entry?.offenseGoal}
-                    rating={entry?.offenseReflectionRating}
-                    comment={entry?.offenseReflectionComment}
-                  />
-                  <ReviewSide
-                    label="DF"
-                    goal={entry?.defenseGoal}
-                    rating={entry?.defenseReflectionRating}
-                    comment={entry?.defenseReflectionComment}
-                  />
-                </div>
+                <ReviewSide
+                  label="OF"
+                  goal={entry?.offenseGoal}
+                  rating={entry?.offenseReflectionRating}
+                  comment={entry?.offenseReflectionComment}
+                />
+                <ReviewSide
+                  label="DF"
+                  goal={entry?.defenseGoal}
+                  rating={entry?.defenseReflectionRating}
+                  comment={entry?.defenseReflectionComment}
+                />
 
                 <div className="practice-actions">
                   {isAbsent ? (
