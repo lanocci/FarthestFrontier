@@ -1201,6 +1201,21 @@ select:disabled {
   justify-content: flex-end;
 }
 
+.film-mode-toggle {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.film-mode-toggle .button.is-selected {
+  border-color: rgba(232, 96, 45, 0.38);
+  background: rgba(232, 96, 45, 0.14);
+  color: var(--accent-strong);
+}
+
 .film-admin-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1373,6 +1388,20 @@ select:disabled {
   align-items: stretch;
 }
 
+.film-focus-shell.is-editing-mode.is-fullscreen .film-playback-main,
+.film-focus-shell.is-editing-mode:fullscreen .film-playback-main,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-playback-main,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-playback-main {
+  --film-fullscreen-quick-height: 76px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  gap: 6px;
+  height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
+  min-height: 0;
+}
+
 .film-focus-shell.is-fullscreen .film-player-frame,
 .film-focus-shell:fullscreen .film-player-frame,
 .film-focus-shell:-webkit-full-screen .film-player-frame {
@@ -1387,6 +1416,17 @@ select:disabled {
   border-radius: 0;
 }
 
+.film-focus-shell.is-editing-mode.is-fullscreen .film-player-frame,
+.film-focus-shell.is-editing-mode:fullscreen .film-player-frame,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-player-frame {
+  width: min(
+    100%,
+    calc((100dvh - (var(--film-fullscreen-pad) * 2) - var(--film-fullscreen-quick-height)) * 16 / 9),
+    calc(100dvw - (var(--film-fullscreen-pad-x) * 2) - var(--film-fullscreen-side-width) - var(--film-fullscreen-gap))
+  );
+  max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2) - var(--film-fullscreen-quick-height));
+}
+
 .film-focus-shell.is-pseudo-fullscreen .film-player-frame {
   width: calc(100vw - var(--film-fullscreen-side-width));
   width: calc(100dvw - var(--film-fullscreen-side-width));
@@ -1395,6 +1435,19 @@ select:disabled {
   margin: 0;
   border: 0;
   border-radius: 0;
+}
+
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-player-frame {
+  width: min(
+    calc(100vw - var(--film-fullscreen-side-width)),
+    calc((100dvh - var(--film-fullscreen-quick-height)) * 16 / 9)
+  );
+  width: min(
+    calc(100dvw - var(--film-fullscreen-side-width)),
+    calc((100dvh - var(--film-fullscreen-quick-height)) * 16 / 9)
+  );
+  max-height: calc(100dvh - var(--film-fullscreen-quick-height));
+  margin: auto;
 }
 
 .film-focus-shell.is-fullscreen .film-playback-side,
@@ -1525,6 +1578,12 @@ select:disabled {
   min-width: 0;
 }
 
+.film-playback-main {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
 .film-current-strip {
   display: flex;
   gap: 8px;
@@ -1613,6 +1672,250 @@ select:disabled {
 .film-summary-icon-button:disabled {
   cursor: default;
   opacity: 0.45;
+}
+
+.film-quick-register {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+  padding: 14px;
+  border: 1px solid rgba(23, 50, 77, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.film-quick-register-head,
+.film-quick-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.film-quick-register-head strong {
+  display: block;
+  color: var(--ink);
+}
+
+.film-quick-register-head span,
+.film-quick-title-preview {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.film-quick-title-preview {
+  padding: 8px 10px;
+  border: 1px solid rgba(23, 50, 77, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  font-weight: 800;
+}
+
+.film-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.film-quick-grid .field-stack,
+.film-quick-grid input,
+.film-quick-grid select {
+  min-width: 0;
+  width: 100%;
+}
+
+.film-quick-time-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.film-quick-side-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.film-quick-time-row .button,
+.film-quick-side-row .button {
+  justify-content: center;
+  min-width: 0;
+  min-height: 42px;
+  padding-inline: 10px;
+}
+
+.film-quick-side-row .button.is-selected {
+  border-color: rgba(232, 96, 45, 0.38);
+  background: rgba(232, 96, 45, 0.14);
+  color: var(--accent-strong);
+}
+
+.film-quick-time-field {
+  grid-column: span 2;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register {
+  position: relative;
+  gap: 0;
+  width: min(100%, 1120px);
+  min-height: 64px;
+  margin-inline: auto;
+  padding: 6px 88px 6px 8px;
+  border-color: rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(7, 13, 24, 0.84);
+  color: white;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register-head,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register-head,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register-head,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register-head {
+  display: none;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-actions,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-actions,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-actions,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  gap: 0;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register-head strong,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register-head strong,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register-head strong,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register-head strong {
+  color: white;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-actions .subtle,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-actions .subtle,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-actions .subtle,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-actions .subtle {
+  display: none;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-title-preview {
+  padding: 5px 8px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-grid,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-grid,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-grid,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-grid {
+  grid-template-columns:
+    minmax(116px, 1.15fr)
+    minmax(116px, 1.15fr)
+    minmax(92px, 0.8fr)
+    minmax(104px, 1fr)
+    minmax(104px, 1fr)
+    minmax(82px, 0.68fr)
+    minmax(62px, 0.56fr);
+  gap: 5px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-time-field,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-time-field,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-time-field,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-time-field {
+  grid-column: auto;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-time-row,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-time-row,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-time-row,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-time-row,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-side-row,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-side-row,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-side-row,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-side-row {
+  gap: 4px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-side-row .button,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-side-row .button,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-side-row .button,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-side-row .button {
+  min-height: 30px;
+  padding-inline: 6px;
+  font-size: 0.74rem;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-grid input,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-grid input,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-grid input,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-grid input,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-grid select,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-grid select,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-grid select,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-grid select {
+  min-height: 30px;
+  padding-block: 4px;
+  font-size: 0.78rem;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .field-label,
+.film-focus-shell.is-editing-mode:fullscreen .field-label,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .field-label,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .field-label {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-actions .button,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-actions .button,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-actions .button,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-actions .button {
+  min-height: 30px;
+  padding-inline: 9px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .film-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .film-quick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .film-quick-time-field {
+    grid-column: auto;
+  }
 }
 
 .film-detail-sheet {

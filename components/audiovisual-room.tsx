@@ -3,13 +3,15 @@
 import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
 import { PlaybookWhiteboard, type PlaybookWhiteboardHandle, type PlaybookWhiteboardState } from "@/components/video-room/playbook-whiteboard";
+import { QuickClipRegistrationBar } from "@/components/video-room/quick-clip-registration-bar";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
 import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateClipWhiteboard, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { getMatchingPlaybookAssets } from "@/lib/video-room/playbook-matching";
+import { buildQuickClipTitle, getQuickClipDefaultsAfterSave, initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, type QuickClipForm } from "@/lib/video-room/quick-registration";
 import { buildVideoRoomUrl, formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
-import { ChevronDown, ChevronUp, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Edit3, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, MonitorPlay, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -45,6 +47,8 @@ type PlaybookForm = {
 };
 
 type PlaybookSourceMode = "upload" | "canvas";
+
+type VideoRoomMode = "view" | "edit";
 
 type YouTubePlayer = {
   destroy: () => void;
@@ -199,6 +203,8 @@ export function AudiovisualRoom({
   const [selectedVideoId, setSelectedVideoId] = useState<string>(filmRoomVideos[0]?.id ?? "");
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [videoRoomMode, setVideoRoomMode] = useState<VideoRoomMode>("view");
+  const [quickClipForm, setQuickClipForm] = useState<QuickClipForm>(initialQuickClipForm);
   const [videoQuery, setVideoQuery] = useState("");
   const [videoAudienceFilter, setVideoAudienceFilter] = useState<VideoAudience | "any">("any");
   const [videoSort, setVideoSort] = useState<"match-date-desc" | "match-date-asc" | "updated-desc" | "title-asc">("match-date-desc");
@@ -234,6 +240,7 @@ export function AudiovisualRoom({
   const [expandedPlaybookIds, setExpandedPlaybookIds] = useState<string[]>([]);
   const [isPlaybackFullscreen, setIsPlaybackFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+  const isEditingMode = canManageTeam && videoRoomMode === "edit";
   const activePlayers = useMemo(() => players.filter((player) => player.active), [players]);
 
   function getScreenOrientationController(): ScreenOrientationController | null {
@@ -462,6 +469,31 @@ export function AudiovisualRoom({
       setVideoPage(totalVideoPages);
     }
   }, [totalVideoPages, videoPage]);
+
+  useEffect(() => {
+    if (!canManageTeam || typeof window === "undefined") {
+      return;
+    }
+
+    const savedMode = window.localStorage.getItem("farthest-frontier-video-room-mode");
+    if (savedMode === "view" || savedMode === "edit") {
+      setVideoRoomMode(savedMode);
+    }
+  }, [canManageTeam]);
+
+  useEffect(() => {
+    if (!canManageTeam || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("farthest-frontier-video-room-mode", videoRoomMode);
+  }, [canManageTeam, videoRoomMode]);
+
+  useEffect(() => {
+    if (!canManageTeam && videoRoomMode !== "view") {
+      setVideoRoomMode("view");
+    }
+  }, [canManageTeam, videoRoomMode]);
 
   const selectedVideo = filmRoomVideos.find((video) => video.id === selectedVideoId) ?? null;
   const selectedVideoYoutubeId = parseYouTubeVideoId(selectedVideo?.youtubeUrl ?? "");
@@ -1081,6 +1113,49 @@ export function AudiovisualRoom({
     setClipForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateQuickClipForm<Key extends keyof QuickClipForm>(key: Key, value: QuickClipForm[Key]) {
+    setQuickClipForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function setQuickClipTimeFromCurrent(field: "startText" | "endText") {
+    setQuickClipForm((current) => ({
+      ...current,
+      [field]: formatSecondsAsTime(currentTime),
+    }));
+  }
+
+  function nudgeQuickClipTimestamp(field: "startText" | "endText", deltaSeconds: number) {
+    setQuickClipForm((current) => ({
+      ...current,
+      [field]: nudgeTimestampText(current[field], deltaSeconds),
+    }));
+  }
+
+  function hasDirtyDetailedClipForm() {
+    return Boolean(editingClipId || showClipComposer);
+  }
+
+  function switchVideoRoomMode(nextMode: VideoRoomMode) {
+    if (!canManageTeam || nextMode === videoRoomMode) {
+      return;
+    }
+
+    if (nextMode === "view" && (isQuickClipDirty(quickClipForm) || hasDirtyDetailedClipForm())) {
+      const shouldDiscard = window.confirm("未保存の編集内容を破棄して視聴モードに切り替えますか？");
+      if (!shouldDiscard) {
+        return;
+      }
+
+      if (selectedVideo) {
+        resetClipForm(selectedVideo.id);
+      }
+      setShowClipComposer(false);
+      setQuickClipForm(initialQuickClipForm);
+    }
+
+    setVideoRoomMode(nextMode);
+  }
+
   function updateImportForm<Key extends keyof ImportForm>(key: Key, value: ImportForm[Key]) {
     setImportForm((current) => ({ ...current, [key]: value }));
   }
@@ -1122,7 +1197,7 @@ export function AudiovisualRoom({
   const playbackExperience = selectedVideo && selectedVideoYoutubeId ? (
     <div
       ref={playbackShellRef}
-      className={`film-focus-shell ${isPlaybackFullscreen ? "is-fullscreen" : ""} ${isPseudoFullscreen ? "is-pseudo-fullscreen" : ""}`}
+      className={`film-focus-shell ${isEditingMode ? "is-editing-mode" : ""} ${isPlaybackFullscreen ? "is-fullscreen" : ""} ${isPseudoFullscreen ? "is-pseudo-fullscreen" : ""}`}
     >
       {isPlaybackFullscreen ? (
         <div className="film-focus-topbar">
@@ -1145,6 +1220,20 @@ export function AudiovisualRoom({
           <div className="film-player-frame">
             <div id={playerHostId} className="film-player-host" />
           </div>
+          {isEditingMode && selectedVideo ? (
+            <QuickClipRegistrationBar
+              availableFormations={availableFormations}
+              availablePlayTypes={availablePlayTypes}
+              disabled={syncing || Boolean(editingClipId) || showClipComposer}
+              formationListId={`${formationListId}-quick`}
+              form={quickClipForm}
+              onNudgeTimestamp={nudgeQuickClipTimestamp}
+              onSave={() => void handleSaveQuickClip()}
+              onSetCurrentTime={setQuickClipTimeFromCurrent}
+              onUpdate={updateQuickClipForm}
+              playTypeListId={`${playTypeListId}-quick`}
+            />
+          ) : null}
         </div>
 
         <div className="film-playback-side">
@@ -1257,9 +1346,9 @@ export function AudiovisualRoom({
             </div>
           )}
 
-          {detailClip && (detailPanelOpen || (canManageTeam && selectedVideo && editingClipId === detailClip.id)) ? (
+          {detailClip && (detailPanelOpen || (isEditingMode && selectedVideo && editingClipId === detailClip.id)) ? (
             <div className="film-active-card film-detail-sheet">
-              {canManageTeam && selectedVideo && editingClipId === detailClip.id ? (
+              {isEditingMode && selectedVideo && editingClipId === detailClip.id ? (
                 <>
                   <div className="film-editing-banner">
                     <strong>このプレーをカード内で編集しています</strong>
@@ -1344,7 +1433,7 @@ export function AudiovisualRoom({
                       <p className="film-comment">{detailClip.coachComment}</p>
                     </div>
                   ) : null}
-                  {canManageTeam && selectedVideo ? (
+                  {isEditingMode && selectedVideo ? (
                     <div className="film-inline-actions film-detail-actions">
                       <button
                         className="button secondary button-compact"
@@ -1425,7 +1514,7 @@ export function AudiovisualRoom({
                 </div>
               </div>
 
-              {canManageTeam ? (
+              {isEditingMode ? (
                 <>
                   {editingSavedWhiteboard ? (
                     <div className="status-strip">
@@ -1545,7 +1634,7 @@ export function AudiovisualRoom({
                                 : "白紙"}
                           </div>
                         </div>
-                        {canManageTeam ? (
+                        {isEditingMode ? (
                           <div className="chip-row">
                             <button
                               className="button ghost"
@@ -1591,7 +1680,7 @@ export function AudiovisualRoom({
         </div>
       </div>
 
-      {canManageTeam && selectedVideo ? (
+      {isEditingMode && selectedVideo ? (
         <div className="film-inline-editor-wrap">
           <div className="film-inline-actions">
             <span className="chip">再生位置 {formatSecondsAsTime(currentTime)}</span>
@@ -2096,25 +2185,25 @@ export function AudiovisualRoom({
     }
   }
 
-  async function handleSaveClip() {
-    const startSeconds = parseTimestamp(clipForm.startText);
-    const endSeconds = parseTimestamp(clipForm.endText);
-    const targetVideoId = clipForm.videoId || selectedVideo?.id || "";
+  async function saveClipFromForm(sourceForm: ClipForm, options?: { afterSave?: (savedClipId: string) => void }) {
+    const startSeconds = parseTimestamp(sourceForm.startText);
+    const endSeconds = parseTimestamp(sourceForm.endText);
+    const targetVideoId = sourceForm.videoId || selectedVideo?.id || "";
 
     if (!canManageTeam || syncing || !targetVideoId) {
       return;
     }
 
     const nextClipBase = {
-      title: clipForm.title.trim(),
-      formation: clipForm.formation.trim(),
-      playType: clipForm.playType.trim(),
-      down: parseDown(clipForm.down),
-      toGoYards: clipForm.toGoYards.trim() || undefined,
-      penaltyType: clipForm.penaltyType.trim() || undefined,
-      playerLinks: sanitizePlayerLinks(clipForm.playerLinks),
-      comment: clipForm.comment.trim(),
-      coachComment: canManageTeam ? clipForm.coachComment.trim() || undefined : undefined,
+      title: sourceForm.title.trim(),
+      formation: sourceForm.formation.trim(),
+      playType: sourceForm.playType.trim(),
+      down: parseDown(sourceForm.down),
+      toGoYards: sourceForm.toGoYards.trim() || undefined,
+      penaltyType: sourceForm.penaltyType.trim() || undefined,
+      playerLinks: sanitizePlayerLinks(sourceForm.playerLinks),
+      comment: sourceForm.comment.trim(),
+      coachComment: canManageTeam ? sourceForm.coachComment.trim() || undefined : undefined,
     };
 
     if (!nextClipBase.title || startSeconds === null || endSeconds === null) {
@@ -2135,7 +2224,7 @@ export function AudiovisualRoom({
       whiteboards: editingClipId
         ? currentVideo?.clips.find((clip) => clip.id === editingClipId)?.whiteboards ?? []
         : [],
-      focusTargets: clipForm.focusTargets,
+      focusTargets: sourceForm.focusTargets,
     };
 
     try {
@@ -2180,12 +2269,40 @@ export function AudiovisualRoom({
       setShowClipComposer(false);
       setSelectedVideoId(targetVideoId);
       setSelectedClipId(saved.clip.id);
+      options?.afterSave?.(saved.clip.id);
       setTeamMessage(`プレー「${saved.clip.title}」を${editingClipId ? "更新" : "追加"}しました。`);
     } catch (error) {
       setTeamMessage(error instanceof Error ? error.message : `プレーの${editingClipId ? "更新" : "追加"}に失敗しました。`);
     } finally {
       setSyncing(false);
     }
+  }
+
+  async function handleSaveClip() {
+    await saveClipFromForm(clipForm);
+  }
+
+  async function handleSaveQuickClip() {
+    if (!selectedVideo || !isEditingMode || editingClipId || showClipComposer) {
+      return;
+    }
+
+    const title = buildQuickClipTitle(quickClipForm);
+    const quickSourceForm: ClipForm = {
+      ...initialClipForm,
+      videoId: selectedVideo.id,
+      title,
+      startText: quickClipForm.startText,
+      endText: quickClipForm.endText,
+      down: quickClipForm.down,
+      toGoYards: quickClipForm.toGoYards,
+      formation: quickClipForm.formation,
+      playType: quickClipForm.playType,
+    };
+
+    await saveClipFromForm(quickSourceForm, {
+      afterSave: () => setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm)),
+    });
   }
 
   async function handleDeleteClip(clip: VideoClip, videoId: string) {
@@ -2427,6 +2544,26 @@ export function AudiovisualRoom({
               </button>
             ) : null}
           </div>
+          {canManageTeam ? (
+            <div className="film-mode-toggle" role="group" aria-label="動画ルームのモード">
+              <button
+                className={`button secondary button-compact ${videoRoomMode === "view" ? "is-selected" : ""}`}
+                type="button"
+                onClick={() => switchVideoRoomMode("view")}
+              >
+                <MonitorPlay aria-hidden="true" />
+                視聴
+              </button>
+              <button
+                className={`button secondary button-compact ${videoRoomMode === "edit" ? "is-selected" : ""}`}
+                type="button"
+                onClick={() => switchVideoRoomMode("edit")}
+              >
+                <Edit3 aria-hidden="true" />
+                編集
+              </button>
+            </div>
+          ) : null}
 
           <div className="film-room-layout">
             <div className="panel inset-panel">
@@ -2436,7 +2573,7 @@ export function AudiovisualRoom({
                       <h3 className="section-title">動画一覧</h3>
                       <p className="section-copy">見たい試合動画やプレー合わせ動画をここで切り替えます。</p>
                     </div>
-                    {canManageTeam ? (
+                    {isEditingMode ? (
                       <button
                         className="button secondary button-compact"
                         type="button"
@@ -2521,7 +2658,7 @@ export function AudiovisualRoom({
                       </button>
                     </div>
                   ) : null}
-                  {canManageTeam && showVideoComposer ? (
+                  {isEditingMode && showVideoComposer ? (
                     <div className="film-inline-editor-wrap">
                       <div className="film-inline-editor">
                         <label className="field-stack">
@@ -2635,7 +2772,7 @@ export function AudiovisualRoom({
                           {selectedVideo ? `${selectedVideo.title} のプレーを一覧で確認できます。` : "動画を選ぶとプレー一覧が表示されます。"}
                         </p>
                       </div>
-                      {canManageTeam && selectedVideo && selectedVideo.clips.length ? (
+                      {isEditingMode && selectedVideo && selectedVideo.clips.length ? (
                         <button
                           className="button secondary button-compact"
                           type="button"
@@ -2720,7 +2857,7 @@ export function AudiovisualRoom({
             </div>
           </div>
 
-          {canManageTeam ? (
+          {isEditingMode ? (
             <div className="film-admin-grid">
               <div className="panel inset-panel film-import-panel">
                 <div className="panel-body">
