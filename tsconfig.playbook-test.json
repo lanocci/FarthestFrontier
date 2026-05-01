@@ -3,8 +3,8 @@
   "compilerOptions": {
     "module": "Node16",
     "moduleResolution": "Node16",
-    "noEmit": false,
-    "outDir": "/private/tmp/ff-playbook-test"
+    "outDir": "/private/tmp/ff-playbook-test",
+    "noEmit": false
   },
   "include": [
     "lib/coach-weekly-review.ts",
@@ -12,6 +12,8 @@
     "lib/video-room/playbook-matching.ts",
     "lib/video-room/playbook-matching.test.ts",
     "lib/video-room/utils.ts",
-    "lib/video-room/utils.test.ts"
+    "lib/video-room/utils.test.ts",
+    "lib/video-room/quick-registration.test.ts",
+    "lib/video-room/quick-registration.ts"
   ]
 }
