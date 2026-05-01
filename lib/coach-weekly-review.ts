@@ -32,6 +32,10 @@ function hasRating(value: PlayerPracticeEntry["offenseReflectionRating"]): boole
   return value !== undefined;
 }
 
+function hasBothGoals(entry?: PlayerPracticeEntry): boolean {
+  return hasText(entry?.offenseGoal) && hasText(entry?.defenseGoal);
+}
+
 function getPracticeEntry(player: Player, practiceDate: string): PlayerPracticeEntry | undefined {
   return player.practiceEntries.find((entry) => entry.practiceDate === practiceDate);
 }
@@ -230,8 +234,8 @@ export function getCoachReviewSummary(players: Player[], practiceDate: string): 
           playersPresent: summary.playersPresent + (entry?.attendanceStatus === "present" ? 1 : 0),
           playersAbsent: summary.playersAbsent + (entry?.attendanceStatus === "absent" ? 1 : 0),
           playersAttendanceUnmarked: summary.playersAttendanceUnmarked + (entry?.attendanceStatus ? 0 : 1),
-          playersWithGoal: summary.playersWithGoal + (!isAbsent && classification.hasGoal ? 1 : 0),
-          playersWithAnyReflection: summary.playersWithAnyReflection + (!isAbsent && classification.hasAnyReflection ? 1 : 0),
+          playersWithGoal: summary.playersWithGoal + (!isAbsent && hasBothGoals(entry) ? 1 : 0),
+          playersWithAnyReflection: summary.playersWithAnyReflection + (!isAbsent && classification.isComplete ? 1 : 0),
           playersComplete: summary.playersComplete + (!isAbsent && classification.isComplete ? 1 : 0),
           playersNeedingAttention: summary.playersNeedingAttention + (!isAbsent && !classification.isComplete ? 1 : 0),
         };

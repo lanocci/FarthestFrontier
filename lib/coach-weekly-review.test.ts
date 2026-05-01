@@ -78,6 +78,27 @@ const players: Player[] = [
     ],
   },
   {
+    id: "p5",
+    name: "田中 光",
+    jerseyNumber: "9",
+    gradeLabel: "5年",
+    active: true,
+    guardianName: "田中",
+    favoriteSkill: "パス",
+    offensePositionIds: ["qb"],
+    defensePositionIds: ["lb"],
+    practiceEntries: [
+      {
+        practiceDate: "2026-05-02",
+        attendanceStatus: "present",
+        offenseGoal: "素早くセットする",
+        defenseGoal: "腰を落として構える",
+        offenseReflectionRating: 4,
+        defenseReflectionRating: 5,
+      },
+    ],
+  },
+  {
     id: "p3",
     name: "山田 海",
     jerseyNumber: "",
@@ -92,17 +113,17 @@ const players: Player[] = [
 ];
 
 const sorted = sortCoachReviewPlayers(players, ["p2"]);
-assert(sorted.map((player) => player.id).join(",") === "p2,p4,p1,p3", `Unexpected sort order: ${sorted.map((player) => player.id).join(",")}`);
+assert(sorted.map((player) => player.id).join(",") === "p2,p4,p1,p5,p3", `Unexpected sort order: ${sorted.map((player) => player.id).join(",")}`);
 
 const sortedLinkedPlayersByJersey = sortCoachReviewPlayers(players, ["p2", "p1"]);
 assert(
-  sortedLinkedPlayersByJersey.map((player) => player.id).join(",") === "p1,p2,p4,p3",
+  sortedLinkedPlayersByJersey.map((player) => player.id).join(",") === "p1,p2,p4,p5,p3",
   `Linked players should sort by jersey number, got ${sortedLinkedPlayersByJersey.map((player) => player.id).join(",")}`,
 );
 
 const sortedForReview = sortCoachReviewPlayers(players, [], "2026-05-02");
 assert(
-  sortedForReview.map((player) => player.id).join(",") === "p2,p4,p3,p1",
+  sortedForReview.map((player) => player.id).join(",") === "p5,p2,p4,p3,p1",
   `Review sort should prioritize present players, goals, and place absent players last, got ${sortedForReview.map((player) => player.id).join(",")}`,
 );
 
@@ -116,12 +137,12 @@ assert(classifyCoachReviewEntry(players.find((player) => player.id === "p1")?.pr
 assert(classifyCoachReviewEntry(undefined).status === "missing-goal", "Missing entry should be missing-goal");
 
 const summary = getCoachReviewSummary(players, "2026-05-02");
-assert(summary.activePlayers === 2, `Expected 2 review target players, got ${summary.activePlayers}`);
-assert(summary.playersWithGoal === 1, `Expected 1 non-absent player with goals, got ${summary.playersWithGoal}`);
-assert(summary.playersWithAnyReflection === 1, `Expected 1 non-absent player with reflection, got ${summary.playersWithAnyReflection}`);
-assert(summary.playersComplete === 0, `Expected 0 complete non-absent players, got ${summary.playersComplete}`);
+assert(summary.activePlayers === 3, `Expected 3 review target players, got ${summary.activePlayers}`);
+assert(summary.playersWithGoal === 1, `Expected 1 non-absent player with both goals, got ${summary.playersWithGoal}`);
+assert(summary.playersWithAnyReflection === 1, `Expected 1 non-absent player with both reflections, got ${summary.playersWithAnyReflection}`);
+assert(summary.playersComplete === 1, `Expected 1 complete non-absent player, got ${summary.playersComplete}`);
 assert(summary.playersNeedingAttention === 2, `Expected 2 non-absent attention players, got ${summary.playersNeedingAttention}`);
-assert(summary.playersPresent === 2, `Expected 2 present players, got ${summary.playersPresent}`);
+assert(summary.playersPresent === 3, `Expected 3 present players, got ${summary.playersPresent}`);
 assert(summary.playersAbsent === 1, `Expected 1 absent player, got ${summary.playersAbsent}`);
 assert(summary.playersAttendanceUnmarked === 0, `Expected 0 unmarked attendance players, got ${summary.playersAttendanceUnmarked}`);
 
