@@ -1388,6 +1388,19 @@ select:disabled {
   align-items: stretch;
 }
 
+.film-focus-shell.is-editing-mode.is-fullscreen .film-playback-main,
+.film-focus-shell.is-editing-mode:fullscreen .film-playback-main,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-playback-main,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-playback-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  gap: 8px;
+  height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
+  min-height: 0;
+}
+
 .film-focus-shell.is-fullscreen .film-player-frame,
 .film-focus-shell:fullscreen .film-player-frame,
 .film-focus-shell:-webkit-full-screen .film-player-frame {
@@ -1402,6 +1415,17 @@ select:disabled {
   border-radius: 0;
 }
 
+.film-focus-shell.is-editing-mode.is-fullscreen .film-player-frame,
+.film-focus-shell.is-editing-mode:fullscreen .film-player-frame,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-player-frame {
+  width: min(
+    100%,
+    calc((100dvh - (var(--film-fullscreen-pad) * 2) - 150px) * 16 / 9),
+    calc(100dvw - (var(--film-fullscreen-pad-x) * 2) - var(--film-fullscreen-side-width) - var(--film-fullscreen-gap))
+  );
+  max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2) - 150px);
+}
+
 .film-focus-shell.is-pseudo-fullscreen .film-player-frame {
   width: calc(100vw - var(--film-fullscreen-side-width));
   width: calc(100dvw - var(--film-fullscreen-side-width));
@@ -1410,6 +1434,19 @@ select:disabled {
   margin: 0;
   border: 0;
   border-radius: 0;
+}
+
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-player-frame {
+  width: min(
+    calc(100vw - var(--film-fullscreen-side-width)),
+    calc((100dvh - 148px) * 16 / 9)
+  );
+  width: min(
+    calc(100dvw - var(--film-fullscreen-side-width)),
+    calc((100dvh - 148px) * 16 / 9)
+  );
+  max-height: calc(100dvh - 148px);
+  margin: auto;
 }
 
 .film-focus-shell.is-fullscreen .film-playback-side,
@@ -1721,11 +1758,110 @@ select:disabled {
   grid-column: span 2;
 }
 
-.film-focus-shell.is-fullscreen .film-quick-register,
-.film-focus-shell:fullscreen .film-quick-register,
-.film-focus-shell:-webkit-full-screen .film-quick-register,
-.film-focus-shell.is-pseudo-fullscreen .film-quick-register {
-  display: none;
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register {
+  gap: 8px;
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  padding: 10px;
+  border-color: rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(7, 13, 24, 0.84);
+  color: white;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register-head,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register-head,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register-head,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register-head,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-actions,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-actions,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-actions,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-actions {
+  gap: 8px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register-head strong,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register-head strong,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register-head strong,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register-head strong {
+  color: white;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register-head span,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-actions .subtle,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-actions .subtle,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-actions .subtle,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-actions .subtle {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-title-preview,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-title-preview {
+  padding: 5px 8px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-grid,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-grid,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-grid,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-grid {
+  gap: 6px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-time-row,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-time-row,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-time-row,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-time-row,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-side-row,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-side-row,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-side-row,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-side-row {
+  gap: 4px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-time-row .button,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-side-row .button,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-side-row .button,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-side-row .button,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-side-row .button {
+  min-height: 34px;
+  padding-inline: 8px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-grid input,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-grid input,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-grid input,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-grid input,
+.film-focus-shell.is-editing-mode.is-fullscreen .film-quick-grid select,
+.film-focus-shell.is-editing-mode:fullscreen .film-quick-grid select,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .film-quick-grid select,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-grid select {
+  min-height: 34px;
+  padding-block: 6px;
+}
+
+.film-focus-shell.is-editing-mode.is-fullscreen .field-label,
+.film-focus-shell.is-editing-mode:fullscreen .field-label,
+.film-focus-shell.is-editing-mode:-webkit-full-screen .field-label,
+.film-focus-shell.is-editing-mode.is-pseudo-fullscreen .field-label {
+  color: rgba(255, 255, 255, 0.78);
 }
 
 @media (max-width: 900px) {

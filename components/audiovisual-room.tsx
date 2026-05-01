@@ -1197,7 +1197,7 @@ export function AudiovisualRoom({
   const playbackExperience = selectedVideo && selectedVideoYoutubeId ? (
     <div
       ref={playbackShellRef}
-      className={`film-focus-shell ${isPlaybackFullscreen ? "is-fullscreen" : ""} ${isPseudoFullscreen ? "is-pseudo-fullscreen" : ""}`}
+      className={`film-focus-shell ${isEditingMode ? "is-editing-mode" : ""} ${isPlaybackFullscreen ? "is-fullscreen" : ""} ${isPseudoFullscreen ? "is-pseudo-fullscreen" : ""}`}
     >
       {isPlaybackFullscreen ? (
         <div className="film-focus-topbar">
