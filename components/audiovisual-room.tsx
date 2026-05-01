@@ -3,12 +3,13 @@
 import { Section } from "@/components/section";
 import { VideoClipEditor } from "@/components/video-room/clip-editor";
 import { PlaybookWhiteboard, type PlaybookWhiteboardHandle, type PlaybookWhiteboardState } from "@/components/video-room/playbook-whiteboard";
+import { QuickClipRegistrationBar } from "@/components/video-room/quick-clip-registration-bar";
 import { type ClipForm, type ImportForm, type ParsedImportRow, type VideoForm } from "@/components/video-room/types";
 import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlaybookAsset, insertClipWhiteboard, insertFilmClip, insertFilmRoomVideo, updateClipWhiteboard, updateFilmClip, upsertPlaybookAsset } from "@/lib/data-store";
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { getMatchingPlaybookAssets } from "@/lib/video-room/playbook-matching";
-import { initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, type QuickClipForm } from "@/lib/video-room/quick-registration";
+import { buildQuickClipTitle, getQuickClipDefaultsAfterSave, initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, type QuickClipForm } from "@/lib/video-room/quick-registration";
 import { buildVideoRoomUrl, formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { ChevronDown, ChevronUp, Edit3, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, MonitorPlay, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -1667,6 +1668,18 @@ export function AudiovisualRoom({
 
       {isEditingMode && selectedVideo ? (
         <div className="film-inline-editor-wrap">
+          <QuickClipRegistrationBar
+            availableFormations={availableFormations}
+            availablePlayTypes={availablePlayTypes}
+            disabled={syncing || Boolean(editingClipId)}
+            formationListId={`${formationListId}-quick`}
+            form={quickClipForm}
+            onNudgeTimestamp={nudgeQuickClipTimestamp}
+            onSave={() => void handleSaveQuickClip()}
+            onSetCurrentTime={setQuickClipTimeFromCurrent}
+            onUpdate={updateQuickClipForm}
+            playTypeListId={`${playTypeListId}-quick`}
+          />
           <div className="film-inline-actions">
             <span className="chip">再生位置 {formatSecondsAsTime(currentTime)}</span>
             <button
@@ -2170,25 +2183,25 @@ export function AudiovisualRoom({
     }
   }
 
-  async function handleSaveClip() {
-    const startSeconds = parseTimestamp(clipForm.startText);
-    const endSeconds = parseTimestamp(clipForm.endText);
-    const targetVideoId = clipForm.videoId || selectedVideo?.id || "";
+  async function saveClipFromForm(sourceForm: ClipForm, options?: { afterSave?: (savedClipId: string) => void }) {
+    const startSeconds = parseTimestamp(sourceForm.startText);
+    const endSeconds = parseTimestamp(sourceForm.endText);
+    const targetVideoId = sourceForm.videoId || selectedVideo?.id || "";
 
     if (!canManageTeam || syncing || !targetVideoId) {
       return;
     }
 
     const nextClipBase = {
-      title: clipForm.title.trim(),
-      formation: clipForm.formation.trim(),
-      playType: clipForm.playType.trim(),
-      down: parseDown(clipForm.down),
-      toGoYards: clipForm.toGoYards.trim() || undefined,
-      penaltyType: clipForm.penaltyType.trim() || undefined,
-      playerLinks: sanitizePlayerLinks(clipForm.playerLinks),
-      comment: clipForm.comment.trim(),
-      coachComment: canManageTeam ? clipForm.coachComment.trim() || undefined : undefined,
+      title: sourceForm.title.trim(),
+      formation: sourceForm.formation.trim(),
+      playType: sourceForm.playType.trim(),
+      down: parseDown(sourceForm.down),
+      toGoYards: sourceForm.toGoYards.trim() || undefined,
+      penaltyType: sourceForm.penaltyType.trim() || undefined,
+      playerLinks: sanitizePlayerLinks(sourceForm.playerLinks),
+      comment: sourceForm.comment.trim(),
+      coachComment: canManageTeam ? sourceForm.coachComment.trim() || undefined : undefined,
     };
 
     if (!nextClipBase.title || startSeconds === null || endSeconds === null) {
@@ -2209,7 +2222,7 @@ export function AudiovisualRoom({
       whiteboards: editingClipId
         ? currentVideo?.clips.find((clip) => clip.id === editingClipId)?.whiteboards ?? []
         : [],
-      focusTargets: clipForm.focusTargets,
+      focusTargets: sourceForm.focusTargets,
     };
 
     try {
@@ -2254,12 +2267,40 @@ export function AudiovisualRoom({
       setShowClipComposer(false);
       setSelectedVideoId(targetVideoId);
       setSelectedClipId(saved.clip.id);
+      options?.afterSave?.(saved.clip.id);
       setTeamMessage(`プレー「${saved.clip.title}」を${editingClipId ? "更新" : "追加"}しました。`);
     } catch (error) {
       setTeamMessage(error instanceof Error ? error.message : `プレーの${editingClipId ? "更新" : "追加"}に失敗しました。`);
     } finally {
       setSyncing(false);
     }
+  }
+
+  async function handleSaveClip() {
+    await saveClipFromForm(clipForm);
+  }
+
+  async function handleSaveQuickClip() {
+    if (!selectedVideo || !isEditingMode || editingClipId) {
+      return;
+    }
+
+    const title = buildQuickClipTitle(quickClipForm);
+    const quickSourceForm: ClipForm = {
+      ...initialClipForm,
+      videoId: selectedVideo.id,
+      title,
+      startText: quickClipForm.startText,
+      endText: quickClipForm.endText,
+      down: quickClipForm.down,
+      toGoYards: quickClipForm.toGoYards,
+      formation: quickClipForm.formation,
+      playType: quickClipForm.playType,
+    };
+
+    await saveClipFromForm(quickSourceForm, {
+      afterSave: () => setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm)),
+    });
   }
 
   async function handleDeleteClip(clip: VideoClip, videoId: string) {
