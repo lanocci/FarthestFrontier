@@ -1678,6 +1678,12 @@ select:disabled {
   min-height: 42px;
 }
 
+.film-quick-side-row .button.is-selected {
+  border-color: rgba(232, 96, 45, 0.38);
+  background: rgba(232, 96, 45, 0.14);
+  color: var(--accent-strong);
+}
+
 @media (max-width: 1100px) {
   .film-quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

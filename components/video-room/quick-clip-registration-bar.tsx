@@ -4,6 +4,7 @@ import type { QuickClipForm, QuickClipSide } from "@/lib/video-room/quick-regist
 import { buildQuickClipTitle } from "@/lib/video-room/quick-registration";
 import { Clock3, Save } from "lucide-react";
 import type { KeyboardEvent } from "react";
+import { useId } from "react";
 
 type QuickClipRegistrationBarProps = {
   availableFormations: string[];
@@ -47,6 +48,8 @@ export function QuickClipRegistrationBar({
   playTypeListId,
 }: QuickClipRegistrationBarProps) {
   const generatedTitle = buildQuickClipTitle(form);
+  const startInputId = useId();
+  const endInputId = useId();
 
   return (
     <div className="film-quick-register" aria-label="クイックプレー登録">
@@ -61,10 +64,11 @@ export function QuickClipRegistrationBar({
       </div>
 
       <div className="film-quick-grid">
-        <label className="field-stack film-quick-time-field">
-          <span className="field-label">開始</span>
+        <div className="field-stack film-quick-time-field">
+          <label className="field-label" htmlFor={startInputId}>開始</label>
           <div className="film-quick-time-row">
             <input
+              id={startInputId}
               type="text"
               inputMode="numeric"
               placeholder="1:24"
@@ -83,12 +87,13 @@ export function QuickClipRegistrationBar({
               現在
             </button>
           </div>
-        </label>
+        </div>
 
-        <label className="field-stack film-quick-time-field">
-          <span className="field-label">終了</span>
+        <div className="field-stack film-quick-time-field">
+          <label className="field-label" htmlFor={endInputId}>終了</label>
           <div className="film-quick-time-row">
             <input
+              id={endInputId}
               type="text"
               inputMode="numeric"
               placeholder="1:37"
@@ -107,7 +112,7 @@ export function QuickClipRegistrationBar({
               現在
             </button>
           </div>
-        </label>
+        </div>
 
         <div className="field-stack">
           <span className="field-label">攻守</span>
@@ -120,6 +125,7 @@ export function QuickClipRegistrationBar({
                 key={value}
                 className={`button secondary button-compact ${form.side === value ? "is-selected" : ""}`}
                 type="button"
+                aria-pressed={form.side === value}
                 onClick={() => onUpdate("side", value as QuickClipSide)}
                 disabled={disabled}
               >
