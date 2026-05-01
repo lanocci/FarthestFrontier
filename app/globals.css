@@ -1201,6 +1201,21 @@ select:disabled {
   justify-content: flex-end;
 }
 
+.film-mode-toggle {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.button.is-selected {
+  border-color: rgba(232, 96, 45, 0.38);
+  background: rgba(232, 96, 45, 0.14);
+  color: var(--accent-strong);
+}
+
 .film-admin-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
