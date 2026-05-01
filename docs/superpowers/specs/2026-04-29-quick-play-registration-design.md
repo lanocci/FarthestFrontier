@@ -13,6 +13,7 @@ The desired workflow is a quick capture pass: mark the play's time range, add on
 - Capture the minimum metadata needed for later search and analysis.
 - Generate a useful temporary title automatically.
 - Preserve the existing detailed clip editor for follow-up edits.
+- Let coaches switch between a focused viewing mode and an editing mode.
 
 ## Non-Goals
 
@@ -20,10 +21,24 @@ The desired workflow is a quick capture pass: mark the play's time range, add on
 - Adding player participation or focus-player selection to the quick capture flow.
 - Adding whiteboard editing to the quick capture flow.
 - Building automated play recognition from video.
+- Adding edit permissions to guardian users.
 
 ## User Experience
 
 Add a quick registration bar directly below the video player in the audiovisual room. The bar stays visually close to playback controls so the coach can mark and save plays without moving away from the video context.
+
+For users who can manage the team, the audiovisual room has two modes:
+
+- Viewing mode
+- Editing mode
+
+Viewing mode prioritizes watching video, jumping between clips, reading clip details, and viewing existing whiteboards. It hides the quick registration bar and other editing-heavy controls so the screen stays calm during review.
+
+Editing mode reveals the quick registration bar and existing management actions, including detailed clip editing, clip creation, imports, video management, and whiteboard editing. The quick registration bar belongs only to editing mode.
+
+Guardian users and other users without team management permissions remain in viewing mode. They do not see the mode toggle.
+
+The mode toggle should sit near the video room header or player toolbar as a compact segmented control: `視聴` and `編集`. The active mode should be visually clear without changing the underlying selected video or selected clip.
 
 The bar captures:
 
@@ -36,6 +51,46 @@ The bar captures:
 - Distance
 
 The quick bar should avoid the broader word "category." Formation and play type should remain separate fields because they already map to existing clip metadata and are more useful for filtering.
+
+## Viewing Mode
+
+Viewing mode keeps playback and review tasks in the foreground.
+
+Visible capabilities:
+
+- Video selection and playback.
+- Clip list, clip search, and clip filters.
+- Jumping to a clip.
+- Reading clip details.
+- Viewing saved whiteboards.
+- Copying clip links when that action is already available.
+- Fullscreen viewing.
+
+Hidden or de-emphasized capabilities:
+
+- Quick registration bar.
+- Full clip creation form.
+- Inline clip edit form.
+- Video creation and import controls.
+- Destructive management actions.
+- Whiteboard editing controls.
+
+If a coach switches from editing mode to viewing mode while the quick registration bar or detailed editor has unsaved changes, the app should ask whether to discard those unsaved edits. If there are no unsaved changes, switching modes should be immediate.
+
+## Editing Mode
+
+Editing mode exposes the tools needed to register and refine plays.
+
+Visible capabilities:
+
+- Quick registration bar below the video player.
+- Existing detailed clip editor and management actions.
+- Clip import and video management controls.
+- Whiteboard creation and editing actions.
+
+Editing mode should preserve the same selected video, selected clip, filters, and playback position as viewing mode. Switching modes changes available controls, not the review context.
+
+For coaches, the app can remember the last selected mode locally in the browser. If no local preference exists, viewing mode is the safer initial default because it presents the clean review experience first.
 
 ## Timestamp Capture
 
@@ -116,6 +171,8 @@ Expected flow:
 5. The existing insert/update pathway persists the clip.
 6. The local video list updates and the quick bar resets for the next clip.
 
+The current mode is UI state rather than persisted team data. It should not change the stored video or clip records. Permission checks should still depend on `canManageTeam`; viewing mode only hides editing controls for coaches, while permission logic prevents non-managers from editing.
+
 ## Testing
 
 Cover the quick registration behavior with focused tests around pure helpers where possible:
@@ -124,9 +181,13 @@ Cover the quick registration behavior with focused tests around pure helpers whe
 - Generated titles omit missing fields cleanly.
 - Down advancement cycles from fourth down back to first down.
 - Quick form reset preserves the intended defaults and clears timestamps.
+- Mode switching preserves selected video, selected clip, filters, and playback position.
+- Switching from editing mode with dirty input prompts before discarding changes.
 
 For UI verification:
 
 - Confirm the quick bar can save a clip with only the quick metadata.
 - Confirm invalid timestamp ranges show an inline error and preserve values.
 - Confirm existing detailed editing still works for quick-created clips.
+- Confirm viewing mode hides editing controls for coaches while keeping playback and clip review usable.
+- Confirm users without team management permissions stay in viewing mode and cannot reveal editing controls.
