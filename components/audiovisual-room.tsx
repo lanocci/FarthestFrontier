@@ -1220,6 +1220,20 @@ export function AudiovisualRoom({
           <div className="film-player-frame">
             <div id={playerHostId} className="film-player-host" />
           </div>
+          {isEditingMode && selectedVideo ? (
+            <QuickClipRegistrationBar
+              availableFormations={availableFormations}
+              availablePlayTypes={availablePlayTypes}
+              disabled={syncing || Boolean(editingClipId) || showClipComposer}
+              formationListId={`${formationListId}-quick`}
+              form={quickClipForm}
+              onNudgeTimestamp={nudgeQuickClipTimestamp}
+              onSave={() => void handleSaveQuickClip()}
+              onSetCurrentTime={setQuickClipTimeFromCurrent}
+              onUpdate={updateQuickClipForm}
+              playTypeListId={`${playTypeListId}-quick`}
+            />
+          ) : null}
         </div>
 
         <div className="film-playback-side">
@@ -1668,18 +1682,6 @@ export function AudiovisualRoom({
 
       {isEditingMode && selectedVideo ? (
         <div className="film-inline-editor-wrap">
-          <QuickClipRegistrationBar
-            availableFormations={availableFormations}
-            availablePlayTypes={availablePlayTypes}
-            disabled={syncing || Boolean(editingClipId) || showClipComposer}
-            formationListId={`${formationListId}-quick`}
-            form={quickClipForm}
-            onNudgeTimestamp={nudgeQuickClipTimestamp}
-            onSave={() => void handleSaveQuickClip()}
-            onSetCurrentTime={setQuickClipTimeFromCurrent}
-            onUpdate={updateQuickClipForm}
-            playTypeListId={`${playTypeListId}-quick`}
-          />
           <div className="film-inline-actions">
             <span className="chip">再生位置 {formatSecondsAsTime(currentTime)}</span>
             <button

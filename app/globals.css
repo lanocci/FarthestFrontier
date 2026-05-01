@@ -1540,6 +1540,12 @@ select:disabled {
   min-width: 0;
 }
 
+.film-playback-main {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
 .film-current-strip {
   display: flex;
   gap: 8px;
@@ -1633,7 +1639,9 @@ select:disabled {
 .film-quick-register {
   display: grid;
   gap: 12px;
-  margin-top: 14px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
   padding: 14px;
   border: 1px solid rgba(23, 50, 77, 0.14);
   border-radius: 16px;
@@ -1671,26 +1679,36 @@ select:disabled {
 
 .film-quick-grid {
   display: grid;
-  grid-template-columns: minmax(138px, 1fr) minmax(138px, 1fr) minmax(112px, 0.7fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(96px, 0.6fr) minmax(86px, 0.55fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
 }
 
-.film-quick-time-row,
-.film-quick-side-row {
-  display: flex;
+.film-quick-grid .field-stack,
+.film-quick-grid input,
+.film-quick-grid select {
+  min-width: 0;
+  width: 100%;
+}
+
+.film-quick-time-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
 }
 
-.film-quick-time-row input {
-  min-width: 72px;
+.film-quick-side-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .film-quick-time-row .button,
 .film-quick-side-row .button {
-  flex: 1;
   justify-content: center;
+  min-width: 0;
   min-height: 42px;
+  padding-inline: 10px;
 }
 
 .film-quick-side-row .button.is-selected {
@@ -1699,7 +1717,18 @@ select:disabled {
   color: var(--accent-strong);
 }
 
-@media (max-width: 1100px) {
+.film-quick-time-field {
+  grid-column: span 2;
+}
+
+.film-focus-shell.is-fullscreen .film-quick-register,
+.film-focus-shell:fullscreen .film-quick-register,
+.film-focus-shell:-webkit-full-screen .film-quick-register,
+.film-focus-shell.is-pseudo-fullscreen .film-quick-register {
+  display: none;
+}
+
+@media (max-width: 900px) {
   .film-quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1708,6 +1737,10 @@ select:disabled {
 @media (max-width: 720px) {
   .film-quick-grid {
     grid-template-columns: 1fr;
+  }
+
+  .film-quick-time-field {
+    grid-column: auto;
   }
 }
 
