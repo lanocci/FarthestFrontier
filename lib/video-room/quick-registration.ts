@@ -1,4 +1,5 @@
 import { formatDownLabel, parseTimestamp } from "./utils";
+import type { VideoClip } from "../types";
 
 export type QuickClipSide = "" | "offense" | "defense";
 
@@ -98,6 +99,32 @@ export function nudgeTimestampText(value: string, deltaSeconds: number): string 
   }
 
   return formatQuickSecondsAsTime(Math.max(0, parsed + deltaSeconds));
+}
+
+function inferQuickSideFromClipTitle(title: string): QuickClipSide {
+  const normalized = title.trim();
+
+  if (normalized.startsWith("攻撃")) {
+    return "offense";
+  }
+
+  if (normalized.startsWith("守備")) {
+    return "defense";
+  }
+
+  return "";
+}
+
+export function buildQuickClipFormFromClip(clip: VideoClip): QuickClipForm {
+  return {
+    startText: formatQuickSecondsAsTime(clip.startSeconds),
+    endText: formatQuickSecondsAsTime(clip.endSeconds),
+    side: inferQuickSideFromClipTitle(clip.title),
+    formation: clip.formation,
+    playType: clip.playType,
+    down: clip.down !== undefined ? String(clip.down) : "",
+    toGoYards: clip.toGoYards ?? "",
+  };
 }
 
 export function getQuickClipDefaultsAfterSave(form: QuickClipForm): QuickClipForm {
