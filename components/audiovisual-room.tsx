@@ -9,7 +9,7 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { getMatchingPlaybookAssets } from "@/lib/video-room/playbook-matching";
-import { buildQuickClipTitle, getQuickClipDefaultsAfterSave, initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, type QuickClipForm } from "@/lib/video-room/quick-registration";
+import { buildQuickClipFormFromClip, buildQuickClipTitle, getQuickClipDefaultsAfterSave, initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, type QuickClipForm } from "@/lib/video-room/quick-registration";
 import { buildVideoRoomUrl, formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { ChevronDown, ChevronUp, Edit3, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, MonitorPlay, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -199,12 +199,14 @@ export function AudiovisualRoom({
   const playbackShellRef = useRef<HTMLDivElement | null>(null);
   const clipCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingSharedClipIdRef = useRef<string | null>(null);
+  const quickClipHydrationSkipClipIdRef = useRef<string | null>(null);
   const selectedYoutubeIdRef = useRef<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string>(filmRoomVideos[0]?.id ?? "");
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoRoomMode, setVideoRoomMode] = useState<VideoRoomMode>("view");
   const [quickClipForm, setQuickClipForm] = useState<QuickClipForm>(initialQuickClipForm);
+  const [quickClipSourceClipId, setQuickClipSourceClipId] = useState<string | null>(null);
   const [videoQuery, setVideoQuery] = useState("");
   const [videoAudienceFilter, setVideoAudienceFilter] = useState<VideoAudience | "any">("any");
   const [videoSort, setVideoSort] = useState<"match-date-desc" | "match-date-asc" | "updated-desc" | "title-asc">("match-date-desc");
@@ -582,6 +584,31 @@ export function AudiovisualRoom({
       : playbackInsertionIndex === -1
         ? null
         : selectedVideoClips[playbackInsertionIndex] ?? null;
+
+  useEffect(() => {
+    if (!isEditingMode || editingClipId || showClipComposer || !playbackClip) {
+      if (!playbackClip) {
+        quickClipHydrationSkipClipIdRef.current = null;
+        if (quickClipSourceClipId) {
+          setQuickClipSourceClipId(null);
+        }
+      }
+      return;
+    }
+
+    if (quickClipHydrationSkipClipIdRef.current === playbackClip.id) {
+      return;
+    }
+
+    quickClipHydrationSkipClipIdRef.current = null;
+
+    if (quickClipSourceClipId === playbackClip.id) {
+      return;
+    }
+
+    setQuickClipForm(buildQuickClipFormFromClip(playbackClip));
+    setQuickClipSourceClipId(playbackClip.id);
+  }, [editingClipId, isEditingMode, playbackClip, quickClipSourceClipId, showClipComposer]);
   const activePlaybookAssets = useMemo(() => {
     const targetClip = playbackClip ?? activeClip;
     return getMatchingPlaybookAssets(targetClip, playbookAssets);
@@ -723,6 +750,9 @@ export function AudiovisualRoom({
     setEditingClipId(null);
     setShowClipComposer(false);
     setDetailPanelOpen(false);
+    setQuickClipForm(initialQuickClipForm);
+    setQuickClipSourceClipId(null);
+    quickClipHydrationSkipClipIdRef.current = null;
     setIsPlaybackFullscreen(false);
     setIsPseudoFullscreen(false);
     setClipForm((current) => ({
@@ -1151,6 +1181,8 @@ export function AudiovisualRoom({
       }
       setShowClipComposer(false);
       setQuickClipForm(initialQuickClipForm);
+      setQuickClipSourceClipId(null);
+      quickClipHydrationSkipClipIdRef.current = null;
     }
 
     setVideoRoomMode(nextMode);
@@ -2185,10 +2217,19 @@ export function AudiovisualRoom({
     }
   }
 
-  async function saveClipFromForm(sourceForm: ClipForm, options?: { afterSave?: (savedClipId: string) => void }) {
+  async function saveClipFromForm(
+    sourceForm: ClipForm,
+    options?: {
+      afterSave?: (savedClip: VideoClip) => void;
+      selectAfterSave?: boolean;
+      targetClipId?: string | null;
+    },
+  ) {
     const startSeconds = parseTimestamp(sourceForm.startText);
     const endSeconds = parseTimestamp(sourceForm.endText);
     const targetVideoId = sourceForm.videoId || selectedVideo?.id || "";
+    const targetClipId = options?.targetClipId ?? editingClipId;
+    const isUpdatingClip = Boolean(targetClipId);
 
     if (!canManageTeam || syncing || !targetVideoId) {
       return;
@@ -2221,8 +2262,8 @@ export function AudiovisualRoom({
       ...nextClipBase,
       startSeconds,
       endSeconds,
-      whiteboards: editingClipId
-        ? currentVideo?.clips.find((clip) => clip.id === editingClipId)?.whiteboards ?? []
+      whiteboards: targetClipId
+        ? currentVideo?.clips.find((clip) => clip.id === targetClipId)?.whiteboards ?? []
         : [],
       focusTargets: sourceForm.focusTargets,
     };
@@ -2230,13 +2271,13 @@ export function AudiovisualRoom({
     try {
       setSyncing(true);
       const saved =
-        editingClipId
+        targetClipId
           ? usingRemoteData && supabase
-            ? await updateFilmClip(supabase, { id: editingClipId, ...nextClip, videoId: targetVideoId })
+            ? await updateFilmClip(supabase, { id: targetClipId, ...nextClip, videoId: targetVideoId })
             : {
                 videoId: targetVideoId,
                 clip: {
-                  id: editingClipId,
+                  id: targetClipId,
                   ...nextClip,
                 },
               }
@@ -2256,7 +2297,7 @@ export function AudiovisualRoom({
             ? {
                 ...video,
                 clips: sortClips(
-                  editingClipId
+                  isUpdatingClip
                     ? video.clips.map((clip) => (clip.id === saved.clip.id ? saved.clip : clip))
                     : [...video.clips, saved.clip],
                 ),
@@ -2268,11 +2309,13 @@ export function AudiovisualRoom({
       resetClipForm(targetVideoId);
       setShowClipComposer(false);
       setSelectedVideoId(targetVideoId);
-      setSelectedClipId(saved.clip.id);
-      options?.afterSave?.(saved.clip.id);
-      setTeamMessage(`プレー「${saved.clip.title}」を${editingClipId ? "更新" : "追加"}しました。`);
+      if (options?.selectAfterSave ?? true) {
+        setSelectedClipId(saved.clip.id);
+      }
+      options?.afterSave?.(saved.clip);
+      setTeamMessage(`プレー「${saved.clip.title}」を${isUpdatingClip ? "更新" : "追加"}しました。`);
     } catch (error) {
-      setTeamMessage(error instanceof Error ? error.message : `プレーの${editingClipId ? "更新" : "追加"}に失敗しました。`);
+      setTeamMessage(error instanceof Error ? error.message : `プレーの${isUpdatingClip ? "更新" : "追加"}に失敗しました。`);
     } finally {
       setSyncing(false);
     }
@@ -2300,9 +2343,23 @@ export function AudiovisualRoom({
       playType: quickClipForm.playType,
     };
 
-    await saveClipFromForm(quickSourceForm, {
-      afterSave: () => setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm)),
-    });
+    await saveClipFromForm(
+      quickSourceForm,
+      {
+        afterSave: (savedClip) => {
+          if (quickClipSourceClipId) {
+            setQuickClipForm(buildQuickClipFormFromClip(savedClip));
+            setQuickClipSourceClipId(savedClip.id);
+          } else {
+            quickClipHydrationSkipClipIdRef.current = savedClip.id;
+            setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm));
+            setQuickClipSourceClipId(null);
+          }
+        },
+        selectAfterSave: false,
+        targetClipId: quickClipSourceClipId,
+      },
+    );
   }
 
   async function handleDeleteClip(clip: VideoClip, videoId: string) {

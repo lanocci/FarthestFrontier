@@ -1,5 +1,6 @@
 import {
   advanceQuickDown,
+  buildQuickClipFormFromClip,
   buildQuickClipTitle,
   getQuickClipDefaultsAfterSave,
   isQuickClipDirty,
@@ -68,6 +69,60 @@ assertEqual(nudgeTimestampText("1:24", 1), "1:25", "nudges timestamp up");
 assertEqual(nudgeTimestampText("1:24", -30), "0:54", "nudges timestamp down");
 assertEqual(nudgeTimestampText("0:03", -10), "0:00", "clamps timestamp at zero");
 assertEqual(nudgeTimestampText("bad", 1), "bad", "invalid timestamp remains unchanged");
+
+assertDeepEqual(
+  buildQuickClipFormFromClip({
+    id: "clip-1",
+    title: "攻撃 Trips Pass 2nd&8",
+    startSeconds: 84,
+    endSeconds: 97,
+    down: 2,
+    toGoYards: "8",
+    formation: "Trips",
+    playType: "Pass",
+    comment: "",
+    playerLinks: [],
+    focusTargets: [],
+    whiteboards: [],
+  }),
+  {
+    startText: "1:24",
+    endText: "1:37",
+    side: "offense",
+    formation: "Trips",
+    playType: "Pass",
+    down: "2",
+    toGoYards: "8",
+  },
+  "hydrates quick form from an existing offense clip",
+);
+
+assertDeepEqual(
+  buildQuickClipFormFromClip({
+    id: "clip-2",
+    title: "守備 Zone 3rd&6",
+    startSeconds: 126,
+    endSeconds: 139,
+    down: 3,
+    toGoYards: "6",
+    formation: "",
+    playType: "Zone",
+    comment: "",
+    playerLinks: [],
+    focusTargets: [],
+    whiteboards: [],
+  }),
+  {
+    startText: "2:06",
+    endText: "2:19",
+    side: "defense",
+    formation: "",
+    playType: "Zone",
+    down: "3",
+    toGoYards: "6",
+  },
+  "hydrates quick form from an existing defense clip",
+);
 
 const savedForm: QuickClipForm = {
   startText: "1:00",
