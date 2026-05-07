@@ -127,10 +127,10 @@ export function buildQuickClipFormFromClip(clip: VideoClip): QuickClipForm {
   };
 }
 
-export function getQuickClipDefaultsAfterSave(form: QuickClipForm): QuickClipForm {
+export function getQuickClipDefaultsAfterSave(form: QuickClipForm, savedEndSeconds?: number): QuickClipForm {
   return {
     ...form,
-    startText: "",
+    startText: typeof savedEndSeconds === "number" ? formatQuickSecondsAsTime(savedEndSeconds + 1) : "",
     endText: "",
     down: advanceQuickDown(form.down),
   };

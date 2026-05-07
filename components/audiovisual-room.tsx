@@ -199,6 +199,7 @@ export function AudiovisualRoom({
   const playbackShellRef = useRef<HTMLDivElement | null>(null);
   const clipCardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pendingSharedClipIdRef = useRef<string | null>(null);
+  const appliedSharedClipIdRef = useRef<string | null>(null);
   const quickClipHydrationSkipClipIdRef = useRef<string | null>(null);
   const selectedYoutubeIdRef = useRef<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string>(filmRoomVideos[0]?.id ?? "");
@@ -450,7 +451,9 @@ export function AudiovisualRoom({
         if (selectedClipId !== targetClip.id) {
           setSelectedClipId(targetClip.id);
         }
-        pendingSharedClipIdRef.current = targetClip.id;
+        if (appliedSharedClipIdRef.current !== targetClip.id) {
+          pendingSharedClipIdRef.current = targetClip.id;
+        }
       }
 
       return;
@@ -735,6 +738,7 @@ export function AudiovisualRoom({
     setSelectedClipId(clip.id);
     setDetailPanelOpen(true);
     pendingSharedClipIdRef.current = null;
+    appliedSharedClipIdRef.current = clip.id;
 
     const targetNode = clipCardRefs.current[pendingClipId];
     targetNode?.scrollIntoView({
@@ -753,6 +757,7 @@ export function AudiovisualRoom({
     setQuickClipForm(initialQuickClipForm);
     setQuickClipSourceClipId(null);
     quickClipHydrationSkipClipIdRef.current = null;
+    appliedSharedClipIdRef.current = null;
     setIsPlaybackFullscreen(false);
     setIsPseudoFullscreen(false);
     setClipForm((current) => ({
@@ -2347,14 +2352,13 @@ export function AudiovisualRoom({
       quickSourceForm,
       {
         afterSave: (savedClip) => {
-          if (quickClipSourceClipId) {
-            setQuickClipForm(buildQuickClipFormFromClip(savedClip));
-            setQuickClipSourceClipId(savedClip.id);
-          } else {
-            quickClipHydrationSkipClipIdRef.current = savedClip.id;
-            setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm));
-            setQuickClipSourceClipId(null);
-          }
+          playerRef.current?.seekTo(savedClip.endSeconds, true);
+          playerRef.current?.playVideo();
+          setCurrentTime(savedClip.endSeconds);
+          quickClipHydrationSkipClipIdRef.current = savedClip.id;
+          setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm, savedClip.endSeconds));
+          setQuickClipSourceClipId(null);
+          syncSelectionUrl(selectedVideo.id, null);
         },
         selectAfterSave: false,
         targetClipId: quickClipSourceClipId,

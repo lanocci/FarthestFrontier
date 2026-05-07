@@ -135,9 +135,9 @@ const savedForm: QuickClipForm = {
 };
 
 assertDeepEqual(
-  getQuickClipDefaultsAfterSave(savedForm),
+  getQuickClipDefaultsAfterSave(savedForm, 70),
   {
-    startText: "",
+    startText: "1:11",
     endText: "",
     side: "offense",
     formation: "Trips",
@@ -145,7 +145,7 @@ assertDeepEqual(
     down: "3",
     toGoYards: "8",
   },
-  "resets timestamps and carries quick metadata",
+  "moves next start to one second after the saved clip end and carries quick metadata",
 );
 
 assertEqual(
