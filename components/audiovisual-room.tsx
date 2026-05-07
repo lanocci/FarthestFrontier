@@ -1166,6 +1166,35 @@ export function AudiovisualRoom({
     }));
   }
 
+  function createScrollRestorer() {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return () => {};
+    }
+
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const activeElement = document.activeElement;
+
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+
+    return () => {
+      let remainingFrames = 4;
+
+      const restore = () => {
+        window.scrollTo({ left: scrollX, top: scrollY, behavior: "auto" });
+        remainingFrames -= 1;
+
+        if (remainingFrames > 0) {
+          window.requestAnimationFrame(restore);
+        }
+      };
+
+      window.requestAnimationFrame(restore);
+    };
+  }
+
   function hasDirtyDetailedClipForm() {
     return Boolean(editingClipId || showClipComposer);
   }
@@ -2347,6 +2376,7 @@ export function AudiovisualRoom({
       formation: quickClipForm.formation,
       playType: quickClipForm.playType,
     };
+    const restoreScroll = createScrollRestorer();
 
     await saveClipFromForm(
       quickSourceForm,
@@ -2359,11 +2389,13 @@ export function AudiovisualRoom({
           setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm, savedClip.endSeconds));
           setQuickClipSourceClipId(null);
           syncSelectionUrl(selectedVideo.id, null);
+          restoreScroll();
         },
         selectAfterSave: false,
         targetClipId: quickClipSourceClipId,
       },
     );
+    restoreScroll();
   }
 
   async function handleDeleteClip(clip: VideoClip, videoId: string) {
