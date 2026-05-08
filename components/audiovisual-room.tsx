@@ -9,7 +9,7 @@ import { deleteAllFilmClips, deleteClipWhiteboard, deleteFilmClip, deletePlayboo
 import { ClipWhiteboardBaseMode, FilmRoomVideo, MaterialAudience, Player, PlaybookAsset, PlaybookSide, PositionMaster, VideoAudience, VideoClip, VideoClipPlayerLink, VideoTagMaster } from "@/lib/types";
 import { formatAudienceLabel, formatSecondsAsTime, getPositionLabel, isValidUrl, parseYouTubeVideoId } from "@/lib/utils";
 import { getMatchingPlaybookAssets } from "@/lib/video-room/playbook-matching";
-import { buildQuickClipFormFromClip, buildQuickClipTitle, getQuickClipDefaultsAfterSave, initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, type QuickClipForm } from "@/lib/video-room/quick-registration";
+import { buildQuickClipFormFromClip, buildQuickClipTitle, getQuickClipDefaultsAfterSave, initialQuickClipForm, isQuickClipDirty, nudgeTimestampText, shouldDeferQuickClipHydration, shouldIgnoreQuickSavePlayerTime, shouldPreserveQuickClipDraft, type QuickClipForm, type QuickSavePlaybackGuard } from "@/lib/video-room/quick-registration";
 import { buildVideoRoomUrl, formatDownLabel, formatMatchDate, formatSituationText, getImportCell, getVideoSearchText, parseDelimitedText, parseDown, parseTimestamp, sanitizePlayerLinks, sortClips, splitImportList } from "@/lib/video-room/utils";
 import { ChevronDown, ChevronUp, Edit3, Expand, Eye, EyeOff, FastForward, Image as ImageIcon, Minimize, MonitorPlay, RotateCcw, Rewind, Save, Trash2, Upload } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -201,6 +201,7 @@ export function AudiovisualRoom({
   const pendingSharedClipIdRef = useRef<string | null>(null);
   const appliedSharedClipIdRef = useRef<string | null>(null);
   const quickClipHydrationSkipClipIdRef = useRef<string | null>(null);
+  const quickSavePlaybackGuardRef = useRef<QuickSavePlaybackGuard | null>(null);
   const selectedYoutubeIdRef = useRef<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string>(filmRoomVideos[0]?.id ?? "");
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
@@ -589,11 +590,20 @@ export function AudiovisualRoom({
         : selectedVideoClips[playbackInsertionIndex] ?? null;
 
   useEffect(() => {
+    if (shouldDeferQuickClipHydration(quickSavePlaybackGuardRef.current)) {
+      return;
+    }
+
+    if (shouldPreserveQuickClipDraft(quickClipForm, quickClipSourceClipId)) {
+      return;
+    }
+
     if (!isEditingMode || editingClipId || showClipComposer || !playbackClip) {
       if (!playbackClip) {
         quickClipHydrationSkipClipIdRef.current = null;
         if (quickClipSourceClipId) {
           setQuickClipSourceClipId(null);
+          setQuickClipForm(initialQuickClipForm);
         }
       }
       return;
@@ -611,7 +621,7 @@ export function AudiovisualRoom({
 
     setQuickClipForm(buildQuickClipFormFromClip(playbackClip));
     setQuickClipSourceClipId(playbackClip.id);
-  }, [editingClipId, isEditingMode, playbackClip, quickClipSourceClipId, showClipComposer]);
+  }, [editingClipId, isEditingMode, playbackClip, quickClipForm, quickClipSourceClipId, showClipComposer]);
   const activePlaybookAssets = useMemo(() => {
     const targetClip = playbackClip ?? activeClip;
     return getMatchingPlaybookAssets(targetClip, playbookAssets);
@@ -733,6 +743,7 @@ export function AudiovisualRoom({
       return;
     }
 
+    quickSavePlaybackGuardRef.current = null;
     playerRef.current.seekTo(clip.startSeconds, true);
     setCurrentTime(clip.startSeconds);
     setSelectedClipId(clip.id);
@@ -757,6 +768,7 @@ export function AudiovisualRoom({
     setQuickClipForm(initialQuickClipForm);
     setQuickClipSourceClipId(null);
     quickClipHydrationSkipClipIdRef.current = null;
+    quickSavePlaybackGuardRef.current = null;
     appliedSharedClipIdRef.current = null;
     setIsPlaybackFullscreen(false);
     setIsPseudoFullscreen(false);
@@ -812,6 +824,7 @@ export function AudiovisualRoom({
         }
 
         if (selectedYoutubeIdRef.current !== selectedVideoYoutubeId) {
+          quickSavePlaybackGuardRef.current = null;
           playerRef.current.loadVideoById(selectedVideoYoutubeId, 0);
           selectedYoutubeIdRef.current = selectedVideoYoutubeId;
         }
@@ -829,6 +842,14 @@ export function AudiovisualRoom({
     const timer = window.setInterval(() => {
       const nextTime = playerRef.current?.getCurrentTime?.();
       if (typeof nextTime === "number" && Number.isFinite(nextTime)) {
+        if (shouldIgnoreQuickSavePlayerTime(nextTime, quickSavePlaybackGuardRef.current)) {
+          return;
+        }
+
+        if (quickSavePlaybackGuardRef.current) {
+          quickSavePlaybackGuardRef.current = null;
+        }
+
         setCurrentTime(nextTime);
       }
     }, 500);
@@ -1811,6 +1832,7 @@ export function AudiovisualRoom({
       return;
     }
 
+    quickSavePlaybackGuardRef.current = null;
     playerRef.current.seekTo(clip.startSeconds, true);
     playerRef.current.playVideo();
     setCurrentTime(clip.startSeconds);
@@ -2377,18 +2399,32 @@ export function AudiovisualRoom({
       playType: quickClipForm.playType,
     };
     const restoreScroll = createScrollRestorer();
+    const currentPlayerTime = playerRef.current?.getCurrentTime?.();
+    const quickSavePreviousSeconds =
+      typeof currentPlayerTime === "number" && Number.isFinite(currentPlayerTime)
+        ? currentPlayerTime
+        : currentTime;
 
     await saveClipFromForm(
       quickSourceForm,
       {
         afterSave: (savedClip) => {
-          playerRef.current?.seekTo(savedClip.endSeconds, true);
-          playerRef.current?.playVideo();
+          quickSavePlaybackGuardRef.current = {
+            targetSeconds: savedClip.endSeconds,
+            previousSeconds: quickSavePreviousSeconds,
+            createdAtMs: Date.now(),
+          };
           setCurrentTime(savedClip.endSeconds);
           quickClipHydrationSkipClipIdRef.current = savedClip.id;
           setQuickClipForm(getQuickClipDefaultsAfterSave(quickClipForm, savedClip.endSeconds));
           setQuickClipSourceClipId(null);
           syncSelectionUrl(selectedVideo.id, null);
+          try {
+            playerRef.current?.seekTo(savedClip.endSeconds, true);
+            playerRef.current?.playVideo();
+          } catch {
+            quickSavePlaybackGuardRef.current = null;
+          }
           restoreScroll();
         },
         selectAfterSave: false,
@@ -2710,6 +2746,7 @@ export function AudiovisualRoom({
                         className={`film-video-card ${video.id === selectedVideoId ? "is-selected" : ""}`}
                         type="button"
                         onClick={() => {
+                          quickSavePlaybackGuardRef.current = null;
                           setSelectedVideoId(video.id);
                           setSelectedClipId(null);
                           syncSelectionUrl(video.id);

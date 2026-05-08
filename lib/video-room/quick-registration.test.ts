@@ -3,8 +3,12 @@ import {
   buildQuickClipFormFromClip,
   buildQuickClipTitle,
   getQuickClipDefaultsAfterSave,
+  initialQuickClipForm,
   isQuickClipDirty,
   nudgeTimestampText,
+  shouldDeferQuickClipHydration,
+  shouldIgnoreQuickSavePlayerTime,
+  shouldPreserveQuickClipDraft,
 } from "./quick-registration.js";
 import type { QuickClipForm } from "./quick-registration.js";
 
@@ -146,6 +150,77 @@ assertDeepEqual(
     toGoYards: "8",
   },
   "moves next start to one second after the saved clip end and carries quick metadata",
+);
+
+assertEqual(
+  shouldIgnoreQuickSavePlayerTime(12, { targetSeconds: 31, previousSeconds: 30 }),
+  true,
+  "ignores stale player time that jumps behind the quick save target",
+);
+
+assertEqual(
+  shouldIgnoreQuickSavePlayerTime(12, { targetSeconds: 31, previousSeconds: 30, createdAtMs: 1_000 }, 2_000),
+  true,
+  "keeps ignoring stale player time while the quick save guard is fresh",
+);
+
+assertEqual(
+  shouldIgnoreQuickSavePlayerTime(12, { targetSeconds: 31, previousSeconds: 30, createdAtMs: 1_000 }, 4_000),
+  false,
+  "stops ignoring stale player time after the quick save guard expires",
+);
+
+assertEqual(
+  shouldIgnoreQuickSavePlayerTime(30.8, { targetSeconds: 31, previousSeconds: 30 }),
+  false,
+  "accepts player time once it reaches the quick save target",
+);
+
+assertEqual(
+  shouldIgnoreQuickSavePlayerTime(12, null),
+  false,
+  "accepts player time when no quick save guard is active",
+);
+
+assertEqual(
+  shouldDeferQuickClipHydration({ targetSeconds: 31, previousSeconds: 30 }),
+  true,
+  "defers playback hydration while the quick save seek is settling",
+);
+
+assertEqual(
+  shouldDeferQuickClipHydration(null),
+  false,
+  "allows playback hydration when no quick save guard is active",
+);
+
+assertEqual(
+  shouldPreserveQuickClipDraft(
+    {
+      startText: "0:46",
+      endText: "",
+      side: "offense",
+      formation: "",
+      playType: "",
+      down: "1",
+      toGoYards: "10",
+    },
+    null,
+  ),
+  true,
+  "preserves an unsourced quick draft instead of hydrating an overlapping playback clip",
+);
+
+assertEqual(
+  shouldPreserveQuickClipDraft(initialQuickClipForm, null),
+  false,
+  "does not preserve an empty quick draft",
+);
+
+assertEqual(
+  shouldPreserveQuickClipDraft(savedForm, "clip-1"),
+  false,
+  "allows hydration when the current quick form came from a playback clip",
 );
 
 assertEqual(

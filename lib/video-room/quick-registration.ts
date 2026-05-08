@@ -13,6 +13,12 @@ export type QuickClipForm = {
   toGoYards: string;
 };
 
+export type QuickSavePlaybackGuard = {
+  targetSeconds: number;
+  previousSeconds: number;
+  createdAtMs?: number;
+};
+
 export const initialQuickClipForm: QuickClipForm = {
   startText: "",
   endText: "",
@@ -134,6 +140,28 @@ export function getQuickClipDefaultsAfterSave(form: QuickClipForm, savedEndSecon
     endText: "",
     down: advanceQuickDown(form.down),
   };
+}
+
+export function shouldIgnoreQuickSavePlayerTime(nextSeconds: number, guard: QuickSavePlaybackGuard | null, nowMs = Date.now()): boolean {
+  if (!guard || !Number.isFinite(nextSeconds) || !Number.isFinite(guard.targetSeconds)) {
+    return false;
+  }
+
+  const maxGuardAgeMs = 2_500;
+  if (typeof guard.createdAtMs === "number" && nowMs - guard.createdAtMs > maxGuardAgeMs) {
+    return false;
+  }
+
+  const seekSettleToleranceSeconds = 0.5;
+  return nextSeconds < guard.targetSeconds - seekSettleToleranceSeconds;
+}
+
+export function shouldDeferQuickClipHydration(guard: QuickSavePlaybackGuard | null): boolean {
+  return Boolean(guard);
+}
+
+export function shouldPreserveQuickClipDraft(form: QuickClipForm, sourceClipId: string | null): boolean {
+  return !sourceClipId && isQuickClipDirty(form);
 }
 
 export function isQuickClipDirty(form: QuickClipForm): boolean {
