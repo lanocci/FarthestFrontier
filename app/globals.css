@@ -1447,7 +1447,8 @@ select:disabled {
     calc((100dvh - var(--film-fullscreen-quick-height)) * 16 / 9)
   );
   max-height: calc(100dvh - var(--film-fullscreen-quick-height));
-  margin: auto;
+  align-self: start;
+  margin: 0 auto;
 }
 
 .film-focus-shell.is-fullscreen .film-playback-side,
@@ -2076,6 +2077,29 @@ select:disabled {
   .film-focus-shell:-webkit-full-screen .film-playback-side {
     max-height: calc(100dvh - (var(--film-fullscreen-pad) * 2));
     padding-top: 46px;
+  }
+
+  .film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-playback-main {
+    --film-fullscreen-quick-height: 54px;
+    grid-template-rows:
+      minmax(0, calc(100dvh - var(--film-fullscreen-quick-height)))
+      var(--film-fullscreen-quick-height);
+    align-content: start;
+    align-items: stretch;
+    gap: 0;
+    height: 100dvh;
+  }
+
+  .film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-player-frame {
+    align-self: start;
+    margin: 0 auto;
+  }
+
+  .film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register {
+    align-self: end;
+    min-height: 0;
+    height: var(--film-fullscreen-quick-height);
+    overflow: hidden;
   }
 
   .film-playback-layout {
