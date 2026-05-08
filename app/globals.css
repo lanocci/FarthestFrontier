@@ -2097,8 +2097,8 @@ select:disabled {
   }
 
   .film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register {
-    position: fixed;
-    right: var(--film-fullscreen-side-width);
+    position: absolute;
+    right: 0;
     bottom: 0;
     left: 0;
     min-height: 0;
@@ -2426,8 +2426,8 @@ select:disabled {
   }
 
   .film-focus-shell.is-editing-mode.is-pseudo-fullscreen .film-quick-register {
-    position: fixed;
-    right: var(--film-fullscreen-side-width);
+    position: absolute;
+    right: 0;
     bottom: 0;
     left: 0;
     min-height: 0;
